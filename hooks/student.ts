@@ -102,13 +102,21 @@ export function usePosts() {
   const like = async (id: number) => {
     try {
       await api.post(`/student/posts/${id}/like`);
-      setPosts((p) => p.map((post) => post.id === id
-        ? { ...post, likes: post.liked ? post.likes - 1 : post.likes + 1, liked: !post.liked }
-        : post));
+      setPosts((p) => p.map((post) =>
+        String(post.id) === String(id)
+          ? { ...post, likes: (post.likes ?? 0) + (post.liked ? -1 : 1), liked: !post.liked }
+          : post));
     } catch { toast.error('Failed to like post'); }
   };
 
-  return { posts, loading, like };
+  const comment = async (id: number, text: string) => {
+    try {
+      await api.post(`/student/posts/${id}/comment`, { comment: text });
+      setPosts((p) => p.map((post) => String(post.id) === String(id) ? { ...post, comments: (post.comments ?? 0) + 1 } : post));
+    } catch { toast.error('Failed to post comment'); }
+  };
+
+  return { posts, loading, like, comment };
 }
 
 /* ── Messages ──────────────────────────────────────────────────────────── */

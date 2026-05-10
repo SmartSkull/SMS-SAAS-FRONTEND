@@ -1,12 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { api, endpoints } from '@/lib/api';
-import { auth } from '@/lib/auth';
-import { useToast } from '@/components/ui/Toast';
-import type { Role, ApiResponse } from '@/types';
+import { useLogin } from '@/hooks/useLogin';
 import clsx from 'clsx';
 import { Eye, EyeOff, GraduationCap, Users, ShieldCheck } from 'lucide-react';
+import type { Role } from '@/types';
 
 type Tab = Role;
 
@@ -17,16 +14,9 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 export default function LoginPage() {
-  const router = useRouter();
-  const toast  = useToast();
-  const [tab, setTab]         = useState<Tab>('student');
-  const [loading, setLoading] = useState(false);
-  const [showPw, setShowPw]   = useState(false);
-  const [form, setForm]       = useState({ id: '', password: '' });
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSug, setShowSug]         = useState(false);
+  const { tab, switchTab, loading, form, setForm, suggestions, showSug, setShowSug, handleIdChange, handleSubmit } = useLogin();
+  const [showPw, setShowPw] = useState(false);
   const sugRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -37,47 +27,8 @@ export default function LoginPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleIdChange = (val: string) => {
-    setForm((p) => ({ ...p, id: val }));
-    if (tab !== 'student' || val.length < 2) { setSuggestions([]); setShowSug(false); return; }
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const r = await api.get<ApiResponse<any[]>>('/public/students/search', { q: val });
-        setSuggestions(r.data.slice(0, 8));
-        setShowSug(r.data.length > 0);
-      } catch { setSuggestions([]); }
-    }, 250);
-  };
-
   const idLabel       = tab === 'student' ? 'Student Name or ID' : tab === 'staff' ? 'Staff ID' : 'Admin ID';
   const idPlaceholder = tab === 'student' ? 'e.g. David Emmanuel' : tab === 'staff' ? 'e.g. STF001' : 'e.g. ADM001';
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const body = tab === 'student'
-        ? { name: form.id, password: form.password }
-        : tab === 'staff'
-        ? { staff_id: form.id, password: form.password }
-        : { admin_id: form.id, password: form.password };
-
-      const ep = tab === 'student' ? endpoints.auth.studentLogin
-        : tab === 'staff' ? endpoints.auth.staffLogin
-        : endpoints.auth.adminLogin;
-
-      const res = await api.post<ApiResponse<{ token: string; refresh_token: string; user: any }>>(ep, body);
-      if (res.success) {
-        auth.setSession(res.data.token, res.data.refresh_token, res.data.user, tab);
-        router.push(`/${tab}/dashboard`);
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Invalid credentials');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
@@ -160,7 +111,7 @@ export default function LoginPage() {
             {/* Role tabs */}
             <div className="flex gap-2 mb-8 p-1 rounded-2xl" style={{ background: 'rgba(241,245,249,0.9)' }}>
               {TABS.map(({ id, label, icon: Icon }) => (
-                <button key={id} onClick={() => { setTab(id); setForm({ id: '', password: '' }); setSuggestions([]); setShowSug(false); }}
+                <button key={id} onClick={() => switchTab(id)}
                   className={clsx(
                     'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all',
                     tab === id
