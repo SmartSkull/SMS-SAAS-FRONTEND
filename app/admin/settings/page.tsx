@@ -1,46 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { Save, Calendar } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse } from '@/types';
-
-interface SchoolDays {
-  monday: boolean; tuesday: boolean; wednesday: boolean;
-  thursday: boolean; friday: boolean; saturday: boolean; sunday: boolean;
-  [key: string]: boolean;
-}
-
-const DAYS: (keyof SchoolDays)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-const DEFAULT: SchoolDays = {
-  monday: true, tuesday: true, wednesday: true,
-  thursday: true, friday: true, saturday: false, sunday: false,
-};
+import { useAdminSettings } from '@/hooks/admin';
 
 export default function SettingsPage() {
-  const [days, setDays] = useState<SchoolDays>(DEFAULT);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const toast = useToast();
-
-  useEffect(() => {
-    api.get<ApiResponse<SchoolDays>>(endpoints.admin.schoolDays)
-      .then((r) => { if (r.data) setDays({ ...DEFAULT, ...r.data }); })
-      .catch(() => toast.error('Failed to load settings'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      await api.post(endpoints.admin.schoolDays, days);
-      toast.success('Settings saved');
-    } catch { toast.error('Failed to save'); }
-    finally { setSaving(false); }
-  };
-
-  const toggle = (day: keyof SchoolDays) => setDays((p) => ({ ...p, [day]: !p[day] }));
+  const { days, setDays, loading, saving, save } = useAdminSettings();
+  const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+  const toggle = (day: string) => setDays((p) => ({ ...p, [day]: !p[day] }));
 
   return (
     <div className="space-y-6">

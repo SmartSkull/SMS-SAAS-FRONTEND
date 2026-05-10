@@ -1,38 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Calendar, Newspaper } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse, Post } from '@/types';
+import { useStaffPosts } from '@/hooks/staff';
 import { EmptyState } from '@/components/ui/StateDisplay';
 
 export default function StaffPosts() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const toast = useToast();
-  const limit = 10;
-
-  const load = (p = 1, append = false) => {
-    if (p === 1) setLoading(true);
-    api.get<ApiResponse<{ posts: Post[]; total: number }>>(endpoints.staff.posts, { page: p, limit })
-      .then((r) => {
-        const newPosts = r.data.posts ?? [];
-        setPosts((prev) => append ? [...prev, ...newPosts] : newPosts);
-        setHasMore(newPosts.length === limit);
-      })
-      .catch(() => toast.error('Failed to load posts'))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(1); }, []);
-
-  const loadMore = () => {
-    const next = page + 1;
-    setPage(next);
-    load(next, true);
-  };
+  const { posts, loading, hasMore, loadMore } = useStaffPosts();
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

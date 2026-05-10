@@ -1,19 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
 import { GraduationCap, Bell, BookOpen, Calendar, BarChart2, ClipboardList, Monitor, Library, Mail, ArrowRight, Clock } from 'lucide-react';
-import type { ApiResponse } from '@/types';
-
-interface Assignment { id: string; title: string; dueAt?: string; }
-interface DashboardData {
-  user: { firstname: string; lastname: string; class: string };
-  current_session: string;
-  current_term: string;
-  unread_notifications: number;
-  recent_assignments: Assignment[];
-}
+import { useDashboard } from '@/hooks/student';
 
 const QUICK_ACTIONS = [
   { icon: BarChart2,    label: 'View Results',  path: '/student/results',     bg: 'bg-blue-50',   icon_color: 'text-blue-600',   hover: 'hover:bg-blue-100' },
@@ -25,16 +13,7 @@ const QUICK_ACTIONS = [
 ];
 
 export default function StudentDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
-
-  useEffect(() => {
-    api.get<ApiResponse<DashboardData>>(endpoints.student.dashboard)
-      .then((r) => setData(r.data))
-      .catch(() => toast.error('Failed to load dashboard'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading } = useDashboard();
 
   if (loading) return (
     <div className="space-y-6 skeleton-stagger">

@@ -1,15 +1,17 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { api, endpoints } from '@/lib/api';
+import { api, endpoints, getImageUrl } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
-import { Monitor, Play, CheckCircle, Clock, ChevronLeft, ChevronRight, Calculator, AlertTriangle, Camera, CameraOff, BookOpen, ShieldAlert, X } from 'lucide-react';
+import { Monitor, Play, CheckCircle, Clock, ChevronLeft, ChevronRight, Calculator, AlertTriangle, Camera, CameraOff, ShieldAlert, X } from 'lucide-react';
 import type { ApiResponse, CbtTest, CbtQuestion } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import clsx from 'clsx';
 
 /* ─── Pre-exam Info Modal ─────────────────────────────────────────────────── */
 function CbtInfoModal({ test, onConfirm, onClose }: { test: CbtTest; onConfirm: () => void; onClose: () => void }) {
+  const user = auth.getUser();
+  const initials = `${user?.firstname?.[0] ?? ''}${user?.lastname?.[0] ?? ''}`.toUpperCase();
   const rules = [
     'Do not switch tabs or leave this page — the test will auto-submit.',
     'Keep your face visible to the camera at all times.',
@@ -27,8 +29,10 @@ function CbtInfoModal({ test, onConfirm, onClose }: { test: CbtTest; onConfirm: 
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-5">
-          <div className="w-11 h-11 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-            <BookOpen size={20} className="text-purple-600" />
+          <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-purple-100 flex items-center justify-center">
+            {user?.image
+              ? <img src={getImageUrl(user.image) ?? ''} alt={user.firstname} className="w-full h-full object-cover" />
+              : <span className="text-purple-700 font-bold text-sm">{initials}</span>}
           </div>
           <div>
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">CBT Examination</p>
@@ -421,9 +425,17 @@ export default function StudentCBT() {
         {/* Header bar */}
         <div className="w-full max-w-2xl mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center shrink-0">
-              <Monitor size={17} className="text-purple-600" />
-            </div>
+            {(() => {
+              const u = auth.getUser();
+              const ini = `${u?.firstname?.[0] ?? ''}${u?.lastname?.[0] ?? ''}`.toUpperCase();
+              return (
+                <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 bg-purple-100 flex items-center justify-center">
+                  {u?.image
+                    ? <img src={getImageUrl(u.image) ?? ''} alt={u.firstname} className="w-full h-full object-cover" />
+                    : <span className="text-purple-700 font-bold text-xs">{ini}</span>}
+                </div>
+              );
+            })()}
             <div className="min-w-0">
               <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">CBT Examination</p>
               <h1 className="text-base font-bold text-gray-900 leading-tight truncate">{activeCourse}</h1>
@@ -502,7 +514,7 @@ export default function StudentCBT() {
               const letter = ['A', 'B', 'C', 'D'][j];
               const selected = answers[q.id] === opt;
               return (
-                <button key={j} onClick={() => selectAnswer(q.id, opt)}
+                <button key={j} onClick={() => selectAnswer(String(q.id), opt)}
                   className={clsx(
                     'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm text-left transition-all',
                     selected
@@ -533,7 +545,7 @@ export default function StudentCBT() {
               Next <ChevronRight size={16} />
             </button>
           ) : (
-            <button onClick={submitTest} disabled={submitting}
+            <button onClick={() => submitTest()} disabled={submitting}
               className="px-6 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700 disabled:opacity-60">
               {submitting ? 'Submitting…' : 'Submit Test'}
             </button>

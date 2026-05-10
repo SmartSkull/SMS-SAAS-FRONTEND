@@ -1,22 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
 import { BookOpen, Download } from 'lucide-react';
-import type { ApiResponse, LibraryItem } from '@/types';
+import { useLibrary } from '@/hooks/student';
 import { EmptyState } from '@/components/ui/StateDisplay';
 
 export default function StudentLibrary() {
-  const [items, setItems] = useState<LibraryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
-
-  useEffect(() => {
-    api.get<ApiResponse<LibraryItem[]>>(endpoints.student.library)
-      .then((r) => setItems(r.data))
-      .catch(() => toast.error('Failed to load library'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { items, loading } = useLibrary();
 
   return (
     <div className="space-y-6">

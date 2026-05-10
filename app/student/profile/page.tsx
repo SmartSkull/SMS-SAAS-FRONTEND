@@ -1,54 +1,20 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import { api, endpoints, getImageUrl } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
+import { useRef } from 'react';
+import { getImageUrl } from '@/lib/api';
+import { useProfile } from '@/hooks/student';
 import { User, Save, Mail, Phone, Hash, GraduationCap, Camera } from 'lucide-react';
-import type { ApiResponse } from '@/types';
 
 export default function StudentProfile() {
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const { profile, setProfile, loading, saving, uploading, save, uploadImage } = useProfile();
   const fileRef = useRef<HTMLInputElement>(null);
-  const toast = useToast();
 
-  useEffect(() => {
-    api.get<ApiResponse<any>>(endpoints.student.profile)
-      .then((r) => setProfile(r.data))
-      .catch(() => toast.error('Failed to load profile'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await api.put(endpoints.student.profile, profile);
-      toast.success('Profile updated');
-    } catch {
-      toast.error('Failed to update profile');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const handleSave = (e: React.FormEvent) => { e.preventDefault(); save(); };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append('image', file);
-      const res = await api.upload<ApiResponse<{ image: string }>>(`${endpoints.student.profile}/image`, form);
-      setProfile((p: any) => ({ ...p, image: res.data.image }));
-      toast.success('Photo updated');
-    } catch {
-      toast.error('Failed to upload photo');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
+    await uploadImage(file);
+    e.target.value = '';
   };
 
   if (loading) return (

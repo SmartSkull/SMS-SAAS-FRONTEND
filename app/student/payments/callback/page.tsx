@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api, endpoints } from '@/lib/api';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
-export default function PaymentCallback() {
+function PaymentCallbackInner() {
   const params    = useSearchParams();
   const router    = useRouter();
   const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
@@ -69,5 +69,17 @@ export default function PaymentCallback() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentCallback() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 size={32} className="text-blue-500 animate-spin" />
+      </div>
+    }>
+      <PaymentCallbackInner />
+    </Suspense>
   );
 }

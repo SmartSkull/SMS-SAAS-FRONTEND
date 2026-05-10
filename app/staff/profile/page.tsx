@@ -1,43 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { User, Save } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse, Staff } from '@/types';
+import { useStaffProfile } from '@/hooks/staff';
+import type { Staff } from '@/types';
 
 export default function StaffProfile() {
-  const [profile, setProfile] = useState<Staff | null>(null);
-  const [form, setForm] = useState({ firstname: '', lastname: '', email: '', phone: '' });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const toast = useToast();
-
-  useEffect(() => {
-    api.get<ApiResponse<Staff>>(endpoints.staff.profile)
-      .then((r) => {
-        setProfile(r.data);
-        setForm({
-          firstname: r.data.firstname ?? '',
-          lastname: r.data.lastname ?? '',
-          email: r.data.email ?? '',
-          phone: r.data.phone ?? '',
-        });
-      })
-      .catch(() => toast.error('Failed to load profile'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await api.put<ApiResponse<Staff>>(endpoints.staff.profile, form);
-      toast.success('Profile updated');
-    } catch {
-      toast.error('Failed to update profile');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const { profile, form, setForm, loading, saving, save } = useStaffProfile();
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -77,7 +44,7 @@ export default function StaffProfile() {
         </div>
 
         <button
-          onClick={handleSave}
+          onClick={save}
           disabled={saving}
           className="mt-6 flex items-center gap-2 btn-brand text-white px-5 py-2.5 rounded-xl text-sm font-medium  disabled:opacity-50"
         >

@@ -1,22 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
 import { FileText, Download } from 'lucide-react';
-import type { ApiResponse, Assignment } from '@/types';
+import { useAssignments } from '@/hooks/student';
 import { EmptyState } from '@/components/ui/StateDisplay';
 
 export default function StudentAssignments() {
-  const [items, setItems] = useState<Assignment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
-
-  useEffect(() => {
-    api.get<ApiResponse<Assignment[]>>(endpoints.student.assignments)
-      .then((r) => setItems(r.data))
-      .catch(() => toast.error('Failed to load assignments'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { items, loading } = useAssignments();
 
   return (
     <div className="space-y-6">

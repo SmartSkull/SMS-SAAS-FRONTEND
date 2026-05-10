@@ -1,8 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse } from '@/types';
+import { useState } from 'react';
+import { useTimetable } from '@/hooks/student';
 import { Calendar } from 'lucide-react';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import clsx from 'clsx';
@@ -32,18 +30,7 @@ function TimetableGrid({ data }: { data: any }) {
 
 export default function StudentTimetable() {
   const [tab, setTab] = useState<'class' | 'exam'>('class');
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
-
-  useEffect(() => {
-    const ep = tab === 'class' ? endpoints.student.classTimetable : endpoints.student.examTimetable;
-    setLoading(true);
-    api.get<ApiResponse<any>>(ep)
-      .then((r) => setData(r.data))
-      .catch(() => toast.error('Failed to load timetable'))
-      .finally(() => setLoading(false));
-  }, [tab]);
+  const { data, loading } = useTimetable(tab);
 
   return (
     <div className="space-y-6">

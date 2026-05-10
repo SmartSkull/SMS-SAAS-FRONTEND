@@ -1,22 +1,7 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { Users, BookOpen, BarChart2, ClipboardList, TrendingUp, Calendar } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
+import { useStaffDashboard } from '@/hooks/staff';
 import { useAuth } from '@/hooks/useAuth';
-import type { ApiResponse } from '@/types';
-
-interface DashboardData {
-  total_students?: number;
-  total_results?: number;
-  total_assignments?: number;
-  total_library?: number;
-  pending_results?: number;
-  current_session?: string;
-  current_term?: string;
-  recent_results?: { student_name: string; course: string; total: number; grade: string }[];
-  [key: string]: unknown;
-}
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string | number; color: string }) {
   return (
@@ -33,17 +18,8 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 }
 
 export default function StaffDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
+  const { data, loading } = useStaffDashboard();
   const { user } = useAuth();
-
-  useEffect(() => {
-    api.get<ApiResponse<DashboardData>>(endpoints.staff.dashboard)
-      .then((r) => setData(r.data))
-      .catch(() => toast.error('Failed to load dashboard'))
-      .finally(() => setLoading(false));
-  }, []);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

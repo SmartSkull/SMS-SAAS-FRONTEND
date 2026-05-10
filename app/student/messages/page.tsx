@@ -1,44 +1,24 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
+import { useState, useRef } from 'react';
 import { Send, User, MessageSquare } from 'lucide-react';
+import { useMessages } from '@/hooks/student';
 import { EmptyState } from '@/components/ui/StateDisplay';
-import type { ApiResponse, Conversation, Message } from '@/types';
 
 export default function StudentMessages() {
-  const [convos, setConvos] = useState<Conversation[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [active, setActive] = useState<string | null>(null);
+  const { convos, messages, active, loading, openConvo, sendMessage } = useMessages();
   const [text, setText] = useState('');
-  const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const toast = useToast();
 
-  useEffect(() => {
-    api.get<ApiResponse<Conversation[]>>(endpoints.student.messages)
-      .then((r) => setConvos(r.data))
-      .catch(() => toast.error('Failed to load messages'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const openConvo = async (userId: string) => {
-    setActive(userId);
-    try {
-      const r = await api.get<ApiResponse<Message[]>>(`${endpoints.student.messages}/${userId}`);
-      setMessages(r.data);
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    } catch { toast.error('Failed to load conversation'); }
+  const handleOpen = async (userId: string) => {
+    await openConvo(userId);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || !active) return;
-    try {
-      await api.post(endpoints.student.messages, { receiver_id: active, message: text });
-      setText('');
-      openConvo(active);
-    } catch { toast.error('Failed to send message'); }
+    if (!text.trim()) return;
+    await sendMessage(text);
+    setText('');
   };
 
   return (
@@ -50,7 +30,7 @@ export default function StudentMessages() {
           {loading ? <div className="p-4 text-center text-gray-400 text-sm">Loading…</div> :
             convos.length === 0 ? <EmptyState icon={MessageSquare} message="No conversations" /> :
             convos.map((c) => (
-              <button key={c.user_id} onClick={() => openConvo(c.user_id)}
+              <button key={c.user_id} onClick={() => handleOpen(c.user_id)}
                 className={`w-full flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors text-left ${active === c.user_id ? 'bg-blue-50' : ''}`}>
                 <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                   <User size={16} className="text-gray-500" />
@@ -82,7 +62,7 @@ export default function StudentMessages() {
               ))}
               <div ref={bottomRef} />
             </div>
-            <form onSubmit={sendMessage} className="p-4 border-t border-gray-100 flex gap-2">
+            <form onSubmit={handleSend} className="p-4 border-t border-gray-100 flex gap-2">
               <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message…"
                 className="flex-1 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500" />
               <button type="submit" className="p-2.5 btn-brand text-white rounded-xl  transition-colors">

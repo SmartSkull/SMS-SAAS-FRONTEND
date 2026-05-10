@@ -1,31 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
 import { Users, UserCheck, Activity } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse } from '@/types';
-
-interface DashboardData {
-  students: { total: number; verified: number; pending: number };
-  staff: { total: number; verified: number };
-  studentsByClass: { class: string; count: number }[];
-  recentStudents: { firstname: string; lastname: string; date: string }[];
-  recentPayments: unknown[];
-  current_session: string;
-  current_term: string;
-}
+import { useAdminDashboard } from '@/hooks/admin';
 
 export default function AdminDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
-
-  useEffect(() => {
-    api.get<ApiResponse<DashboardData>>(endpoints.admin.dashboard)
-      .then((r) => setData(r.data))
-      .catch(() => toast.error('Failed to load dashboard'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading } = useAdminDashboard();
 
   if (loading) return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

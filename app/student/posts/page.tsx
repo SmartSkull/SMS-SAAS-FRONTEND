@@ -1,29 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
 import { Heart, MessageCircle, Newspaper } from 'lucide-react';
-import type { ApiResponse, Post } from '@/types';
+import { usePosts } from '@/hooks/student';
 import { EmptyState } from '@/components/ui/StateDisplay';
 
 export default function StudentPosts() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
-
-  useEffect(() => {
-    api.get<ApiResponse<Post[]>>(endpoints.student.posts)
-      .then((r) => setPosts(r.data))
-      .catch(() => toast.error('Failed to load posts'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const like = async (id: number) => {
-    try {
-      await api.post(`/student/posts/${id}/like`);
-      setPosts((p) => p.map((post) => post.id === id ? { ...post, likes: post.liked ? post.likes - 1 : post.likes + 1, liked: !post.liked } : post));
-    } catch { toast.error('Failed to like post'); }
-  };
+  const { posts, loading, like } = usePosts();
 
   return (
     <div className="space-y-6 max-w-2xl">
