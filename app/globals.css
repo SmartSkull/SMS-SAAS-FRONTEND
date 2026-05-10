@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /* Brand blue */
+  --brand: #2563eb;
+  --brand-dark: #1d4ed8;
+  --brand-light: #eff6ff;
+  --brand-border: #bfdbfe;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Blue gradient button utility */
+.btn-brand {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #fff;
+  border: none;
+  transition: opacity 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px 0 rgba(37,99,235,0.25);
+}
+.btn-brand:hover:not(:disabled) {
+  opacity: 0.92;
+  box-shadow: 0 4px 16px 0 rgba(37,99,235,0.35);
+}
+.btn-brand:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Card with blue left accent */
+.card {
+  border-left: 4px solid #3b82f6;
+  background: linear-gradient(to right, #eff6ff 0px, #ffffff 48px);
+}
+.shimmer {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 0.75rem;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Staggered fade-in for skeleton blocks */
+.skeleton-stagger > * {
+  opacity: 0;
+  animation: skeletonIn 0.35s ease forwards;
+}
+.skeleton-stagger > *:nth-child(1) { animation-delay: 0.00s; }
+.skeleton-stagger > *:nth-child(2) { animation-delay: 0.07s; }
+.skeleton-stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.skeleton-stagger > *:nth-child(4) { animation-delay: 0.21s; }
+.skeleton-stagger > *:nth-child(5) { animation-delay: 0.28s; }
+.skeleton-stagger > *:nth-child(6) { animation-delay: 0.35s; }
+
+@keyframes skeletonIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+@media print {
+  /* Hide chrome */
+  nav, aside, header, .print\:hidden { display: none !important; }
+
+  /* Fit everything on one page */
+  @page { size: A4 landscape; margin: 10mm; }
+
+  html, body { height: auto !important; overflow: visible !important; background: white; }
+
+  /* Remove card left-accent and shadows for print */
+  .card { border-left: none !important; background: white !important; box-shadow: none !important; }
+
+  /* Scale the main content area to fill the page */
+  main, [class*="space-y"] { padding: 0 !important; margin: 0 !important; }
+
+  /* Shrink font and padding so table fits */
+  table { width: 100% !important; font-size: 8pt !important; border-collapse: collapse !important; }
+  th, td { padding: 3px 5px !important; }
+
+  /* Keep table on one page — no breaks */
+  table, thead, tbody, tr, th, td { page-break-inside: avoid !important; }
+  thead { display: table-header-group; }
+
+  /* Fit the whole page without scrollbars */
+  .overflow-x-auto { overflow: visible !important; }
+
+  /* Hide filters, buttons, comments section */
+  select, button, .rounded-2xl:has(select) { display: none !important; }
+
+  /* Show only the results table and summary cards */
+  h1 { font-size: 14pt !important; margin-bottom: 6px !important; }
+}
