@@ -5,6 +5,8 @@ import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { useSchoolData } from '@/hooks/useSchoolData';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Course { id: number; course_id: string; course: string; class?: string; }
 interface CourseForm { course_id: string; course: string; class: string; }
@@ -18,6 +20,8 @@ export default function CoursesPage() {
   const [form, setForm] = useState<CourseForm>(EMPTY);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+  const { classes } = useSchoolData();
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -51,10 +55,11 @@ export default function CoursesPage() {
     } finally { setSaving(false); }
   };
 
-  const remove = async (id: number) => {
-    if (!confirm('Delete this course?')) return;
-    try { await api.delete(`${endpoints.admin.courses}/${id}`); toast.success('Deleted'); load(); }
+  const remove = async () => {
+    if (!confirmId) return;
+    try { await api.delete(`${endpoints.admin.courses}/${confirmId}`); toast.success('Deleted'); load(); }
     catch { toast.error('Failed to delete'); }
+    finally { setConfirmId(null); }
   };
 
   const filtered = courses.filter((c) =>
@@ -104,7 +109,7 @@ export default function CoursesPage() {
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <button onClick={() => openEdit(c)} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
-                      <button onClick={() => remove(c.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
+                      <button onClick={() => setConfirmId(c.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -122,13 +127,21 @@ export default function CoursesPage() {
               <button onClick={() => setModal({ open: false })}><X size={20} className="text-gray-400" /></button>
             </div>
             <div className="p-6 space-y-4">
-              {(['course_id', 'course', 'class'] as const).map((f) => (
+              {(['course_id', 'course'] as const).map((f) => (
                 <div key={f}>
                   <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{f.replace('_', ' ')}</label>
                   <input value={form[f]} onChange={(e) => setForm((p) => ({ ...p, [f]: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 </div>
               ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                <select value={form.class} onChange={(e) => setForm(p => ({ ...p, class: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div className="flex gap-3 p-6 border-t border-gray-100">
               <button onClick={() => setModal({ open: false })} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
@@ -138,6 +151,10 @@ export default function CoursesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmId !== null && (
+        <ConfirmModal onConfirm={remove} onCancel={() => setConfirmId(null)} />
       )}
     </div>
   );

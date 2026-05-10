@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import {
   LayoutDashboard, User, BarChart2, BookOpen, Library, Calendar, Monitor,
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
-  Settings, GraduationCap, X,
+  Settings, GraduationCap, X, Bell,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -21,6 +21,7 @@ const MENUS = {
     { icon: Gamepad2, label: 'Book Game', path: '/student/book-game' },
     { icon: Newspaper, label: 'Posts', path: '/student/posts' },
     { icon: Mail, label: 'Messages', path: '/student/messages' },
+    { icon: Bell, label: 'Notifications', path: '/student/notifications' },
     { icon: CreditCard, label: 'Payments', path: '/student/payments' },
   ],
   staff: [
@@ -33,6 +34,7 @@ const MENUS = {
     { icon: Monitor, label: 'CBT', path: '/staff/cbt' },
     { icon: Newspaper, label: 'Posts', path: '/staff/posts' },
     { icon: Mail, label: 'Messages', path: '/staff/messages' },
+    { icon: Bell, label: 'Notifications', path: '/staff/notifications' },
   ],
   admin: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
@@ -46,6 +48,7 @@ const MENUS = {
     { icon: Library, label: 'Library', path: '/admin/library' },
     { icon: Newspaper, label: 'Posts', path: '/admin/posts' },
     { icon: Mail, label: 'Messages', path: '/admin/messages' },
+    { icon: Bell, label: 'Notifications', path: '/admin/notifications' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
   ],
 };

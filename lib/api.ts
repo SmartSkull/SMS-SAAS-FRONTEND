@@ -139,6 +139,8 @@ export const endpoints = {
     users: '/staff/users',
     posts: '/staff/posts',
     schoolDays: '/staff/school-days',
+    notifications: '/staff/notifications',
+    notificationsRead: '/staff/notifications/read',
   },
   admin: {
     dashboard: '/admin/dashboard',
@@ -178,6 +180,8 @@ export const endpoints = {
     resultsBulkApprove: '/admin/results/bulk-approve',
     resultsBulkUnapprove: '/admin/results/bulk-unapprove',
     schoolDays: '/admin/school-days',
+    notifications: '/admin/notifications',
+    notificationsRead: '/admin/notifications/read',
     schoolDaysDelete: (s: string, t: string) => `/admin/school-days/${s}/${t}`,
     settings: '/admin/settings',
     cbtQuestions: '/admin/cbt/questions',

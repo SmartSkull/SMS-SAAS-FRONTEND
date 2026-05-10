@@ -5,6 +5,7 @@ import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Post {
   id: number; title: string; content: string; image?: string;
@@ -20,6 +21,7 @@ export default function PostsPage() {
   const [modal, setModal] = useState<{ open: boolean; post?: Post }>({ open: false });
   const [form, setForm] = useState<PostForm>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
   const toast = useToast();
 
   const load = useCallback(() => {
@@ -63,10 +65,11 @@ export default function PostsPage() {
     } finally { setSaving(false); }
   };
 
-  const remove = async (id: number) => {
-    if (!confirm('Delete this post?')) return;
-    try { await api.delete(`${endpoints.admin.posts}/${id}`); toast.success('Deleted'); load(); }
+  const remove = async () => {
+    if (!confirmId) return;
+    try { await api.delete(`${endpoints.admin.posts}/${confirmId}`); toast.success('Deleted'); load(); }
     catch { toast.error('Failed to delete'); }
+    finally { setConfirmId(null); }
   };
 
   return (
@@ -104,7 +107,7 @@ export default function PostsPage() {
                 )}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => openEdit(p)} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
-                  <button onClick={() => remove(p.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
+                  <button onClick={() => setConfirmId(p.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                 </div>
               </div>
             </div>
@@ -147,6 +150,10 @@ export default function PostsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmId !== null && (
+        <ConfirmModal onConfirm={remove} onCancel={() => setConfirmId(null)} />
       )}
     </div>
   );

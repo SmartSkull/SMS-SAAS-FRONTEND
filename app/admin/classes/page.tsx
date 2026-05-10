@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, X, Users } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface SchoolClass {
   id: string; name: string; teacher_name: string | null; student_count: number;
@@ -15,6 +16,7 @@ export default function ClassesPage() {
   const [modal, setModal] = useState<{ open: boolean; cls?: SchoolClass }>({ open: false });
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<SchoolClass | null>(null);
   const toast = useToast();
 
   const load = useCallback(() => {
@@ -44,9 +46,9 @@ export default function ClassesPage() {
   };
 
   const remove = async (cls: SchoolClass) => {
-    if (!confirm(`Delete ${cls.name}?`)) return;
     try { await api.delete(endpoints.admin.classItem(cls.name)); toast.success('Deleted'); load(); }
     catch { toast.error('Failed to delete'); }
+    finally { setConfirmTarget(null); }
   };
 
   return (
@@ -86,7 +88,7 @@ export default function ClassesPage() {
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <button onClick={() => { setName(c.name); setModal({ open: true, cls: c }); }} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
-                      <button onClick={() => remove(c)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
+                      <button onClick={() => setConfirmTarget(c)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -117,6 +119,14 @@ export default function ClassesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmTarget && (
+        <ConfirmModal
+          message={`Delete class "${confirmTarget.name}"? This cannot be undone.`}
+          onConfirm={() => remove(confirmTarget)}
+          onCancel={() => setConfirmTarget(null)}
+        />
       )}
     </div>
   );

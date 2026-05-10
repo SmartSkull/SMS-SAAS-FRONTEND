@@ -1,6 +1,7 @@
 'use client';
 import { Users, UserCheck, Activity } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks/admin';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function AdminDashboard() {
   const { data, loading } = useAdminDashboard();
@@ -42,22 +43,26 @@ export default function AdminDashboard() {
         {/* Students by class */}
         <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5">
           <h2 className="font-semibold text-gray-900 mb-4">Students by Class</h2>
-          <div className="space-y-2">
-            {(data?.studentsByClass ?? []).map(({ class: cls, count }) => {
-              const pct = Math.round((count / (data!.students.total || 1)) * 100);
-              return (
-                <div key={cls}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-700">{cls}</span>
-                    <span className="font-medium text-gray-900">{count}</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full">
-                    <div className="h-1.5 bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart
+              data={(data?.studentsByClass ?? []).map(({ class: cls, count }) => ({ name: cls, count }))}
+              margin={{ top: 4, right: 8, left: -16, bottom: 40 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} angle={-35} textAnchor="end" interval={0} />
+              <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}
+                cursor={{ fill: '#f3f4f6' }}
+                formatter={(v: any) => [v, 'Students']}
+              />
+              <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={40}>
+                {(data?.studentsByClass ?? []).map((_, i) => (
+                  <Cell key={i} fill={`hsl(${220 + i * 18}, 70%, ${55 + (i % 3) * 8}%)`} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Recent students */}

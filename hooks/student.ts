@@ -116,7 +116,15 @@ export function usePosts() {
     } catch { toast.error('Failed to post comment'); }
   };
 
-  return { posts, loading, like, comment };
+  const decrementComments = (id: number) => {
+    setPosts((p) => p.map((post) => String(post.id) === String(id) ? { ...post, comments: Math.max(0, (post.comments ?? 1) - 1) } : post));
+  };
+
+  const incrementComments = (id: number) => {
+    setPosts((p) => p.map((post) => String(post.id) === String(id) ? { ...post, comments: (post.comments ?? 0) + 1 } : post));
+  };
+
+  return { posts, loading, like, comment, decrementComments, incrementComments };
 }
 
 /* ── Messages ──────────────────────────────────────────────────────────── */
@@ -124,6 +132,7 @@ export function useMessages() {
   const [convos, setConvos] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [active, setActive] = useState<string | null>(null);
+  const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
@@ -137,8 +146,9 @@ export function useMessages() {
   const openConvo = async (userId: string) => {
     setActive(userId);
     try {
-      const r = await api.get<ApiResponse<Message[]>>(`${endpoints.student.messages}/${userId}`);
-      setMessages(r.data);
+      const r = await api.get<ApiResponse<any>>(`${endpoints.student.messages}/thread`, { uid: userId });
+      setMessages(r.data?.messages ?? r.data);
+      setPartnerLastLogin(r.data?.partner_last_login_at ?? null);
     } catch { toast.error('Failed to load conversation'); }
   };
 
@@ -150,7 +160,7 @@ export function useMessages() {
     } catch { toast.error('Failed to send message'); }
   };
 
-  return { convos, messages, active, loading, openConvo, sendMessage };
+  return { convos, messages, active, loading, openConvo, sendMessage, clearActive: () => setActive(null), partnerLastLogin };
 }
 
 /* ── Timetable ─────────────────────────────────────────────────────────── */

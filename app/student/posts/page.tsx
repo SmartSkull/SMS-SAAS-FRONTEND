@@ -8,7 +8,7 @@ import { auth } from '@/lib/auth';
 import clsx from 'clsx';
 
 export default function StudentPosts() {
-  const { posts, loading, like, comment } = usePosts();
+  const { posts, loading, like, decrementComments, incrementComments } = usePosts();
   const currentUser = auth.getUser();
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [openComment, setOpenComment] = useState<string | null>(null);
@@ -31,12 +31,24 @@ export default function StudentPosts() {
     const pid = String(id);
     const text = commentText[pid]?.trim();
     if (!text) return;
-    await comment(id, text);
+    // Add optimistic entry
+    const tempId = `temp_${Date.now()}`;
     setPostComments((p) => ({
       ...p,
-      [pid]: [...(p[pid] ?? []), { id: Date.now(), text, author: { firstName: 'You', lastName: '' }, createdAt: new Date().toISOString() }],
+      [pid]: [...(p[pid] ?? []), { id: tempId, text, author: { firstName: currentUser?.firstname ?? 'You', lastName: currentUser?.lastname ?? '' }, createdAt: new Date().toISOString(), optimistic: true }],
     }));
     setCommentText((p) => ({ ...p, [pid]: '' }));
+    try {
+      const r = await api.post<any>(`/student/posts/${id}/comment`, { comment: text });
+      const realId = r.data?.id;
+      setPostComments((p) => ({
+        ...p,
+        [pid]: p[pid].map((c) => c.id === tempId ? { ...c, id: realId, optimistic: false } : c),
+      }));
+      incrementComments(id);
+    } catch { 
+      setPostComments((p) => ({ ...p, [pid]: p[pid].filter((c) => c.id !== tempId) }));
+    }
   };
 
   const saveEdit = async (postId: string, commentId: string) => {
@@ -54,7 +66,8 @@ export default function StudentPosts() {
   const deleteComment = async (postId: string, commentId: string) => {
     try {
       await api.delete(`/student/posts/${postId}/comment/${commentId}`);
-      setPostComments((p) => ({ ...p, [postId]: p[postId].filter((c) => c.id !== commentId) }));
+      setPostComments((p) => ({ ...p, [postId]: p[postId].filter((c) => String(c.id) !== commentId) }));
+      decrementComments(Number(postId));
     } catch {}
   };
 
@@ -148,7 +161,7 @@ export default function StudentPosts() {
                     <div className="mt-3 space-y-2">
                       {(postComments[pid] ?? []).map((c: any) => {
                         const cid = String(c.id);
-                        const isOwn = c.author?.firstName === 'You' || String(c.authorId) === String(currentUser?.id);
+                        const isOwn = !c.optimistic && (c.author?.firstName === 'You' || String(c.authorId) === String(currentUser?.id));
                         const isEditing = editingComment?.id === cid;
                         return (
                           <div key={cid} className="flex gap-2 text-xs">

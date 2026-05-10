@@ -5,6 +5,7 @@ import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface LibraryItem {
   id: number; title: string; description?: string; file_url: string;
@@ -15,6 +16,7 @@ export default function LibraryPage() {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
   const toast = useToast();
 
   const load = useCallback(() => {
@@ -32,10 +34,11 @@ export default function LibraryPage() {
     catch { toast.error('Failed to approve'); }
   };
 
-  const remove = async (id: number) => {
-    if (!confirm('Delete this item?')) return;
-    try { await api.delete(`${endpoints.admin.library}/${id}`); toast.success('Deleted'); load(); }
+  const remove = async () => {
+    if (!confirmId) return;
+    try { await api.delete(`${endpoints.admin.library}/${confirmId}`); toast.success('Deleted'); load(); }
     catch { toast.error('Failed to delete'); }
+    finally { setConfirmId(null); }
   };
 
   const filtered = items.filter((i) =>
@@ -98,7 +101,7 @@ export default function LibraryPage() {
                       {!item.approved && (
                         <button onClick={() => approve(item.id)} className="text-blue-600 hover:text-blue-800"><CheckCircle size={16} /></button>
                       )}
-                      <button onClick={() => remove(item.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
+                      <button onClick={() => setConfirmId(item.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -107,6 +110,10 @@ export default function LibraryPage() {
           </table>
         </div>
       </div>
+
+      {confirmId !== null && (
+        <ConfirmModal onConfirm={remove} onCancel={() => setConfirmId(null)} />
+      )}
     </div>
   );
 }

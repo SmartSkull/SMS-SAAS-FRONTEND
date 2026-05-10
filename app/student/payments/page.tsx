@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { api, endpoints } from '@/lib/api';
+import { api, endpoints, getImageUrl } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { CreditCard, CheckCircle2, Clock, XCircle, ExternalLink, Download, Receipt } from 'lucide-react';
@@ -38,13 +38,16 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
         body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
         .wrap{background:#fff;border-radius:16px;width:360px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.15)}
         .hdr{background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:24px 20px;text-align:center;color:#fff}
-        .hdr img{width:52px;height:52px;border-radius:50%;border:3px solid rgba(255,255,255,.35);display:block;margin:0 auto 10px}
+        .hdr .logos{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px}
+        .hdr img{width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.35)}
         .hdr h1{font-size:13px;font-weight:800;letter-spacing:1px}
         .hdr p{font-size:10px;opacity:.65;margin-top:2px}
         .hdr .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);font-size:9px;font-weight:700;letter-spacing:1.5px;padding:3px 12px;border-radius:999px;margin-top:10px}
-        .amt{background:#f0f7ff;border-bottom:2px dashed #bfdbfe;padding:18px;text-align:center}
+        .amt{background:#f0f7ff;border-bottom:2px dashed #bfdbfe;padding:18px;display:flex;align-items:center;gap:16px}
+        .amt img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #bfdbfe;flex-shrink:0}
+        .amt .info{flex:1}
         .amt .lbl{font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em}
-        .amt .val{font-size:34px;font-weight:900;color:#1d4ed8;margin-top:2px}
+        .amt .val{font-size:32px;font-weight:900;color:#1d4ed8;margin-top:2px;line-height:1}
         .amt .badge{display:inline-block;background:#dcfce7;color:#15803d;font-size:9px;font-weight:700;padding:2px 10px;border-radius:999px;margin-top:6px}
         .rows{padding:14px 18px}
         .row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f1f5f9}
@@ -78,13 +81,19 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
             </span>
           </div>
 
-          {/* Amount */}
-          <div className="amt" style={{ background: '#f0f7ff', borderBottom: '2px dashed #bfdbfe', padding: '18px', textAlign: 'center' }}>
-            <p style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em' }}>Amount Paid</p>
-            <p style={{ fontSize: 36, fontWeight: 900, color: '#1d4ed8', marginTop: 2 }}>₦{Number(payment.amount).toLocaleString()}</p>
-            <span style={{ display: 'inline-block', background: '#dcfce7', color: '#15803d', fontSize: 9, fontWeight: 700, padding: '2px 12px', borderRadius: 999, marginTop: 6 }}>
-              ✓ {payment.status}
-            </span>
+          {/* Amount + Student Image */}
+          <div style={{ background: '#f0f7ff', borderBottom: '2px dashed #bfdbfe', padding: '18px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            {user?.image && (
+              <img src={getImageUrl(user.image) ?? ''} alt="student"
+                style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '3px solid #bfdbfe', flexShrink: 0 }} />
+            )}
+            <div style={{ flex: 1, textAlign: user?.image ? 'left' : 'center' }}>
+              <p style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em' }}>Amount Paid</p>
+              <p style={{ fontSize: 32, fontWeight: 900, color: '#1d4ed8', marginTop: 2, lineHeight: 1 }}>₦{Number(payment.amount).toLocaleString()}</p>
+              <span style={{ display: 'inline-block', background: '#dcfce7', color: '#15803d', fontSize: 9, fontWeight: 700, padding: '2px 12px', borderRadius: 999, marginTop: 6 }}>
+                ✓ {payment.status}
+              </span>
+            </div>
           </div>
 
           {/* Rows */}
@@ -142,8 +151,15 @@ export default function StudentPayments() {
   const [loading, setLoading]   = useState(false);
   const [paying, setPaying]     = useState(false);
   const [receipt, setReceipt]   = useState<any | null>(null);
-  const currentUser = auth.getUser();
+  const [currentUser, setCurrentUser] = useState<any>(auth.getUser());
   const toast = useToast();
+
+  // Fetch fresh profile so image is up-to-date
+  useEffect(() => {
+    api.get<ApiResponse<any>>(endpoints.student.profile)
+      .then((r) => setCurrentUser((u: any) => ({ ...u, image: r.data?.image ?? u?.image })))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     Promise.all([

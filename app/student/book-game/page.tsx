@@ -96,7 +96,7 @@ export default function BookGame() {
   );
 
   return (
-    <div className="space-y-6 max-w-xl">
+    <div className="space-y-6 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-900">Book Game</h1>
       <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-8 text-center">
         <Gamepad2 size={48} className="text-blue-500 mx-auto mb-4" />

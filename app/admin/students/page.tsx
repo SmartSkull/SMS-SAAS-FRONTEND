@@ -1,9 +1,11 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { Search, Plus, Edit2, Trash2, CheckCircle, ChevronLeft, ChevronRight, X, GraduationCap } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
+import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { useSchoolData } from '@/hooks/useSchoolData';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Student {
   student_id: string; firstname: string; lastname: string;
@@ -11,13 +13,31 @@ interface Student {
 }
 interface Meta { total: number; page: number; per_page: number; last_page: number; }
 
-const EMPTY = { firstname: '', lastname: '', email: '', phone: '', class: '', session: '', password: '' };
+const EMPTY = { firstName: '', lastName: '', email: '', telephone: '', class: '', session: '', password: '' };
+
+const COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
+const DEFAULT_IMAGES = new Set(['image.png', 'default.png', '', 'null']);
+
+function StudentAvatar({ student }: { student: Student }) {
+  const initials = ((student.firstname?.[0] ?? '') + (student.lastname?.[0] ?? '')).toUpperCase() || '?';
+  const color = COLORS[(student.student_id?.charCodeAt(student.student_id.length - 1) ?? 0) % COLORS.length];
+  const src = student.image && !DEFAULT_IMAGES.has(student.image) ? getImageUrl(student.image) : null;
+  return src ? (
+    <img src={src} alt={initials} className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+  ) : (
+    <span className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
+      style={{ background: color }}>{initials}</span>
+  );
+}
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [meta, setMeta] = useState<Meta>({ total: 0, page: 1, per_page: 20, last_page: 1 });
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [classFilter, setClassFilter] = useState('');
+  const { classes, sessions } = useSchoolData();
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
   const [modal, setModal] = useState<{ open: boolean; student?: Student }>({ open: false });
@@ -28,12 +48,12 @@ export default function StudentsPage() {
   const load = useCallback(() => {
     setLoading(true);
     api.get<{ success: boolean; data: Student[]; meta: Meta }>(endpoints.admin.students, {
-      page, search: search || undefined,
+      page, search: search || undefined, class: classFilter || undefined,
     })
       .then((r) => { setStudents(r.data ?? []); setMeta(r.meta); })
       .catch(() => toast.error('Failed to load students'))
       .finally(() => setLoading(false));
-  }, [page, search]);
+  }, [page, search, classFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -41,7 +61,7 @@ export default function StudentsPage() {
     setSaving(true);
     try {
       if (modal.student) {
-        await api.put(endpoints.admin.student(modal.student.student_id), form);
+        await api.post(`${endpoints.admin.students}/update`, { ...form, student_id: modal.student.student_id });
         toast.success('Student updated');
       } else {
         await api.post(endpoints.admin.students, form);
@@ -52,10 +72,13 @@ export default function StudentsPage() {
     finally { setSaving(false); }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm('Delete this student?')) return;
-    try { await api.delete(endpoints.admin.student(id)); toast.success('Deleted'); load(); }
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const remove = async () => {
+    if (!confirmId) return;
+    try { await api.post(`${endpoints.admin.students}/delete`, { student_id: confirmId }); toast.success('Deleted'); load(); }
     catch { toast.error('Failed to delete'); }
+    finally { setConfirmId(null); }
   };
 
   const verify = async (id: string) => {
@@ -87,6 +110,11 @@ export default function StudentsPage() {
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search students…" className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500" />
         </div>
+        <select value={classFilter} onChange={(e) => { setClassFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+          <option value="">All Classes</option>
+          {classes.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
         {selected.length > 0 && (
           <button onClick={bulkVerify} className="flex items-center gap-2 btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium ">
             <CheckCircle size={16} /> Verify {selected.length}
@@ -116,8 +144,13 @@ export default function StudentsPage() {
               <tr key={s.student_id} className="hover:bg-gray-50">
                 <td className="p-3"><input type="checkbox" checked={selected.includes(s.student_id)} onChange={() => toggleSelect(s.student_id)} /></td>
                 <td className="p-3">
-                  <p className="font-medium text-gray-900">{s.firstname} {s.lastname}</p>
-                  <p className="text-xs text-gray-400">{s.email}</p>
+                  <div className="flex items-center gap-2">
+                    <StudentAvatar student={s} />
+                    <div>
+                      <p className="font-medium text-gray-900">{s.firstname} {s.lastname}</p>
+                      <p className="text-xs text-gray-400">{s.email}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="p-3 text-gray-500 font-mono text-xs">{s.student_id || '—'}</td>
                 <td className="p-3 text-gray-600">{s.class || '—'}</td>
@@ -131,8 +164,8 @@ export default function StudentsPage() {
                     {s.admin_verify !== '1' && (
                       <button onClick={() => verify(s.student_id)} title="Verify" className="text-blue-600 hover:text-blue-800"><CheckCircle size={16} /></button>
                     )}
-                    <button onClick={() => { setForm({ firstname: s.firstname, lastname: s.lastname, email: s.email, phone: '', class: s.class, session: '', password: '' }); setModal({ open: true, student: s }); }} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
-                    <button onClick={() => remove(s.student_id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
+                    <button onClick={() => { setForm({ firstName: s.firstname, lastName: s.lastname, email: s.email, telephone: '', class: s.class, session: '', password: '' }); setModal({ open: true, student: s }); }} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
+                    <button onClick={() => setConfirmId(s.student_id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
@@ -160,13 +193,29 @@ export default function StudentsPage() {
               <button onClick={() => setModal({ open: false })}><X size={20} className="text-gray-400" /></button>
             </div>
             <div className="p-6 space-y-3">
-              {(['firstname', 'lastname', 'email', 'phone', 'class', 'session'] as const).map((f) => (
+              {(['firstName', 'lastName', 'email', 'telephone'] as const).map((f) => (
                 <div key={f}>
-                  <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">{f}</label>
-                  <input value={(form as any)[f]} onChange={(e) => setForm(p => ({ ...p, [f]: e.target.value }))}
+                  <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">{f === 'firstName' ? 'First Name' : f === 'lastName' ? 'Last Name' : f === 'telephone' ? 'Phone' : f}</label>
+                  <input value={(form as any)[f] ?? ''} onChange={(e) => setForm(p => ({ ...p, [f]: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500" />
                 </div>
               ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class</label>
+                <select value={form.class} onChange={(e) => setForm(p => ({ ...p, class: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Session</label>
+                <select value={form.session} onChange={(e) => setForm(p => ({ ...p, session: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+                  <option value="">Select session</option>
+                  {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
               {!modal.student && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
@@ -183,6 +232,14 @@ export default function StudentsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmId && (
+        <ConfirmModal
+          message="Are you sure you want to delete this student? This action cannot be undone."
+          onConfirm={remove}
+          onCancel={() => setConfirmId(null)}
+        />
       )}
     </div>
   );

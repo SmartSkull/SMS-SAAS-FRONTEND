@@ -358,28 +358,43 @@ export function useAdminPayments(limit = 20) {
 }
 
 /* ── Settings ──────────────────────────────────────────────────────────── */
-interface SchoolDays { monday: boolean; tuesday: boolean; wednesday: boolean; thursday: boolean; friday: boolean; saturday: boolean; sunday: boolean; [key: string]: boolean; }
-const DEFAULT_DAYS: SchoolDays = { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false };
+interface SchoolDayRecord { session: string; term: string; totalDays: number; }
 
 export function useAdminSettings() {
-  const [days, setDays] = useState<SchoolDays>(DEFAULT_DAYS);
+  const [records, setRecords] = useState<SchoolDayRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ session: '', term: '', total_days: '' });
   const toast = useToast();
 
-  useEffect(() => {
-    api.get<ApiResponse<SchoolDays>>(endpoints.admin.schoolDays)
-      .then((r) => { if (r.data) setDays({ ...DEFAULT_DAYS, ...r.data }); })
-      .catch(() => toast.error('Failed to load settings'))
+  const load = () => {
+    setLoading(true);
+    api.get<ApiResponse<SchoolDayRecord[]>>(endpoints.admin.schoolDays)
+      .then((r) => setRecords(r.data ?? []))
+      .catch(() => toast.error('Failed to load school days'))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { load(); }, []);
 
   const save = async () => {
+    if (!form.session || !form.term || !form.total_days) return toast.error('All fields are required');
     setSaving(true);
-    try { await api.post(endpoints.admin.schoolDays, days); toast.success('Settings saved'); }
-    catch { toast.error('Failed to save'); }
+    try {
+      await api.post(endpoints.admin.schoolDays, { session: form.session, term: form.term, total_days: Number(form.total_days) });
+      toast.success('School days saved');
+      setForm({ session: '', term: '', total_days: '' });
+      load();
+    } catch { toast.error('Failed to save'); }
     finally { setSaving(false); }
   };
 
-  return { days, setDays, loading, saving, save };
+  const remove = async (session: string, term: string) => {
+    try {
+      await api.delete(`${endpoints.admin.schoolDays}/${encodeURIComponent(session)}/${term}`);
+      toast.success('Deleted'); load();
+    } catch { toast.error('Failed to delete'); }
+  };
+
+  return { records, form, setForm, loading, saving, save, remove };
 }

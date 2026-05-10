@@ -36,9 +36,9 @@ export default function Navbar({ onMenuClick }: Props) {
           <Mail size={20} className="text-gray-500" />
         </Link>
 
-        <button className="relative p-2.5 rounded-xl hover:bg-blue-50 transition-colors">
+        <Link href={role ? `/${role}/notifications` : '/login'} className="relative p-2.5 rounded-xl hover:bg-blue-50 transition-colors">
           <Bell size={20} className="text-gray-500" />
-        </button>
+        </Link>
 
         <div className="w-px h-8 bg-gray-200 mx-1" />
 

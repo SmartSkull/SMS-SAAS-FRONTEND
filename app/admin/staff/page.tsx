@@ -4,6 +4,8 @@ import { Search, Plus, Edit2, Trash2, CheckCircle, ChevronLeft, ChevronRight, X,
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { useSchoolData } from '@/hooks/useSchoolData';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface StaffMember {
   staff_id: string; unique_id: string; firstname: string; lastname: string;
@@ -23,6 +25,8 @@ export default function StaffPage() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+  const { classes, subjects } = useSchoolData();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -49,10 +53,11 @@ export default function StaffPage() {
     finally { setSaving(false); }
   };
 
-  const remove = async (id: string) => {
-    if (!confirm('Delete this staff member?')) return;
-    try { await api.delete(endpoints.admin.staffMember(id)); toast.success('Deleted'); load(); }
+  const remove = async () => {
+    if (!confirmId) return;
+    try { await api.delete(endpoints.admin.staffMember(confirmId)); toast.success('Deleted'); load(); }
     catch { toast.error('Failed to delete'); }
+    finally { setConfirmId(null); }
   };
 
   const verify = async (id: string) => {
@@ -117,7 +122,7 @@ export default function StaffPage() {
                     )}
                     <button onClick={() => { setForm({ firstname: m.firstname, lastname: m.lastname, email: m.email, telephone: m.telephone, subject: '', class: '', password: '' }); setModal({ open: true, member: m }); }}
                       className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
-                    <button onClick={() => remove(m.staff_id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
+                    <button onClick={() => setConfirmId(m.staff_id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
@@ -145,13 +150,29 @@ export default function StaffPage() {
               <button onClick={() => setModal({ open: false })}><X size={20} className="text-gray-400" /></button>
             </div>
             <div className="p-6 space-y-3">
-              {(['firstname', 'lastname', 'email', 'telephone', 'subject', 'class'] as const).map((f) => (
+              {(['firstname', 'lastname', 'email', 'telephone'] as const).map((f) => (
                 <div key={f}>
                   <label className="block text-xs font-medium text-gray-600 mb-1 capitalize">{f}</label>
                   <input value={(form as any)[f]} onChange={(e) => setForm(p => ({ ...p, [f]: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500" />
                 </div>
               ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                <select value={form.subject} onChange={(e) => setForm(p => ({ ...p, subject: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+                  <option value="">Select subject</option>
+                  {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class</label>
+                <select value={form.class} onChange={(e) => setForm(p => ({ ...p, class: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
               {!modal.member && (
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
@@ -168,6 +189,10 @@ export default function StaffPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmId && (
+        <ConfirmModal onConfirm={remove} onCancel={() => setConfirmId(null)} />
       )}
     </div>
   );
