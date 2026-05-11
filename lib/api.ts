@@ -7,9 +7,7 @@ const BASE_URL = typeof window !== 'undefined'
   ? '/api'
   : (process.env.BACKEND_URL ?? 'http://localhost:3333');
 
-const UPLOADS_URL = typeof window !== 'undefined'
-  ? '/uploads'
-  : `${process.env.BACKEND_URL ?? 'http://localhost:3333'}/uploads`;
+const UPLOADS_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3333'}/uploads`;
 
 export function getImageUrl(filename?: string | null): string | null {
   if (!filename || filename === 'null' || filename === 'image.png') return null;
