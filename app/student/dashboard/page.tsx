@@ -83,7 +83,7 @@ export default function StudentDashboard() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, <span className="text-blue-600">{data?.user.firstname}!</span> 👋
+            Welcome back, <span className="text-blue-600">{data?.user.firstName ?? data?.user.firstname}!</span> 👋
           </h1>
           <p className="text-gray-500 text-sm mt-1">{data?.current_term} Term · {data?.current_session} Session</p>
         </div>
