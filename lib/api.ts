@@ -2,11 +2,11 @@ import axios, { type AxiosRequestConfig } from 'axios';
 import { auth } from './auth';
 
 const BASE_URL = typeof window === 'undefined'
-  ? 'https://www.florierenparklaneis.com.ng/api'  // server-side: direct
-  : '/api';                                         // client-side: proxied through Next.js
+  ? (process.env.NEXT_PUBLIC_API_URL_SERVER ?? 'https://www.florierenparklaneis.com.ng/api')
+  : '/api';
 
 const UPLOADS_URL = typeof window === 'undefined'
-  ? `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3333'}/uploads`
+  ? `${process.env.NEXT_PUBLIC_API_URL_SERVER?.replace('/api', '') ?? 'https://www.florierenparklaneis.com.ng'}/uploads`
   : '/uploads';
 
 export function getImageUrl(filename?: string | null): string | null {
