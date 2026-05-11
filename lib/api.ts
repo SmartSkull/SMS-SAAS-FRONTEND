@@ -15,7 +15,10 @@ export function getImageUrl(filename?: string | null): string | null {
   return `${UPLOADS_URL}/${filename}`;
 }
 
-const client = axios.create({ baseURL: BASE_URL });
+const client = axios.create({
+  baseURL: BASE_URL,
+  headers: { 'ngrok-skip-browser-warning': '1' },
+});
 
 // Attach token
 client.interceptors.request.use((config) => {
