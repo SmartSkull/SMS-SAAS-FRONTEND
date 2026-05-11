@@ -12,7 +12,8 @@ const UPLOADS_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost
 export function getImageUrl(filename?: string | null): string | null {
   if (!filename || filename === 'null' || filename === 'image.png') return null;
   if (filename.startsWith('http')) return filename;
-  return `${UPLOADS_URL}/${filename}`;
+  // Route through /api/uploads proxy which adds ngrok-skip-browser-warning header
+  return `/api/uploads/${filename}`;
 }
 
 const client = axios.create({
