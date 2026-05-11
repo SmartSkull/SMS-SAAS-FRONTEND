@@ -1,13 +1,15 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { auth } from './auth';
 
-const BASE_URL = typeof window === 'undefined'
-  ? (process.env.NEXT_PUBLIC_API_URL_SERVER ?? 'https://www.florierenparklaneis.com.ng/api')
-  : '/api';
+// Client always uses /api (proxied by Next.js rewrites to the backend)
+// Server-side uses the backend URL directly via BACKEND_URL (no NEXT_PUBLIC_ = build-time safe)
+const BASE_URL = typeof window !== 'undefined'
+  ? '/api'
+  : (process.env.BACKEND_URL ?? 'http://localhost:3333');
 
-const UPLOADS_URL = typeof window === 'undefined'
-  ? `${process.env.NEXT_PUBLIC_API_URL_SERVER?.replace('/api', '') ?? 'https://www.florierenparklaneis.com.ng'}/uploads`
-  : '/uploads';
+const UPLOADS_URL = typeof window !== 'undefined'
+  ? '/uploads'
+  : `${process.env.BACKEND_URL ?? 'http://localhost:3333'}/uploads`;
 
 export function getImageUrl(filename?: string | null): string | null {
   if (!filename || filename === 'null' || filename === 'image.png') return null;
