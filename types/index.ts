@@ -75,6 +75,12 @@ export interface Assignment {
   due_date: string;
   file_url?: string;
   created_at: string;
+  // backend aliases
+  subject?: string;
+  assignment?: string;
+  deadline?: string;
+  file?: string;
+  createdAt?: string;
 }
 
 export interface LibraryItem {
@@ -86,6 +92,7 @@ export interface LibraryItem {
   class?: string;
   uploaded_by: string;
   created_at: string;
+  createdAt?: string;
 }
 
 export interface Message {

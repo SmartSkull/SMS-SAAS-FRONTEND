@@ -6,11 +6,12 @@ import type { ApiResponse, Assignment, LibraryItem, Result, Staff, Student, Conv
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
 interface StaffDashboardData {
+  user?: { firstname: string; lastname: string; image?: string };
   total_students?: number; total_results?: number; total_assignments?: number;
-  total_library?: number; pending_results?: number;
+  total_library?: number; pending_results?: number; student_count?: number;
   current_session?: string; current_term?: string;
+  analytics?: { assignments?: { total?: number }; library?: { total?: number } };
   recent_results?: { student_name: string; course: string; total: number; grade: string }[];
-  [key: string]: unknown;
 }
 
 export function useStaffDashboard() {

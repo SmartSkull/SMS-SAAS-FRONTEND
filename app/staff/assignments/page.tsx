@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse, Assignment } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
 
-const EMPTY = { title: '', description: '', course: '', class: '', due_date: '' };
+const EMPTY = { subject: '', assignment: '', class: '', deadline: '' };
 
 export default function StaffAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -31,7 +31,7 @@ export default function StaffAssignments() {
   const openCreate = () => { setEditing(null); setForm(EMPTY); setFile(null); setShowForm(true); };
   const openEdit = (a: Assignment) => {
     setEditing(a);
-    setForm({ title: a.title, description: a.description, course: a.course, class: a.class, due_date: a.due_date });
+    setForm({ subject: a.subject ?? a.title, assignment: a.assignment ?? a.description, class: a.class, deadline: a.deadline ?? a.due_date });
     setFile(null);
     setShowForm(true);
   };
@@ -90,12 +90,12 @@ export default function StaffAssignments() {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">{editing ? 'Edit' : 'Create'} Assignment</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(['title', 'course', 'class', 'due_date'] as const).map((f) => (
+              {(['subject', 'class', 'deadline'] as const).map((f) => (
                 <div key={f}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{f.replace('_', ' ')}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{f === 'deadline' ? 'Due Date' : f}</label>
                   <input
                     required
-                    type={f === 'due_date' ? 'date' : 'text'}
+                    type={f === 'deadline' ? 'date' : 'text'}
                     value={form[f]}
                     onChange={(e) => setForm((p) => ({ ...p, [f]: e.target.value }))}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -104,12 +104,12 @@ export default function StaffAssignments() {
               ))}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assignment</label>
               <textarea
                 required
                 rows={3}
-                value={form.description}
-                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                value={form.assignment}
+                onChange={(e) => setForm((p) => ({ ...p, assignment: e.target.value }))}
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -145,14 +145,14 @@ export default function StaffAssignments() {
               <div key={a.id} className="flex items-start justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-gray-800">{a.title}</p>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{a.course}</span>
+                    <p className="font-semibold text-gray-800">{a.subject ?? a.title}</p>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{a.subject ?? a.course}</span>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{a.class}</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{a.description}</p>
+                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{a.assignment ?? a.description}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                    <span>Due: {new Date(a.due_date).toLocaleDateString()}</span>
-                    {a.file_url && <span className="flex items-center gap-1"><Paperclip size={12} /> Attachment</span>}
+                    <span>Due: {new Date(a.deadline ?? a.due_date).toLocaleDateString()}</span>
+                    {(a.file || a.file_url) && <span className="flex items-center gap-1"><Paperclip size={12} /> Attachment</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4 shrink-0">

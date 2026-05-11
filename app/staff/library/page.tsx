@@ -17,8 +17,8 @@ export default function StaffLibrary() {
 
   const load = () => {
     setLoading(true);
-    api.get<ApiResponse<{ library: LibraryItem[] }>>(endpoints.staff.library)
-      .then((r) => setItems(r.data.library ?? []))
+    api.get<any>(endpoints.staff.library)
+      .then((r) => setItems(r.data ?? []))
       .catch(() => toast.error('Failed to load library'))
       .finally(() => setLoading(false));
   };
@@ -32,7 +32,7 @@ export default function StaffLibrary() {
     try {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      fd.append('file', file);
+      fd.append('pdf', file);
       await api.upload(endpoints.staff.library, fd);
       toast.success('Document uploaded');
       setShowForm(false);
@@ -139,7 +139,7 @@ export default function StaffLibrary() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-400">{new Date(item.created_at).toLocaleDateString()}</span>
+                  <span className="text-xs text-gray-400">{new Date(item.createdAt ?? item.created_at).toLocaleDateString()}</span>
                   <div className="flex gap-2">
                     <a href={item.file_url} target="_blank" rel="noreferrer"
                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
