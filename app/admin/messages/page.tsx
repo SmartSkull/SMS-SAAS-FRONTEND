@@ -280,7 +280,7 @@ export default function AdminMessages() {
                     m.isMe ? 'bg-purple-600 text-white rounded-br-sm' : 'bg-white text-gray-900 rounded-bl-sm border border-gray-100')}>
                     {editingMsg?.id === m.id ? (
                       <div className="flex items-center gap-1.5 px-3 py-2">
-                        <input autoFocus value={editingMsg.text}
+                        <input autoFocus value={editingMsg?.text ?? ''}
                           onChange={e => setEditingMsg(p => p ? { ...p, text: e.target.value } : null)}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(m.id); if (e.key === 'Escape') setEditingMsg(null); }}
                           className="bg-purple-500 text-white placeholder-purple-200 outline-none text-sm w-40 rounded" />
