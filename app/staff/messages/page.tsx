@@ -15,6 +15,43 @@ function Avatar({ name, image, size = 10 }: { name?: string; image?: string | nu
   );
 }
 
+function UserList({ users, onSelect }: { users: any[]; onSelect: (id: string) => void }) {
+  const PAGE = 10;
+  const [page, setPage] = useState(1);
+  const pages = Math.ceil(users.length / PAGE);
+  const slice = users.slice((page - 1) * PAGE, page * PAGE);
+  return (
+    <>
+      <div className="space-y-1 max-h-[400px] overflow-y-auto pr-1">
+        {slice.map(u => (
+          <button key={u.id} onClick={() => onSelect(u.id)}
+            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left">
+            <Avatar name={u.firstname} image={u.image} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900">{u.firstname} {u.lastname}</p>
+              {u.class && <p className="text-xs text-gray-400">{u.class}</p>}
+            </div>
+            <ChevronRight size={14} className="text-gray-300" />
+          </button>
+        ))}
+      </div>
+      {pages > 1 && (
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+            className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
+            <ChevronLeft size={14} />
+          </button>
+          <span className="text-xs text-gray-500">{page} / {pages} · {users.length} total</span>
+          <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages}
+            className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function StaffMessages() {
   const [convos, setConvos] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -159,7 +196,7 @@ export default function StaffMessages() {
               </div>
               <button onClick={() => setShowNew(false)} className="hidden md:block text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
               <div>
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Who do you want to message?</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -194,17 +231,7 @@ export default function StaffMessages() {
                   </p>
                   {loadingUsers ? <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                     : userList.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No users found</p>
-                    : <div className="space-y-1">{userList.map(u => (
-                      <button key={u.id} onClick={() => startChat(u.id)}
-                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left">
-                        <Avatar name={u.firstname} image={u.image} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{u.firstname} {u.lastname}</p>
-                          {u.class && <p className="text-xs text-gray-400">{u.class}</p>}
-                        </div>
-                        <ChevronRight size={14} className="text-gray-300" />
-                      </button>
-                    ))}</div>}
+                    : <UserList users={userList} onSelect={startChat} />}
                 </div>
               )}
             </div>
@@ -222,7 +249,7 @@ export default function StaffMessages() {
         ) : (
           <>
             <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3 bg-white">
-              <button onClick={() => setActive(null)} className="md:hidden p-1 -ml-1 text-gray-400"><ChevronLeft size={20} /></button>
+              <button onClick={() => setActive(null)} className="p-1 -ml-1 text-gray-400 hover:text-gray-600"><ChevronLeft size={20} /></button>
               <Avatar name={activeConvo?.name} image={activeConvo?.image} />
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{activeConvo?.name}</p>
