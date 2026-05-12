@@ -5,6 +5,7 @@ import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse, Assignment } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 const EMPTY = { subject: '', assignment: '', class: '', deadline: '' };
 
@@ -16,6 +17,7 @@ export default function StaffAssignments() {
   const [form, setForm] = useState(EMPTY);
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmId, setConfirmId] = useState<number | null>(null);
   const toast = useToast();
 
   const load = () => {
@@ -64,15 +66,11 @@ export default function StaffAssignments() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this assignment?')) return;
-    try {
-      await api.delete(`${endpoints.staff.assignments}/${id}`);
-      toast.success('Assignment deleted');
-      load();
-    } catch {
-      toast.error('Failed to delete assignment');
-    }
+  const handleDelete = async () => {
+    if (!confirmId) return;
+    try { await api.delete(`${endpoints.staff.assignments}/${confirmId}`); toast.success('Assignment deleted'); load(); }
+    catch { toast.error('Failed to delete assignment'); }
+    finally { setConfirmId(null); }
   };
 
   return (
@@ -159,7 +157,7 @@ export default function StaffAssignments() {
                   <button onClick={() => openEdit(a)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                     <Pencil size={15} />
                   </button>
-                  <button onClick={() => handleDelete(a.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                  <button onClick={() => setConfirmId(a.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
                     <Trash2 size={15} />
                   </button>
                 </div>
@@ -168,6 +166,7 @@ export default function StaffAssignments() {
           </div>
         )}
       </div>
+      {confirmId !== null && <ConfirmModal onConfirm={handleDelete} onCancel={() => setConfirmId(null)} />}
     </div>
   );
 }

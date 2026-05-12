@@ -25,17 +25,22 @@ export default function StaffStudents() {
 
   const load = (p = 1) => {
     setLoading(true);
-    api.get<ApiResponse<StudentsData>>(endpoints.staff.students, {
+    api.get<ApiResponse<Student[]>>(endpoints.staff.students, {
       page: p, limit, class: classFilter || undefined, search: search || undefined,
     })
       .then((r) => {
-        setStudents(r.data.students ?? []);
-        setTotal(r.data.total ?? 0);
-        if (r.data.classes) setClasses(r.data.classes);
+        const data = Array.isArray(r.data) ? r.data : [];
+        setStudents(data);
+        setTotal(data.length);
       })
       .catch(() => toast.error('Failed to load students'))
       .finally(() => setLoading(false));
   };
+
+  useEffect(() => {
+    api.get<ApiResponse<{ name: string }[]>>(endpoints.staff.classes)
+      .then((r) => setClasses((Array.isArray(r.data) ? r.data : []).map((c: any) => c.name).filter(Boolean)));
+  }, []);
 
   useEffect(() => { load(1); setPage(1); }, [classFilter]);
 
@@ -93,7 +98,7 @@ export default function StaffStudents() {
                   {students.length === 0 ? (
                     <tr><td colSpan={4}><EmptyState icon={GraduationCap} message="No students found." card={false} /></td></tr>
                   ) : students.map((s) => (
-                    <tr key={s.id} className="hover:bg-gray-50">
+                    <tr key={s.student_id} className="hover:bg-gray-50">
                       <td className="py-3 font-mono text-xs text-gray-600">{s.student_id}</td>
                       <td className="py-3 font-medium text-gray-800">{s.firstname} {s.lastname}</td>
                       <td className="py-3 text-gray-600">{s.class}</td>

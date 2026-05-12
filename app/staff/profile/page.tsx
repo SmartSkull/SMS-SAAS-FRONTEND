@@ -50,7 +50,7 @@ export default function StaffProfile() {
   if (loading) return <div className="h-64 bg-gray-200 rounded-2xl animate-pulse" />;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6 mx-auto">
       <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
 
       <div className="bg-white rounded-2xl card shadow-sm p-6">

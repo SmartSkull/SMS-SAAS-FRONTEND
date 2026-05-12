@@ -205,5 +205,6 @@ export const endpoints = {
     courses: '/public/courses',
     posts: '/public/posts',
     searchStudents: '/public/students/search',
+    approvedResultsMeta: '/public/approved-results-meta',
   },
 };

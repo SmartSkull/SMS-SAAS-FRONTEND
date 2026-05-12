@@ -241,9 +241,9 @@ export function useStaffPosts(limit = 10) {
 
   const load = useCallback((p = 1, append = false) => {
     if (p === 1) setLoading(true);
-    api.get<ApiResponse<{ posts: Post[]; total: number }>>(endpoints.staff.posts, { page: p, limit })
+    api.get<any>(endpoints.staff.posts, { page: p, limit })
       .then((r) => {
-        const newPosts = r.data.posts ?? [];
+        const newPosts = r.data ?? [];
         setPosts((prev) => append ? [...prev, ...newPosts] : newPosts);
         setHasMore(newPosts.length === limit);
       })
@@ -259,5 +259,5 @@ export function useStaffPosts(limit = 10) {
     load(next, true);
   };
 
-  return { posts, loading, hasMore, loadMore };
+  return { posts, setPosts, loading, hasMore, loadMore };
 }

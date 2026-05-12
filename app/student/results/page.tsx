@@ -10,7 +10,7 @@ import { EmptyState, LoadingState } from '@/components/ui/StateDisplay';
 
 const LOGO = 'https://florierenparklaneis.com.ng/assets/img/florieren/logo.png';
 const SIG  = 'https://florierenparklaneis.com.ng/assets/img/florieren/signature.png';
-const UPLOADS = 'https://florierenparklaneis.com.ng/uploads';
+const UPLOADS = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
 async function toBase64(url: string): Promise<string> {
   try {

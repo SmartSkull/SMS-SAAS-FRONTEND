@@ -15,14 +15,14 @@ export function useSchoolData(): SchoolData {
   const TERMS = ['FIRST', 'SECOND', 'THIRD'];
 
   useEffect(() => {
-    api.get<{ data: { name: string }[] }>(endpoints.admin.classes)
+    api.get<{ data: { name: string }[] }>(endpoints.public.classes)
       .then(r => setClasses((r.data ?? []).map((c: any) => c.name).filter(Boolean)))
       .catch(() => {});
-    api.get<{ data: { name: string }[] }>(endpoints.admin.sessions)
+    api.get<{ data: { name: string }[] }>(endpoints.public.sessions)
       .then(r => setSessions((r.data ?? []).map((s: any) => s.name).filter(Boolean)))
       .catch(() => {});
-    api.get<{ data: { course: string }[] }>(endpoints.admin.courses)
-      .then(r => setSubjects([...new Set((r.data ?? []).map((c: any) => c.course).filter(Boolean))]))
+    api.get<{ data: { course?: string; name?: string }[] }>(endpoints.public.courses)
+      .then(r => setSubjects([...new Set((r.data ?? []).map((c: any) => c.course ?? c.name).filter(Boolean))]))
       .catch(() => {});
   }, []);
 

@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, BarChart2, HelpCircle } from 'lucide-react';
+import { Plus, Trash2, BarChart2, HelpCircle, Pencil } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import type { ApiResponse, CbtQuestion } from '@/types';
 
 interface CbtResult {
@@ -22,22 +23,23 @@ export default function StaffCbt() {
   const [results, setResults] = useState<CbtResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
 
   const loadQuestions = () => {
     setLoading(true);
-    api.get<ApiResponse<{ questions: CbtQuestion[] }>>(endpoints.staff.cbtQuestions)
-      .then((r) => setQuestions(r.data.questions ?? []))
+    api.get<any>(endpoints.staff.cbtQuestions)
+      .then((r) => setQuestions(r.data ?? []))
       .catch(() => toast.error('Failed to load questions'))
       .finally(() => setLoading(false));
   };
 
   const loadResults = () => {
     setLoading(true);
-    api.get<ApiResponse<{ results: CbtResult[] }>>(endpoints.staff.cbtResults)
-      .then((r) => setResults(r.data.results ?? []))
+    api.get<any>(endpoints.staff.cbtResults)
+      .then((r) => setResults(r.data ?? []))
       .catch(() => toast.error('Failed to load results'))
       .finally(() => setLoading(false));
   };
@@ -47,26 +49,33 @@ export default function StaffCbt() {
     else loadResults();
   }, [tab]);
 
+  const openEdit = (q: any) => {
+    setEditingId(q.id);
+    setForm({ question: q.question, option_a: q.optionA, option_b: q.optionB, option_c: q.optionC, option_d: q.optionD, answer: q.answer, course: '', class: '' });
+    setShowForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.post(endpoints.staff.cbtQuestions, {
-        question: form.question,
-        options: [form.option_a, form.option_b, form.option_c, form.option_d],
-        answer: form.answer,
-        course: form.course,
-        class: form.class,
-      });
-      toast.success('Question added');
-      setShowForm(false);
-      setForm(EMPTY);
-      loadQuestions();
-    } catch {
-      toast.error('Failed to add question');
-    } finally {
-      setSubmitting(false);
-    }
+      if (editingId) {
+        await api.put(`${endpoints.staff.cbtQuestions}/${editingId}`, {
+          question: form.question, optionA: form.option_a, optionB: form.option_b,
+          optionC: form.option_c, optionD: form.option_d, answer: form.answer,
+        });
+        toast.success('Question updated');
+      } else {
+        await api.post(endpoints.staff.cbtQuestions, {
+          question: form.question, optionA: form.option_a, optionB: form.option_b,
+          optionC: form.option_c, optionD: form.option_d, answer: form.answer,
+          course: form.course, class: form.class,
+        });
+        toast.success('Question added');
+      }
+      setShowForm(false); setEditingId(null); setForm(EMPTY); loadQuestions();
+    } catch { toast.error('Failed to save question'); }
+    finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: number) => {
@@ -85,7 +94,7 @@ export default function StaffCbt() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">CBT Management</h1>
         {tab === 'questions' && (
-          <button onClick={() => setShowForm(true)}
+          <button onClick={() => { setEditingId(null); setForm(EMPTY); setShowForm(true); }}
             className="flex items-center gap-2 btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium ">
             <Plus size={16} /> Add Question
           </button>
@@ -105,9 +114,9 @@ export default function StaffCbt() {
 
       {showForm && tab === 'questions' && (
         <div className="bg-white rounded-2xl card shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Add Question</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">{editingId ? 'Edit Question' : 'Add Question'}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {!editingId && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
                 <input required value={form.course} onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))}
@@ -118,18 +127,18 @@ export default function StaffCbt() {
                 <input required value={form.class} onChange={(e) => setForm((p) => ({ ...p, class: e.target.value }))}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-            </div>
+            </div>}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Question</label>
               <textarea required rows={2} value={form.question} onChange={(e) => setForm((p) => ({ ...p, question: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
                 <div key={opt}>
                   <label className="block text-sm font-medium text-gray-700 mb-1 uppercase">{opt.replace('_', ' ')}</label>
                   <input required value={form[opt]} onChange={(e) => setForm((p) => ({ ...p, [opt]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               ))}
             </div>
@@ -169,18 +178,24 @@ export default function StaffCbt() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800">{i + 1}. {q.question}</p>
                     <div className="grid grid-cols-2 gap-1 mt-2">
-                      {q.options.map((opt, j) => (
-                        <p key={j} className={`text-xs px-2 py-1 rounded-lg ${
-                          q.answer === String.fromCharCode(65 + j) ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-500'
-                        }`}>
-                          {String.fromCharCode(65 + j)}. {opt}
-                        </p>
-                      ))}
+                      {(['A', 'B', 'C', 'D'] as const).map((letter) => {
+                        const opt = (q as any)[`option${letter}`];
+                        return (
+                          <p key={letter} className={`text-xs px-2 py-1 rounded-lg ${
+                            q.answer === letter ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-500'
+                          }`}>{letter}. {opt}</p>
+                        );
+                      })}
                     </div>
                   </div>
-                  <button onClick={() => handleDelete(q.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg ml-4 shrink-0">
-                    <Trash2 size={15} />
-                  </button>
+                  <div className="flex gap-1 ml-4 shrink-0">
+                    <button onClick={() => openEdit(q)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                      <Pencil size={15} />
+                    </button>
+                    <button onClick={() => handleDelete(q.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
