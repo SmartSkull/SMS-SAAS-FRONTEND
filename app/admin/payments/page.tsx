@@ -3,7 +3,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { CheckCircle, Search, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Payment {
   id: number; student_id: string; firstname: string; lastname: string;
@@ -17,7 +19,22 @@ export default function PaymentsPage() {
   const [page, setPage] = useState(1);
   const [meta, setMeta] = useState({ total: 0, last_page: 1 });
   const [loading, setLoading] = useState(true);
+  const [classFilter, setClassFilter] = useState('');
+  const [sessionFilter, setSessionFilter] = useState('');
+  const [termFilter, setTermFilter] = useState('');
   const toast = useToast();
+  const { classes, sessions, terms } = useSchoolData();
+
+  const [summary, setSummary] = useState<{ class: string; paid_count: number; unpaid_count: number; total_amount: number }[]>([]);
+
+  const loadSummary = useCallback(() => {
+    api.get<any>(endpoints.admin.schoolFeesPaymentsSummary, {
+      session: sessionFilter || undefined,
+      term: termFilter || undefined,
+    }).then((r) => setSummary(r.data?.classes ?? [])).catch(() => toast.error('Failed to load payments summary'));
+  }, [sessionFilter, termFilter]);
+
+  useEffect(() => { loadSummary(); }, [loadSummary]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -27,12 +44,17 @@ export default function PaymentsPage() {
         .catch(() => toast.error('Failed to load'))
         .finally(() => setLoading(false));
     } else {
-      api.get<any>(endpoints.admin.payments, { page })
+      api.get<any>(endpoints.admin.payments, { 
+        page,
+        class: classFilter || undefined,
+        session: sessionFilter || undefined,
+        term: termFilter || undefined,
+      })
         .then((r) => { setPayments(r.data ?? []); setMeta(r.meta ?? { total: 0, last_page: 1 }); })
         .catch(() => toast.error('Failed to load'))
         .finally(() => setLoading(false));
     }
-  }, [tab, page]);
+  }, [tab, page, classFilter, sessionFilter, termFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -59,12 +81,49 @@ export default function PaymentsPage() {
       </div>
 
       <div className="bg-white rounded-2xl card shadow-sm p-4">
-        <div className="relative">
+        <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Search payments..." className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
         </div>
+        <select value={classFilter} onChange={e => { setClassFilter(e.target.value); setPage(1); }}
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+          <option value="">All Classes</option>
+          {classes.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={sessionFilter} onChange={e => { setSessionFilter(e.target.value); setPage(1); }}
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+          <option value="">All Sessions</option>
+          {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={termFilter} onChange={e => { setTermFilter(e.target.value); setPage(1); }}
+          className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+          <option value="">All Terms</option>
+          {terms.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
       </div>
+      </div>
+
+      {summary.length > 0 && (
+        <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5">
+          <h2 className="font-semibold text-gray-900 mb-4">Payments by Class</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={summary} margin={{ top: 4, right: 8, left: -16, bottom: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="class" tick={{ fontSize: 11, fill: '#6b7280' }} angle={-35} textAnchor="end" interval={0} />
+              <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}
+                cursor={{ fill: '#f3f4f6' }}
+              />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+              <Bar dataKey="paid_count" name="Paid" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={36} />
+              <Bar dataKey="unpaid_count" name="Unpaid" fill="#e5e7eb" radius={[4, 4, 0, 0]} maxBarSize={36} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">

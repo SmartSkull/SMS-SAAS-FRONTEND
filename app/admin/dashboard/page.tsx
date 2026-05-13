@@ -1,10 +1,13 @@
 'use client';
-import { Users, UserCheck, Activity } from 'lucide-react';
+import { Users, UserCheck, Activity, User } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks/admin';
+import { useAuth } from '@/hooks/useAuth';
+import { getImageUrl } from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function AdminDashboard() {
   const { data, loading } = useAdminDashboard();
+  const { user } = useAuth();
 
   if (loading) return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -21,9 +24,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard 🎓</h1>
-        <p className="text-sm text-gray-500 mt-1 capitalize">{data?.current_term} Term · {data?.current_session} Session</p>
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-blue-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+          {getImageUrl(user?.image)
+            ? <img src={getImageUrl(user?.image)!} className="w-full h-full object-cover" />
+            : <User size={24} className="text-blue-600" />}
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome, {user?.firstname ?? 'Admin'}! 🎓</h1>
+          <p className="text-sm text-gray-500 mt-0.5 capitalize">{data?.current_term} Term · {data?.current_session} Session</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

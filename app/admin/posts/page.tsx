@@ -1,19 +1,18 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import { Plus, Edit2, Trash2, X, Image, Newspaper } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse } from '@/types';
-import { EmptyState } from '@/components/ui/StateDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { EmptyState } from '@/components/ui/StateDisplay';
+import { useToast } from '@/components/ui/Toast';
+import { api, endpoints, getImageUrl } from '@/lib/api';
+import { Edit2, Image, Newspaper, Plus, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Post {
   id: number; title: string; content: string; image?: string;
   author_name: string; likes: number; comments: number; created_at: string;
 }
 
-interface PostForm { title: string; content: string; image?: File | null; }
-const EMPTY: PostForm = { title: '', content: '', image: null };
+interface PostForm { text: string; image?: File | null; }
+const EMPTY: PostForm = { text: '', image: null };
 
 export default function PostsPage() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -26,8 +25,8 @@ export default function PostsPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get<ApiResponse<{ posts: Post[] }>>(endpoints.admin.posts)
-      .then((r) => setPosts(r.data.posts ?? []))
+    api.get<any>(endpoints.admin.posts)
+      .then((r) => setPosts(Array.isArray(r.data) ? r.data : (r.data?.posts ?? [])))
       .catch(() => toast.error('Failed to load posts'))
       .finally(() => setLoading(false));
   }, []);
@@ -35,28 +34,21 @@ export default function PostsPage() {
   useEffect(() => { load(); }, [load]);
 
   const openCreate = () => { setForm(EMPTY); setModal({ open: true }); };
-  const openEdit = (p: Post) => { setForm({ title: p.title, content: p.content, image: null }); setModal({ open: true, post: p }); };
+  const openEdit = (p: Post) => { setForm({ text: p.content, image: null }); setModal({ open: true, post: p }); };
 
   const save = async () => {
-    if (!form.title.trim() || !form.content.trim()) return;
+    if (!form.text.trim()) return;
     setSaving(true);
     try {
       if (form.image) {
         const fd = new FormData();
-        fd.append('title', form.title);
-        fd.append('content', form.content);
+        fd.append('text', form.text);
         fd.append('image', form.image);
-        if (modal.post) {
-          await api.upload(`${endpoints.admin.posts}/${modal.post.id}`, fd, 'PUT');
-        } else {
-          await api.upload(endpoints.admin.posts, fd);
-        }
+        if (modal.post) await api.upload(`${endpoints.admin.posts}/${modal.post.id}`, fd, 'PUT');
+        else await api.upload(endpoints.admin.posts, fd);
       } else {
-        if (modal.post) {
-          await api.put(`${endpoints.admin.posts}/${modal.post.id}`, { title: form.title, content: form.content });
-        } else {
-          await api.post(endpoints.admin.posts, { title: form.title, content: form.content });
-        }
+        if (modal.post) await api.put(`${endpoints.admin.posts}/${modal.post.id}`, { text: form.text });
+        else await api.post(endpoints.admin.posts, { text: form.text });
       }
       toast.success(modal.post ? 'Post updated' : 'Post created');
       setModal({ open: false }); load();
@@ -82,11 +74,11 @@ export default function PostsPage() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-32 bg-white rounded-2xl card shadow-sm animate-pulse" />)}</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-32 bg-white rounded-2xl card shadow-sm animate-pulse" />)}</div>
       ) : posts.length === 0 ? (
         <EmptyState icon={Newspaper} message="No posts yet." />
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-20 lg:grid-cols-3 gap-4">
           {posts.map((p) => (
             <div key={p.id} className="bg-white rounded-2xl card shadow-sm p-6">
               <div className="flex items-start justify-between gap-4">
@@ -102,8 +94,8 @@ export default function PostsPage() {
                     <span>💬 {p.comments}</span>
                   </div>
                 </div>
-                {p.image && (
-                  <img src={p.image} alt={p.title} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+                {getImageUrl(p.image) && (
+                  <img src={getImageUrl(p.image)!} alt={p.title} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
                 )}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button onClick={() => openEdit(p)} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
@@ -124,14 +116,9 @@ export default function PostsPage() {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input value={form.title} onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
-                <textarea value={form.content} onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))} rows={5}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Post Text</label>
+                <textarea value={form.text} onChange={(e) => setForm((p) => ({ ...p, text: e.target.value }))} rows={6}
+                  className="w-full px-3 py-2 border text-black border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Image (optional)</label>
@@ -143,7 +130,7 @@ export default function PostsPage() {
               </div>
             </div>
             <div className="flex gap-3 p-6 border-t border-gray-100">
-              <button onClick={() => setModal({ open: false })} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
+              <button onClick={() => setModal({ open: false })} className="flex-1 px-4 py-2 border border-gray-200 text-black rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
               <button onClick={save} disabled={saving} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
                 {saving ? 'Saving...' : 'Save'}
               </button>

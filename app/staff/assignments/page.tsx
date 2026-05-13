@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, Paperclip, FileText } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import type { ApiResponse, Assignment } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -19,11 +20,12 @@ export default function StaffAssignments() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmId, setConfirmId] = useState<number | null>(null);
   const toast = useToast();
+  const { classes, subjects } = useSchoolData();
 
   const load = () => {
     setLoading(true);
-    api.get<ApiResponse<{ assignments: Assignment[] }>>(endpoints.staff.assignments)
-      .then((r) => setAssignments(r.data.assignments ?? []))
+    api.get<ApiResponse<Assignment[]>>(endpoints.staff.assignments)
+      .then((r) => setAssignments(Array.isArray(r.data) ? r.data : (r.data as any).assignments ?? []))
       .catch(() => toast.error('Failed to load assignments'))
       .finally(() => setLoading(false));
   };
@@ -88,18 +90,28 @@ export default function StaffAssignments() {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">{editing ? 'Edit' : 'Create'} Assignment</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(['subject', 'class', 'deadline'] as const).map((f) => (
-                <div key={f}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{f === 'deadline' ? 'Due Date' : f}</label>
-                  <input
-                    required
-                    type={f === 'deadline' ? 'date' : 'text'}
-                    value={form[f]}
-                    onChange={(e) => setForm((p) => ({ ...p, [f]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <select required value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Select subject</option>
+                  {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                <select required value={form.class} onChange={e => setForm(p => ({ ...p, class: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                <input required type="date" value={form.deadline}
+                  onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assignment</label>
@@ -108,7 +120,7 @@ export default function StaffAssignments() {
                 rows={3}
                 value={form.assignment}
                 onChange={(e) => setForm((p) => ({ ...p, assignment: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>

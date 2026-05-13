@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2, FileText, Download } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import type { ApiResponse, LibraryItem } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
 
@@ -14,6 +15,7 @@ export default function StaffLibrary() {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
+  const { classes, subjects } = useSchoolData();
 
   const load = () => {
     setLoading(true);
@@ -72,18 +74,28 @@ export default function StaffLibrary() {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Upload Document</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(['title', 'course', 'class'] as const).map((f) => (
-                <div key={f}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{f}</label>
-                  <input
-                    required={f === 'title'}
-                    type="text"
-                    value={form[f]}
-                    onChange={(e) => setForm((p) => ({ ...p, [f]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <input required type="text" value={form.title}
+                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+                <select required value={form.course} onChange={e => setForm(p => ({ ...p, course: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Select course</option>
+                  {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                <select value={form.class} onChange={e => setForm(p => ({ ...p, class: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -91,7 +103,7 @@ export default function StaffLibrary() {
                 rows={2}
                 value={form.description}
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -141,7 +153,9 @@ export default function StaffLibrary() {
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-400">{new Date(item.createdAt ?? item.created_at).toLocaleDateString()}</span>
                   <div className="flex gap-2">
-                    <a href={item.file_url} target="_blank" rel="noreferrer"
+                    <a href={item.file_url ? `/api${item.file_url}` : '#'}
+                      download
+                      target="_blank" rel="noreferrer"
                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                       <Download size={15} />
                     </a>

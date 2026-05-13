@@ -8,11 +8,14 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import type { ApiResponse, CbtQuestion } from '@/types';
 
 interface CbtResult {
-  student_name: string;
-  course: string;
-  score: number;
-  total: number;
-  submitted_at: string;
+  id: string;
+  score: string;
+  percentage: string;
+  submittedAt: string;
+  firstname: string;
+  lastname: string;
+  student?: { user?: { uniqueId?: string } };
+  testId?: string;
 }
 
 const EMPTY = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A', course: '', class: '' };
@@ -209,7 +212,7 @@ export default function StaffCbt() {
                 <thead>
                   <tr className="text-left text-gray-500 border-b">
                     <th className="pb-3 font-medium">Student</th>
-                    <th className="pb-3 font-medium">Course</th>
+                    <th className="pb-3 font-medium">Student ID</th>
                     <th className="pb-3 font-medium">Score</th>
                     <th className="pb-3 font-medium">Date</th>
                   </tr>
@@ -217,13 +220,13 @@ export default function StaffCbt() {
                 <tbody className="divide-y divide-gray-50">
                   {results.map((r, i) => (
                     <tr key={i} className="hover:bg-gray-50">
-                      <td className="py-3 font-medium text-gray-800">{r.student_name}</td>
-                      <td className="py-3 text-gray-600">{r.course}</td>
+                      <td className="py-3 font-medium text-gray-800">{r.firstname} {r.lastname}</td>
+                      <td className="py-3 text-gray-500 font-mono text-xs">{r.student?.user?.uniqueId ?? '—'}</td>
                       <td className="py-3">
                         <span className="font-semibold text-gray-800">{r.score}</span>
-                        <span className="text-gray-400">/{r.total}</span>
+                        <span className="text-gray-400 text-xs ml-1">({r.percentage}%)</span>
                       </td>
-                      <td className="py-3 text-gray-500">{new Date(r.submitted_at).toLocaleDateString()}</td>
+                      <td className="py-3 text-gray-500">{new Date(r.submittedAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>

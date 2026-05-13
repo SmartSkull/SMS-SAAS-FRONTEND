@@ -1,7 +1,8 @@
 'use client';
-import { Users, BookOpen, BarChart2, ClipboardList, TrendingUp, Calendar } from 'lucide-react';
+import { Users, BookOpen, TrendingUp, Calendar, User } from 'lucide-react';
 import { useStaffDashboard } from '@/hooks/staff';
 import { useAuth } from '@/hooks/useAuth';
+import { getImageUrl } from '@/lib/api';
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string | number; color: string }) {
   return (
@@ -29,11 +30,16 @@ export default function StaffDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Welcome, {data?.user?.firstname ?? user?.firstname}!</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {data?.current_session} — {data?.current_term}
-        </p>
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 rounded-full bg-blue-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+          {getImageUrl(data?.user?.image ?? user?.image)
+            ? <img src={getImageUrl(data?.user?.image ?? user?.image)!} className="w-full h-full object-cover" />
+            : <User size={24} className="text-blue-600" />}
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Welcome, {data?.user?.firstname ?? user?.firstname}!</h1>
+          <p className="text-gray-500 text-sm mt-0.5">{data?.current_session} — {data?.current_term}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

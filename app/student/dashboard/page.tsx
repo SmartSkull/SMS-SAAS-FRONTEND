@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { GraduationCap, Bell, BookOpen, Calendar, BarChart2, ClipboardList, Monitor, Library, Mail, ArrowRight, Clock } from 'lucide-react';
+import { GraduationCap, Bell, BookOpen, Calendar, BarChart2, ClipboardList, Monitor, Library, Mail, ArrowRight, Clock, User } from 'lucide-react';
 import { useDashboard } from '@/hooks/student';
+import { getImageUrl } from '@/lib/api';
 
 const QUICK_ACTIONS = [
   { icon: BarChart2,    label: 'View Results',  path: '/student/results',     bg: 'bg-blue-50',   icon_color: 'text-blue-600',   hover: 'hover:bg-blue-100' },
@@ -81,11 +82,18 @@ export default function StudentDashboard() {
     <div className="space-y-6">
       {/* Welcome */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, <span className="text-blue-600">{data?.user.firstname}!</span> 👋
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">{data?.current_term} Term · {data?.current_session} Session</p>
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-blue-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+            {getImageUrl(data?.user?.image)
+              ? <img src={getImageUrl(data?.user?.image)!} className="w-full h-full object-cover" />
+              : <User size={24} className="text-blue-600" />}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Welcome back, <span className="text-blue-600">{data?.user.firstname}!</span> 👋
+            </h1>
+            <p className="text-gray-500 text-sm mt-0.5">{data?.current_term} Term · {data?.current_session} Session</p>
+          </div>
         </div>
         <div className="px-4 py-2 bg-blue-50 rounded-xl border border-blue-100 text-sm font-semibold text-blue-700 self-start">
           <Clock size={14} className="inline mr-1.5" />
