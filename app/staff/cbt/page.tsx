@@ -30,6 +30,7 @@ export default function StaffCbt() {
   const [form, setForm] = useState(EMPTY);
   const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
+  const { classes, subjects } = useSchoolData();
 
   const loadQuestions = () => {
     setLoading(true);
@@ -122,13 +123,19 @@ export default function StaffCbt() {
             {!editingId && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-                <input required value={form.course} onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <select required value={form.course} onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Select course</option>
+                  {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                <input required value={form.class} onChange={(e) => setForm((p) => ({ ...p, class: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <select required value={form.class} onChange={(e) => setForm((p) => ({ ...p, class: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
             </div>}
             <div>
