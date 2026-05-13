@@ -4,7 +4,7 @@ import { Plus, Trash2, BarChart2, HelpCircle, Pencil } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
-import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import type { ApiResponse, CbtQuestion } from '@/types';
 
 interface CbtResult {
