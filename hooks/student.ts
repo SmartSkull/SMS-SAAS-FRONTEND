@@ -6,7 +6,7 @@ import type { ApiResponse, Assignment, LibraryItem, CbtTest, Conversation, Messa
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
 interface DashboardData {
-  user: { firstname: string; lastname: string; class: string };
+  user: { firstname: string; lastname: string; class: string; image?: string };
   current_session: string;
   current_term: string;
   unread_notifications: number;
