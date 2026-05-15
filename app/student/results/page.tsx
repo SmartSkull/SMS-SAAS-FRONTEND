@@ -7,9 +7,9 @@ import type { ApiResponse } from '@/types';
 import clsx from 'clsx';
 import { User, BookOpen, BarChart2, Users, CheckCircle2, Clock, Printer, FileBarChart2, Search } from 'lucide-react';
 import { EmptyState, LoadingState } from '@/components/ui/StateDisplay';
+import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
+import type { SchoolProfile } from '@/types';
 
-const LOGO = 'https://florierenparklaneis.com.ng/assets/img/florieren/logo.png';
-const SIG  = 'https://florierenparklaneis.com.ng/assets/img/florieren/signature.png';
 const UPLOADS = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
 async function toBase64(url: string): Promise<string> {
@@ -35,7 +35,7 @@ function gradeColor(g: string) {
   return '#dc2626';
 }
 
-async function printResultSheet(data: any, results: any[], session: string, term: string, user: any) {
+async function printResultSheet(data: any, results: any[], session: string, term: string, user: any, school?: SchoolProfile | null) {
   const showFirst  = term.toLowerCase() === 'second' || term.toLowerCase() === 'third';
   const showSecond = term.toLowerCase() === 'third';
 
@@ -46,8 +46,12 @@ async function printResultSheet(data: any, results: any[], session: string, term
   const teacherPhotoUrl = data.teacher?.image ? `${UPLOADS}/${data.teacher.image}` : '';
   const principalPhotoUrl = data.principal?.image ? `${UPLOADS}/${data.principal.image}` : '';
 
+  const logoUrl = normalizeSchoolLogo(school?.logo) || '';
+  const primary = school?.primaryColor || '#1d4ed8';
+  const schoolName = school?.name || 'School Portal';
+  const schoolSlogan = school?.slogan || school?.motto || '';
   const [logoB64, photoB64, sigB64, teacherB64, principalB64] = await Promise.all([
-    toBase64(LOGO), toBase64(photoUrl), toBase64(SIG),
+    toBase64(logoUrl), toBase64(photoUrl), Promise.resolve(''),
     toBase64(teacherPhotoUrl), toBase64(principalPhotoUrl),
   ]);
 
@@ -64,14 +68,14 @@ async function printResultSheet(data: any, results: any[], session: string, term
   <style>
     @page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:10px;background:#fff}
-    .hdr{text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid #1d4ed8}
-    .hdr h1{color:#1d4ed8;font-size:16px;margin-bottom:2px}
+    .hdr{text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid ${primary}}
+    .hdr h1{color:${primary};font-size:16px;margin-bottom:2px}
     .info-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:6px 10px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe}
     .stats{display:flex;gap:8px}
     .stat{text-align:center;padding:3px 8px;background:#fff;border-radius:4px;border:1px solid #e2e8f0}
-    .stat .n{font-size:12px;font-weight:700;color:#1d4ed8}.stat .l{font-size:6px;color:#666;text-transform:uppercase}
+    .stat .n{font-size:12px;font-weight:700;color:${primary}}.stat .l{font-size:6px;color:#666;text-transform:uppercase}
     table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:6px}
-    th{background:#1d4ed8;color:#fff;padding:4px 3px;font-size:8px;text-transform:uppercase}
+    th{background:${primary};color:#fff;padding:4px 3px;font-size:8px;text-transform:uppercase}
     td{padding:4px 3px;text-align:center;border-bottom:1px solid #e5e7eb}
     tr:nth-child(even){background:#f9fafb}
     .sn{text-align:left!important;font-weight:500}
@@ -90,15 +94,15 @@ async function printResultSheet(data: any, results: any[], session: string, term
     .sig .ttl{font-size:8px;color:#666;text-transform:uppercase;margin-top:3px;text-align:center}
     .sig-img{height:35px;width:auto;display:block;margin:0 auto}
     .date-val{font-size:11px;font-weight:600;color:#333;padding:5px 0;border-bottom:1px solid #333;min-width:120px;text-align:center}
-    .sum td{font-weight:700;border-top:2px solid #1d4ed8;background:#eff6ff!important}
+    .sum td{font-weight:700;border-top:2px solid ${primary};background:#eff6ff!important}
     @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
   </style></head><body><div>
   <div class="hdr">
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:4px">
       ${logoB64 ? `<img src="${logoB64}" style="width:56px;height:56px;object-fit:contain">` : ''}
       <div style="text-align:left">
-        <div style="color:#1d4ed8;font-size:17px;font-weight:700">Florieren Parklane International School</div>
-        <div style="color:#555;font-size:9px">Excellence in Education</div>
+        <div style="color:${primary};font-size:17px;font-weight:700">${schoolName}</div>
+        <div style="color:#555;font-size:9px">${schoolSlogan}</div>
       </div>
     </div>
     <div style="margin-top:5px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:3px 12px;display:inline-block">
@@ -111,7 +115,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   </div>
 
   <div class="info-bar">
-    ${photoB64 ? `<img src="${photoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #1d4ed8;margin-right:10px">` : ''}
+    ${photoB64 ? `<img src="${photoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ${primary};margin-right:10px">` : ''}
     <div style="display:flex;gap:15px">
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${user?.firstName} ${user?.lastName}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${user?.uniqueId || ''}</div></div>
@@ -211,6 +215,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
 const TERMS = ['FIRST', 'SECOND', 'THIRD'];
 
 export default function StudentResults() {
+  const { school } = useSelectedSchool();
   const [data, setData]       = useState<any>(null);
   const [sessions, setSessions] = useState<{ name: string }[]>([]);
   const [session, setSession] = useState('');
@@ -259,7 +264,7 @@ export default function StudentResults() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">My Results</h1>
         {data && results.length > 0 && (
-          <button onClick={() => printResultSheet(data, results, session, term, auth.getUser())}
+          <button onClick={() => printResultSheet(data, results, session, term, auth.getUser(), school)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors print:hidden">
             <Printer size={16} /> Print
           </button>

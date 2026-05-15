@@ -5,9 +5,9 @@ import { auth } from './auth';
 // Server-side uses the backend URL directly via BACKEND_URL (no NEXT_PUBLIC_ = build-time safe)
 const BASE_URL = typeof window !== 'undefined'
   ? '/api'
-  : (process.env.BACKEND_URL ?? 'http://localhost:3333');
+  : (process.env.BACKEND_URL ?? 'http://localhost:8080');
 
-const UPLOADS_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3333'}/uploads`;
+const UPLOADS_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/uploads`;
 
 export function getImageUrl(filename?: string | null): string | null {
   if (!filename || filename === 'null' || filename === 'image.png') return null;
@@ -188,6 +188,7 @@ export const endpoints = {
     notificationsRead: '/admin/notifications/read',
     schoolDaysDelete: (s: string, t: string) => `/admin/school-days/${s}/${t}`,
     settings: '/admin/settings',
+    school: '/admin/school',
     cbtQuestions: '/admin/cbt/questions',
     cbtQuestion: (id: string) => `/admin/cbt/questions/${id}`,
     schoolFees: '/admin/school-fees',
@@ -203,6 +204,10 @@ export const endpoints = {
     terms: '/public/terms',
     classes: '/public/classes',
     courses: '/public/courses',
+    schools: '/public/schools',
+    school: (slug: string) => `/public/schools/${encodeURIComponent(slug)}`,
+    schoolCheck: '/public/schools/check',
+    schoolRegister: '/public/schools/register',
     posts: '/public/posts',
     searchStudents: '/public/students/search',
     approvedResultsMeta: '/public/approved-results-meta',

@@ -6,8 +6,8 @@ import { ToastProvider } from '@/components/ui/Toast';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Florieren Parklane IS',
-  description: 'Florieren Parklane International School Portal',
+  title: 'School Portal',
+  description: 'School management portal',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

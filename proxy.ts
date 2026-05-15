@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/about', '/history', '/contact', '/admissions',
+const PUBLIC_PATHS = ['/', '/login', '/school', '/school/register', '/about', '/history', '/contact', '/admissions',
   '/gallery', '/our-staff', '/policy', '/classrooms', '/principal-speech'];
 
 export function proxy(request: NextRequest) {

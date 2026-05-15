@@ -1,0 +1,8 @@
+⨯ Another next dev server is already running.
+
+- Local:        http://localhost:3000
+- PID:          13404
+- Dir:          C:\xampp\htdocs\florieren\nextjs-frontend
+- Log:          .next\dev\logs\next-development.log
+
+Run taskkill /PID 13404 /F to stop it.

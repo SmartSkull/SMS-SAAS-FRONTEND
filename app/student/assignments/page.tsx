@@ -3,6 +3,12 @@ import { FileText, Download } from 'lucide-react';
 import { useAssignments } from '@/hooks/student';
 import { EmptyState } from '@/components/ui/StateDisplay';
 
+function fileHref(path?: string) {
+  if (!path) return '#';
+  if (path.startsWith('http')) return path;
+  return path.startsWith('/api') ? path : `/api/uploads/${path.replace(/^\/?(uploads\/)?/, '')}`;
+}
+
 export default function StudentAssignments() {
   const { items, loading } = useAssignments();
 
@@ -30,7 +36,7 @@ export default function StudentAssignments() {
                   <p className="text-xs text-amber-600 font-medium mt-2">Due: {new Date(a.due_date).toLocaleDateString()}</p>
                 </div>
                 {a.file_url && (
-                  <a href={`https://www.florierenparklaneis.com.ng${a.file_url}`} target="_blank" rel="noreferrer"
+                  <a href={fileHref(a.file_url)} target="_blank" rel="noreferrer"
                     className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors">
                     <Download size={16} />
                   </a>

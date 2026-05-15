@@ -5,13 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { useSelectedSchool } from '@/hooks/useSelectedSchool';
 
 interface Props { onMenuClick: () => void; }
 
 export default function Navbar({ onMenuClick }: Props) {
   const { user, role, logout } = useAuth();
+  const { school } = useSelectedSchool();
   const router = useRouter();
   const toast = useToast();
+  const primary = school?.primaryColor || '#2563eb';
+  const secondary = school?.secondaryColor || '#eff6ff';
 
   const handleLogout = async () => {
     try { await api.post(endpoints.auth.logout); } catch { /* ignore */ }
@@ -25,32 +29,32 @@ export default function Navbar({ onMenuClick }: Props) {
 
   return (
     <header className="bg-white/80 backdrop-blur-lg border-b border-gray-100 sticky top-0 z-20 h-16 flex items-center px-4 lg:px-6 gap-4">
-      <button onClick={onMenuClick} className="lg:hidden p-2 rounded-xl hover:bg-blue-50 transition-colors">
+      <button onClick={onMenuClick} className="lg:hidden p-2 rounded-xl transition-colors hover:bg-[var(--brand-light)]">
         <Menu size={20} className="text-gray-600" />
       </button>
 
       <div className="flex-1" />
 
       <div className="flex items-center gap-2">
-        <Link href={messagesPath} className="relative p-2.5 rounded-xl hover:bg-blue-50 transition-colors">
+        <Link href={messagesPath} className="relative p-2.5 rounded-xl transition-colors hover:bg-[var(--brand-light)]">
           <Mail size={20} className="text-gray-500" />
         </Link>
 
-        <Link href={role ? `/${role}/notifications` : '/login'} className="relative p-2.5 rounded-xl hover:bg-blue-50 transition-colors">
+        <Link href={role ? `/${role}/notifications` : '/login'} className="relative p-2.5 rounded-xl transition-colors hover:bg-[var(--brand-light)]">
           <Bell size={20} className="text-gray-500" />
         </Link>
 
         <div className="w-px h-8 bg-gray-200 mx-1" />
 
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
-            <User size={16} className="text-blue-700" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: secondary }}>
+            <User size={16} style={{ color: primary }} />
           </div>
           <div className="hidden md:block">
             <p className="text-sm font-semibold text-gray-700 leading-tight">
               {user?.firstname} {user?.lastname}
             </p>
-            <p className="text-xs text-blue-600 capitalize">{role}</p>
+            <p className="text-xs capitalize" style={{ color: primary }}>{role}</p>
           </div>
         </div>
 

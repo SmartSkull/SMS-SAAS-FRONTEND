@@ -3,11 +3,12 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  /* Brand blue */
   --brand: #2563eb;
   --brand-dark: #1d4ed8;
   --brand-light: #eff6ff;
+  --brand-accent: #84cc16;
   --brand-border: #bfdbfe;
+  --brand-shadow: rgba(37,99,235,0.25);
 }
 
 @theme inline {
@@ -17,19 +18,146 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Blue gradient button utility */
 .btn-brand {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
   color: #fff;
   border: none;
   transition: opacity 0.15s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px 0 rgba(37,99,235,0.25);
+  box-shadow: 0 2px 8px 0 var(--brand-shadow);
 }
 .btn-brand:hover:not(:disabled) {
   opacity: 0.92;
-  box-shadow: 0 4px 16px 0 rgba(37,99,235,0.35);
+  box-shadow: 0 4px 16px 0 var(--brand-shadow);
 }
 .btn-brand:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Portal theme bridge: legacy blue Tailwind utilities inherit selected school colors. */
+.bg-blue-50,
+.hover\:bg-blue-50:hover,
+.focus\:bg-blue-50:focus {
+  background-color: color-mix(in srgb, var(--brand) 8%, white) !important;
+}
+
+.bg-blue-50\/40 {
+  background-color: color-mix(in srgb, var(--brand) 8%, white 40%) !important;
+}
+
+.bg-blue-50\/50 {
+  background-color: color-mix(in srgb, var(--brand) 8%, white 50%) !important;
+}
+
+.bg-blue-100,
+.hover\:bg-blue-100:hover {
+  background-color: color-mix(in srgb, var(--brand) 16%, white) !important;
+}
+
+.bg-blue-200,
+.hover\:bg-blue-200:hover {
+  background-color: color-mix(in srgb, var(--brand) 28%, white) !important;
+}
+
+.bg-blue-300 {
+  background-color: color-mix(in srgb, var(--brand) 45%, white) !important;
+}
+
+.bg-blue-400,
+.hover\:bg-blue-400:hover {
+  background-color: color-mix(in srgb, var(--brand) 78%, white) !important;
+}
+
+.bg-blue-500,
+.hover\:bg-blue-500:hover,
+.focus\:bg-blue-500:focus {
+  background-color: var(--brand) !important;
+}
+
+.bg-blue-600,
+.hover\:bg-blue-600:hover {
+  background-color: var(--brand) !important;
+}
+
+.bg-blue-700,
+.hover\:bg-blue-700:hover,
+.bg-blue-800,
+.hover\:bg-blue-800:hover {
+  background-color: var(--brand-dark) !important;
+}
+
+.text-blue-300 {
+  color: color-mix(in srgb, var(--brand) 45%, white) !important;
+}
+
+.text-blue-400,
+.hover\:text-blue-400:hover {
+  color: color-mix(in srgb, var(--brand) 70%, white) !important;
+}
+
+.text-blue-500,
+.hover\:text-blue-500:hover,
+.text-blue-600,
+.hover\:text-blue-600:hover,
+.text-blue-700,
+.hover\:text-blue-700:hover,
+.text-blue-800,
+.hover\:text-blue-800:hover {
+  color: var(--brand) !important;
+}
+
+.border-blue-100 {
+  border-color: color-mix(in srgb, var(--brand) 16%, white) !important;
+}
+
+.border-blue-200,
+.hover\:border-blue-200:hover {
+  border-color: color-mix(in srgb, var(--brand) 28%, white) !important;
+}
+
+.border-blue-300,
+.hover\:border-blue-300:hover {
+  border-color: color-mix(in srgb, var(--brand) 42%, white) !important;
+}
+
+.border-blue-500,
+.hover\:border-blue-500:hover,
+.focus\:border-blue-500:focus,
+.border-blue-600 {
+  border-color: var(--brand) !important;
+}
+
+.border-r-2.border-blue-500 {
+  border-right-color: var(--brand) !important;
+}
+
+.ring-blue-100,
+.focus\:ring-blue-100:focus {
+  --tw-ring-color: color-mix(in srgb, var(--brand) 16%, white) !important;
+}
+
+.ring-blue-300,
+.focus\:ring-blue-300:focus {
+  --tw-ring-color: color-mix(in srgb, var(--brand) 40%, white) !important;
+}
+
+.ring-blue-500,
+.focus\:ring-blue-500:focus,
+.focus\:ring-blue-500\/20:focus,
+.focus\:ring-blue-500\/30:focus {
+  --tw-ring-color: color-mix(in srgb, var(--brand) 35%, transparent) !important;
+}
+
+.accent-blue-600 {
+  accent-color: var(--brand) !important;
+}
+
+.from-blue-500 {
+  --tw-gradient-from: var(--brand) !important;
+}
+
+.to-blue-600,
+.to-blue-700,
+.from-blue-600 {
+  --tw-gradient-to: var(--brand-dark) !important;
+}
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -52,10 +180,9 @@ input::placeholder, textarea::placeholder {
   color: #9ca3af;
 }
 
-/* Card with blue left accent */
 .card {
-  border-left: 4px solid #3b82f6;
-  background: linear-gradient(to right, #eff6ff 0px, #ffffff 48px);
+  border-left: 4px solid var(--brand);
+  background: linear-gradient(to right, var(--brand-light) 0px, #ffffff 48px);
 }
 .shimmer {
   background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);

@@ -1,18 +1,19 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { EmptyState, LoadingState } from '@/components/ui/StateDisplay';
+import { useToast } from '@/components/ui/Toast';
+import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { auth } from '@/lib/auth';
-import { useToast } from '@/components/ui/Toast';
-import { CreditCard, CheckCircle2, Clock, XCircle, ExternalLink, Download, Receipt } from 'lucide-react';
-import type { ApiResponse } from '@/types';
+import type { ApiResponse, SchoolProfile } from '@/types';
 import clsx from 'clsx';
-import { EmptyState, LoadingState } from '@/components/ui/StateDisplay';
+import { CheckCircle2, Clock, CreditCard, Download, ExternalLink, Receipt, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { useEffect, useRef, useState } from 'react';
 
 const TERMS = ['FIRST', 'SECOND', 'THIRD'];
 const VERIFY_BASE = process.env.NEXT_PUBLIC_API_URL
   ? `${process.env.NEXT_PUBLIC_API_URL}/student/school-fees/verify`
-  : 'http://localhost:3333/api/student/school-fees/verify';
+  : `${process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080'}/student/school-fees/verify`;
 
 interface FeeStatus {
   session: string; term: string; class: string;
@@ -22,10 +23,14 @@ interface FeeStatus {
 }
 
 /* ── Receipt Modal ─────────────────────────────────────────────────────────── */
-function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onClose: () => void }) {
+function ReceiptModal({ payment, user, school, onClose }: { payment: any; user: any; school?: SchoolProfile | null; onClose: () => void }) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const verifyUrl  = `${VERIFY_BASE}?reference=${payment.reference}`;
   const paidDate   = new Date(payment.paidAt || payment.createdAt);
+  const logo = normalizeSchoolLogo(school?.logo);
+  const primary = school?.primaryColor || '#1d4ed8';
+  const schoolName = school?.name || 'School Portal';
+  const schoolSlogan = school?.slogan || school?.motto || '';
 
   const handlePrint = () => {
     const content = receiptRef.current?.innerHTML;
@@ -37,7 +42,7 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
         .wrap{background:#fff;border-radius:16px;width:360px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.15)}
-        .hdr{background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:24px 20px;text-align:center;color:#fff}
+        .hdr{background:${primary};padding:24px 20px;text-align:center;color:#fff}
         .hdr .logos{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px}
         .hdr img{width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,.35)}
         .hdr h1{font-size:13px;font-weight:800;letter-spacing:1px}
@@ -47,7 +52,7 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
         .amt img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #bfdbfe;flex-shrink:0}
         .amt .info{flex:1}
         .amt .lbl{font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em}
-        .amt .val{font-size:32px;font-weight:900;color:#1d4ed8;margin-top:2px;line-height:1}
+        .amt .val{font-size:32px;font-weight:900;color:${primary};margin-top:2px;line-height:1}
         .amt .badge{display:inline-block;background:#dcfce7;color:#15803d;font-size:9px;font-weight:700;padding:2px 10px;border-radius:999px;margin-top:6px}
         .rows{padding:14px 18px}
         .row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid #f1f5f9}
@@ -71,11 +76,11 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
         <div ref={receiptRef} style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,.3)' }}>
 
           {/* Header */}
-          <div className="hdr" style={{ background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)', padding: '22px 20px', textAlign: 'center' }}>
-            <img src="https://florierenparklaneis.com.ng/assets/img/florieren/logo.png"
-              style={{ width: 52, height: 52, borderRadius: '50%', border: '3px solid rgba(255,255,255,.35)', display: 'block', margin: '0 auto 10px' }} />
-            <p style={{ color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 1 }}>FLORIEREN PARKLANE</p>
-            <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 10, marginTop: 2 }}>International School</p>
+          <div className="hdr" style={{ background: primary, padding: '22px 20px', textAlign: 'center' }}>
+            {logo && <img src={logo}
+              style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,.35)', display: 'block', margin: '0 auto 10px' }} />}
+            <p style={{ color: '#fff', fontSize: 13, fontWeight: 800, letterSpacing: 1 }}>{schoolName}</p>
+            {schoolSlogan && <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 10, marginTop: 2 }}>{schoolSlogan}</p>}
             <span style={{ display: 'inline-block', background: 'rgba(255,255,255,.18)', border: '1px solid rgba(255,255,255,.3)', color: '#fff', fontSize: 9, fontWeight: 700, letterSpacing: 1.5, padding: '3px 12px', borderRadius: 999, marginTop: 10 }}>
               PAYMENT RECEIPT
             </span>
@@ -89,7 +94,7 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
             )}
             <div style={{ flex: 1, textAlign: user?.image ? 'left' : 'center' }}>
               <p style={{ fontSize: 9, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '.1em' }}>Amount Paid</p>
-              <p style={{ fontSize: 32, fontWeight: 900, color: '#1d4ed8', marginTop: 2, lineHeight: 1 }}>₦{Number(payment.amount).toLocaleString()}</p>
+              <p style={{ fontSize: 32, fontWeight: 900, color: primary, marginTop: 2, lineHeight: 1 }}>₦{Number(payment.amount).toLocaleString()}</p>
               <span style={{ display: 'inline-block', background: '#dcfce7', color: '#15803d', fontSize: 9, fontWeight: 700, padding: '2px 12px', borderRadius: 999, marginTop: 6 }}>
                 ✓ {payment.status}
               </span>
@@ -115,13 +120,13 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
           {/* QR */}
           <div className="qr" style={{ padding: '14px 18px 18px', textAlign: 'center', borderTop: '2px dashed #bfdbfe', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <QRCodeSVG value={verifyUrl} size={140} level="H"
-              imageSettings={{ src: 'https://florierenparklaneis.com.ng/assets/img/florieren/logo.png', height: 30, width: 30, excavate: true }} />
+              imageSettings={logo ? { src: logo, height: 30, width: 30, excavate: true } : undefined} />
             <p style={{ fontSize: 9, color: '#94a3b8', marginTop: 6 }}>Scan to verify authenticity</p>
           </div>
 
           {/* Footer */}
           <div className="foot" style={{ background: '#f8faff', padding: 10, textAlign: 'center', fontSize: 9, color: '#94a3b8', borderTop: '1px solid #e2e8f0' }}>
-            © {new Date().getFullYear()} Florieren Parklane International School
+            © {new Date().getFullYear()} {schoolName}
           </div>
         </div>
 
@@ -144,6 +149,7 @@ function ReceiptModal({ payment, user, onClose }: { payment: any; user: any; onC
 
 /* ── Main Page ─────────────────────────────────────────────────────────────── */
 export default function StudentPayments() {
+  const { school } = useSelectedSchool();
   const [data, setData]         = useState<FeeStatus | null>(null);
   const [sessions, setSessions] = useState<{ name: string }[]>([]);
   const [session, setSession]   = useState('');
@@ -248,7 +254,7 @@ export default function StudentPayments() {
                 {data.payment_status === 'SUCCESS' && data.reference && (
                   <div className="mt-5 pt-5 border-t border-gray-100">
                     <button onClick={() => setReceipt(data.history?.find((h: any) => h.reference === data.reference) ?? { reference: data.reference, amount: data.amount, status: 'SUCCESS', paidAt: data.paid_at, createdAt: data.paid_at })}
-                      className="flex items-center gap-2 px-5 py-2 btn-brand text-white rounded-xl text-sm font-semibold ">
+                      className="flex items-center gap-2 px-5 py-2 btn-brand text-white rounded-xl text-sm font-semibold cursor-pointer">
                       <Receipt size={15} /> View Receipt
                     </button>
                   </div>
@@ -298,7 +304,7 @@ export default function StudentPayments() {
                         <td className="px-4 py-3">
                           {p.status === 'SUCCESS' && (
                             <button onClick={() => setReceipt(p)}
-                              className="flex items-center gap-1 text-xs text-blue-600 font-semibold hover:text-blue-700">
+                              className="flex items-center gap-1 text-xs text-blue-600 font-semibold hover:text-blue-700 cursor-pointer">
                               <Receipt size={13} /> Receipt
                             </button>
                           )}
@@ -313,7 +319,7 @@ export default function StudentPayments() {
         </>
       )}
 
-      {receipt && <ReceiptModal payment={receipt} user={currentUser} onClose={() => setReceipt(null)} />}
+      {receipt && <ReceiptModal payment={receipt} user={currentUser} school={school} onClose={() => setReceipt(null)} />}
     </div>
   );
 }

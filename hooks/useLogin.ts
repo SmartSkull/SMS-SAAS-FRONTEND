@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { api, endpoints } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
+import { readSelectedSchool } from '@/hooks/useSelectedSchool';
 import type { Role, ApiResponse } from '@/types';
 
 export function useLogin() {
@@ -29,7 +30,8 @@ export function useLogin() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
-        const r = await api.get<ApiResponse<any[]>>('/public/students/search', { q: val });
+        const school = readSelectedSchool();
+        const r = await api.get<ApiResponse<any[]>>('/public/students/search', { q: val, school: school?.slug });
         setSuggestions(r.data.slice(0, 8));
         setShowSug(r.data.length > 0);
       } catch { setSuggestions([]); }
@@ -41,10 +43,10 @@ export function useLogin() {
     setLoading(true);
     try {
       const body = tab === 'student'
-        ? { name: form.id, password: form.password }
+        ? { name: form.id, password: form.password, school_slug: readSelectedSchool()?.slug }
         : tab === 'staff'
-        ? { staff_id: form.id, password: form.password }
-        : { admin_id: form.id, password: form.password };
+        ? { staff_id: form.id, password: form.password, school_slug: readSelectedSchool()?.slug }
+        : { admin_id: form.id, password: form.password, school_slug: readSelectedSchool()?.slug };
 
       const ep = tab === 'student' ? endpoints.auth.studentLogin
         : tab === 'staff' ? endpoints.auth.staffLogin

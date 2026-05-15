@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import {
   LayoutDashboard, User, BarChart2, BookOpen, Library, Calendar, Monitor,
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
@@ -49,6 +50,7 @@ const MENUS = {
     { icon: Newspaper, label: 'Posts', path: '/admin/posts' },
     { icon: Mail, label: 'Messages', path: '/admin/messages' },
     { icon: Bell, label: 'Notifications', path: '/admin/notifications' },
+    { icon: School, label: 'School Info', path: '/admin/school' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
   ],
 };
@@ -57,8 +59,12 @@ interface Props { open: boolean; onClose: () => void; }
 
 export default function Sidebar({ open, onClose }: Props) {
   const { user, role } = useAuth();
+  const { school } = useSelectedSchool();
   const pathname = usePathname();
   const items = MENUS[role as keyof typeof MENUS] ?? [];
+  const logo = normalizeSchoolLogo(school?.logo);
+  const primary = school?.primaryColor ?? '#1e40af';
+  const accent = school?.accentColor ?? '#84cc16';
 
   return (
     <>
@@ -66,18 +72,24 @@ export default function Sidebar({ open, onClose }: Props) {
       {open && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={onClose} />}
 
       <aside className={clsx(
-        'fixed top-0 left-0 h-full w-64 bg-gradient-to-b from-blue-800 to-blue-950 z-40 flex flex-col transition-transform duration-300',
+        'fixed top-0 left-0 h-full w-64 z-40 flex flex-col transition-transform duration-300',
         'lg:translate-x-0',
         open ? 'translate-x-0' : '-translate-x-full',
-      )}>
+      )}
+        style={{ background: `linear-gradient(180deg, ${primary}, #111827)` }}>
         {/* Logo */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <Link href={role ? `/${role}/dashboard` : '/'} className="flex items-center gap-3">
-            <img src="https://florierenparklaneis.com.ng/assets/img/florieren/logo.png"
-              alt="Logo" className="w-10 h-10 rounded-full" />
+            {logo ? (
+              <img src={logo} alt={`${school?.name ?? 'School'} logo`} className="w-10 h-10 rounded-full object-cover" />
+            ) : (
+              <div className="flex w-10 h-10 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
+                {school?.name?.charAt(0) ?? 'S'}
+              </div>
+            )}
             <div>
-              <p className="text-white font-bold text-sm leading-tight">Florieren Parklane</p>
-              <p className="text-lime-300/80 text-xs">IS Portal</p>
+              <p className="text-white font-bold text-sm leading-tight truncate max-w-36">{school?.name ?? 'School Portal'}</p>
+              <p className="text-xs" style={{ color: accent }}>Portal</p>
             </div>
           </Link>
           <button onClick={onClose} className="lg:hidden text-white/60 hover:text-white">
@@ -98,7 +110,7 @@ export default function Sidebar({ open, onClose }: Props) {
               )}>
               <Icon size={18} />
               {label}
-              {pathname === path && <span className="ml-auto w-2 h-2 bg-blue-300 rounded-full" />}
+              {pathname === path && <span className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />}
             </Link>
           ))}
         </nav>
@@ -107,7 +119,7 @@ export default function Sidebar({ open, onClose }: Props) {
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
-              <User size={16} className="text-lime-300" />
+              <User size={16} style={{ color: accent }} />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-medium truncate">
@@ -115,7 +127,7 @@ export default function Sidebar({ open, onClose }: Props) {
               </p>
               <p className="text-white/50 text-xs capitalize">{role}</p>
             </div>
-            <span className="w-2 h-2 bg-lime-400 rounded-full" />
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
           </div>
         </div>
       </aside>

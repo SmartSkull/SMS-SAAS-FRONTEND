@@ -39,6 +39,41 @@ export interface ApiResponse<T = unknown> {
   data: T;
 }
 
+export interface SchoolProfile {
+  id: string;
+  name: string;
+  slug: string;
+  slogan?: string | null;
+  motto?: string | null;
+  description?: string | null;
+  email?: string | null;
+  contactEmail?: string | null;
+  contactName?: string | null;
+  telephone?: string | null;
+  alternatePhone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  website?: string | null;
+  logo?: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  location?: string;
+  contact?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    alternatePhone?: string | null;
+  };
+  colors?: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;

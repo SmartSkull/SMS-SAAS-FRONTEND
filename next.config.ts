@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   async rewrites() {
-    const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3333';
+    const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
     return {
       beforeFiles: [],
       afterFiles: [
