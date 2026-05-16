@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Eye, EyeOff, GraduationCap, Search, ShieldCheck, Users } from 'lucide-react';
-import clsx from 'clsx';
 import { useLogin } from '@/hooks/useLogin';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import type { Role } from '@/types';
+import clsx from 'clsx';
+import { Eye, EyeOff, GraduationCap, Search, ShieldCheck, Users } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 
 type Tab = Role;
 
@@ -55,8 +55,8 @@ export default function LoginPage() {
   const idLabel = tab === 'student' ? 'Student Name or ID' : tab === 'staff' ? 'Staff ID' : 'Admin ID';
   const idPlaceholder = tab === 'student' ? 'e.g. David Emmanuel' : tab === 'staff' ? 'e.g. STF001' : 'e.g. ADM001';
   const highlights = [
-    { label: school.motto || 'School Portal', sub: school.slogan || 'Personalized school access' },
-    { label: school.location || 'Campus location', sub: school.website || 'Official school information' },
+    { label: school.motto || 'School Portal', sub: school.slogan || '' },
+    { label: school.location || 'Campus location', sub: school.website || '' },
     { label: school.contact?.email || school.email || 'Contact school', sub: school.telephone || 'School contact' },
   ];
 
@@ -125,7 +125,7 @@ export default function LoginPage() {
                   key={id}
                   onClick={() => switchTab(id)}
                   className={clsx(
-                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer',
                     tab === id ? 'text-white shadow-lg' : 'text-gray-500 hover:text-gray-700',
                   )}
                   style={tab === id ? { background: primary, boxShadow: `0 4px 15px ${primary}55` } : {}}
