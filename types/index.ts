@@ -210,3 +210,130 @@ export interface Term {
   name: string;
   isCurrent: boolean;
 }
+
+
+export type AttendanceStatus = 'PRESENT' | 'LATE' | 'ABSENT';
+
+export interface AttendanceLocation {
+  id: string;
+  schoolId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  resumptionTime: string;
+  isActive: boolean;
+}
+
+export interface StaffAttendanceRecord {
+  id: string;
+  staffId: string;
+  locationId: string | null;
+  date: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  status: AttendanceStatus;
+  lateMinutes: number;
+  note: string | null;
+}
+
+export interface StaffAttendanceReportItem extends StaffAttendanceRecord {
+  staff: {
+    id: string;
+    name: string;
+    staffNo: string;
+    image: string | null;
+  };
+}
+
+export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type LeaveType = 'ANNUAL' | 'SICK' | 'MATERNITY' | 'PATERNITY' | 'UNPAID' | 'OTHER';
+
+export interface LeaveRequest {
+  id: string;
+  staffId: string;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string;
+  proofFile: string | null;
+  status: LeaveStatus;
+  adminNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface LeaveRequestWithStaff extends LeaveRequest {
+  staff: {
+    id: string;
+    name: string;
+    staffNo: string;
+    image: string | null;
+  };
+}
+
+export interface LeaveBalance {
+  type: LeaveType;
+  entitled: number;
+  used: number;
+  remaining: number;
+}
+
+export type PayrollStatus = 'DRAFT' | 'ISSUED' | 'PAID';
+
+export interface SalarySetup {
+  id: string;
+  staffId: string;
+  basicSalary: number;
+  housingAllowance: number;
+  transportAllowance: number;
+  otherAllowance: number;
+  taxRate: number;
+  pensionRate: number;
+  effectiveFrom: string;
+}
+
+export interface StaffSalarySetup {
+  staffId: string;
+  staffNo: string;
+  name: string;
+  image: string | null;
+  setup: SalarySetup | null;
+}
+
+export interface PayrollDeduction {
+  id: string;
+  schoolId: string;
+  staffId: string | null;
+  staffName: string;
+  title: string;
+  amount: number;
+  recurring: boolean;
+  month: number | null;
+  year: number | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface Payslip {
+  id: string;
+  staffId: string;
+  staffName: string;
+  staffNo: string;
+  image: string | null;
+  month: number;
+  year: number;
+  basicSalary: number;
+  housingAllowance: number;
+  transportAllowance: number;
+  otherAllowance: number;
+  grossPay: number;
+  taxAmount: number;
+  pensionAmount: number;
+  deductions: number;
+  netPay: number;
+  status: PayrollStatus;
+  generatedAt: string;
+  createdAt: string;
+}

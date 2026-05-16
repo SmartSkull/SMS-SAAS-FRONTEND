@@ -6,7 +6,8 @@ import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchoo
 import {
   LayoutDashboard, User, BarChart2, BookOpen, Library, Calendar, Monitor,
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
-  Settings, GraduationCap, X, Bell,
+  Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
+  Wallet,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -30,6 +31,9 @@ const MENUS = {
     { icon: User, label: 'Profile', path: '/staff/profile' },
     { icon: Users, label: 'Students', path: '/staff/students' },
     { icon: BarChart2, label: 'Results', path: '/staff/results' },
+    { icon: ClipboardCheck, label: 'Attendance', path: '/staff/attendance' },
+    { icon: CalendarOff, label: 'Leave', path: '/staff/leave' },
+    { icon: Wallet, label: 'Payroll', path: '/staff/payroll' },
     { icon: BookOpen, label: 'Assignments', path: '/staff/assignments' },
     { icon: Library, label: 'Library', path: '/staff/library' },
     { icon: Monitor, label: 'CBT', path: '/staff/cbt' },
@@ -42,6 +46,9 @@ const MENUS = {
     { icon: GraduationCap, label: 'Students', path: '/admin/students' },
     { icon: Users, label: 'Staff', path: '/admin/staff' },
     { icon: BarChart2, label: 'Results', path: '/admin/results' },
+    { icon: ClipboardCheck, label: 'Attendance', path: '/admin/attendance' },
+    { icon: CalendarOff, label: 'Leave', path: '/admin/leave' },
+    { icon: Wallet, label: 'Payroll', path: '/admin/payroll' },
     { icon: School, label: 'Classes', path: '/admin/classes' },
     { icon: BookMarked, label: 'Courses', path: '/admin/courses' },
     { icon: Calendar, label: 'Sessions', path: '/admin/sessions' },
