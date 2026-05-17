@@ -28,11 +28,31 @@ export default function StudentProfile() {
   );
 
   const fields = [
-    { label: 'First Name', key: 'firstName',  type: 'text' },
-    { label: 'Last Name',  key: 'lastName',   type: 'text' },
-    { label: 'Email',      key: 'email',      type: 'email' },
-    { label: 'Phone',      key: 'telephone',  type: 'tel' },
+    { label: 'First Name',    key: 'firstName',    type: 'text',  group: 'user' },
+    { label: 'Last Name',     key: 'lastName',     type: 'text',  group: 'user' },
+    { label: 'Email',         key: 'email',        type: 'email', group: 'user' },
+    { label: 'Phone',         key: 'telephone',    type: 'tel',   group: 'user' },
+    { label: 'Date of Birth', key: 'dateOfBirth',  type: 'date',  group: 'student' },
+    { label: 'State of Origin', key: 'stateOfOrigin', type: 'text', group: 'student' },
+    { label: 'Home Address',  key: 'homeAddress',  type: 'text',  group: 'student' },
+    { label: "Father's Name", key: 'fatherName',   type: 'text',  group: 'student' },
+    { label: "Mother's Name", key: 'motherName',   type: 'text',  group: 'student' },
+    { label: 'Religion',      key: 'religion',     type: 'select', group: 'student', options: ['Christianity', 'Islam', 'Traditional', 'Other'] },
+    { label: 'Blood Group',   key: 'bloodGroup',   type: 'select', group: 'student', options: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] },
   ];
+
+  const getValue = (key: string, group: string) => {
+    if (group === 'student') return profile?.student?.[key] ?? '';
+    return profile?.[key] ?? '';
+  };
+
+  const setValue = (key: string, group: string, value: string) => {
+    if (group === 'student') {
+      setProfile((p: any) => ({ ...p, student: { ...p?.student, [key]: value } }));
+    } else {
+      setProfile((p: any) => ({ ...p, [key]: value }));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -78,15 +98,26 @@ export default function StudentProfile() {
           <h2 className="font-bold text-gray-900 mb-5">Edit Information</h2>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
-              {fields.map(({ label, key, type }) => (
-                <div key={key}>
+              {fields.map(({ label, key, type, group, options }: any) => (
+                <div key={key} className={key === 'homeAddress' ? 'sm:col-span-2' : ''}>
                   <label className="text-sm font-medium text-gray-700 block mb-1">{label}</label>
-                  <input
-                    type={type}
-                    value={profile?.[key] ?? ''}
-                    onChange={(e) => setProfile((p: any) => ({ ...p, [key]: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                  />
+                  {options ? (
+                    <select
+                      value={getValue(key, group)}
+                      onChange={(e) => setValue(key, group, e.target.value)}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors bg-white"
+                    >
+                      <option value="">Select {label}</option>
+                      {options.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : (
+                    <input
+                      type={type}
+                      value={getValue(key, group)}
+                      onChange={(e) => setValue(key, group, e.target.value)}
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    />
+                  )}
                 </div>
               ))}
             </div>

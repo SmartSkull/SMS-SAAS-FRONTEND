@@ -145,6 +145,8 @@ export const endpoints = {
     schoolDays: '/staff/school-days',
     notifications: '/staff/notifications',
     notificationsRead: '/staff/notifications/read',
+    classTimetable: '/staff/timetable/class',
+    examTimetable: '/staff/timetable/exam',
     attendanceClockIn: '/attendance/clock-in',
     attendanceClockOut: '/attendance/clock-out',
     attendanceToday: '/attendance/today',

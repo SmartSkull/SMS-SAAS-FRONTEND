@@ -7,7 +7,7 @@ import {
   LayoutDashboard, User, BarChart2, BookOpen, Library, Calendar, Monitor,
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
   Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
-  Wallet,
+  Wallet, CalendarDays,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -35,6 +35,7 @@ const MENUS = {
     { icon: CalendarOff, label: 'Leave', path: '/staff/leave' },
     { icon: Wallet, label: 'Payroll', path: '/staff/payroll' },
     { icon: BookOpen, label: 'Assignments', path: '/staff/assignments' },
+    { icon: CalendarDays, label: 'Timetable', path: '/staff/timetable' },
     { icon: Library, label: 'Library', path: '/staff/library' },
     { icon: Monitor, label: 'CBT', path: '/staff/cbt' },
     { icon: Newspaper, label: 'Posts', path: '/staff/posts' },

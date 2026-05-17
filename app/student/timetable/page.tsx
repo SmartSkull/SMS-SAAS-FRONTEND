@@ -50,9 +50,16 @@ export default function StudentTimetable() {
         ) : !data || (Array.isArray(data) && data.length === 0) ? (
           <EmptyState icon={Calendar} message="No timetable available." card={false} />
         ) : tab === 'class' ? (
-          <TimetableGrid data={data} />
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono bg-gray-50 rounded-xl p-4">{(data as any).content ?? (data as any).timetable}</pre>
         ) : (
-          <TimetableGrid data={data} />
+          <div className="space-y-4">
+            {(Array.isArray(data) ? data : [data]).map((t: any) => (
+              <div key={t.id} className="border border-gray-100 rounded-xl p-4">
+                <p className="text-xs font-bold text-purple-600 uppercase mb-2">{t.level} Level</p>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono bg-gray-50 rounded-xl p-3">{t.content ?? t.timetable}</pre>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

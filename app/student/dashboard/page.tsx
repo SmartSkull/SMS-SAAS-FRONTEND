@@ -1,8 +1,46 @@
 'use client';
 import Link from 'next/link';
-import { GraduationCap, Bell, BookOpen, Calendar, BarChart2, ClipboardList, Monitor, Library, Mail, ArrowRight, Clock, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { GraduationCap, Bell, BookOpen, Calendar, BarChart2, ClipboardList, Monitor, Library, Mail, ArrowRight, User } from 'lucide-react';
 import { useDashboard } from '@/hooks/student';
 import { getImageUrl } from '@/lib/api';
+
+function LiveClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+
+  const h = now.getHours() % 12, m = now.getMinutes(), s = now.getSeconds();
+  const hDeg = h * 30 + m * 0.5;
+  const mDeg = m * 6;
+  const sDeg = s * 6;
+  const date = now.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 rounded-xl border border-blue-100 self-start">
+      {/* Analog clock */}
+      <svg width="36" height="36" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r="17" fill="white" stroke="#bfdbfe" strokeWidth="1.5" />
+        {/* Hour ticks */}
+        {[...Array(12)].map((_, i) => {
+          const a = (i * 30 - 90) * (Math.PI / 180);
+          return <line key={i} x1={18 + 13 * Math.cos(a)} y1={18 + 13 * Math.sin(a)} x2={18 + 15 * Math.cos(a)} y2={18 + 15 * Math.sin(a)} stroke="#93c5fd" strokeWidth="1.2" />;
+        })}
+        {/* Hour hand */}
+        <line x1="18" y1="18" x2={18 + 8 * Math.cos((hDeg - 90) * Math.PI / 180)} y2={18 + 8 * Math.sin((hDeg - 90) * Math.PI / 180)} stroke="#1d4ed8" strokeWidth="2.2" strokeLinecap="round" />
+        {/* Minute hand */}
+        <line x1="18" y1="18" x2={18 + 11 * Math.cos((mDeg - 90) * Math.PI / 180)} y2={18 + 11 * Math.sin((mDeg - 90) * Math.PI / 180)} stroke="#2563eb" strokeWidth="1.6" strokeLinecap="round" />
+        {/* Second hand */}
+        <line x1="18" y1="18" x2={18 + 12 * Math.cos((sDeg - 90) * Math.PI / 180)} y2={18 + 12 * Math.sin((sDeg - 90) * Math.PI / 180)} stroke="#ef4444" strokeWidth="1" strokeLinecap="round" />
+        <circle cx="18" cy="18" r="1.5" fill="#1d4ed8" />
+      </svg>
+      <div>
+        <p className="text-xs font-semibold text-blue-700 leading-none">{time}</p>
+        <p className="text-xs text-blue-500 mt-0.5">{date}</p>
+      </div>
+    </div>
+  );
+}
 
 const QUICK_ACTIONS = [
   { icon: BarChart2,    label: 'View Results',  path: '/student/results',     bg: 'bg-blue-50',   icon_color: 'text-blue-600',   hover: 'hover:bg-blue-100' },
@@ -95,16 +133,17 @@ export default function StudentDashboard() {
             <p className="text-gray-500 text-sm mt-0.5">{data?.current_term} Term · {data?.current_session} Session</p>
           </div>
         </div>
-        <div className="px-4 py-2 bg-blue-50 rounded-xl border border-blue-100 text-sm font-semibold text-blue-700 self-start">
-          <Clock size={14} className="inline mr-1.5" />
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-        </div>
+        <LiveClock />
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(({ icon: Icon, label, value, color }) => (
-          <div key={label} className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5">
+          <div key={label} className="relative bg-white rounded-2xl card shadow-sm border border-gray-100 p-5 overflow-hidden">
+            {/* Faint background icon */}
+            <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end opacity-[0.08] animate-pulse pointer-events-none translate-x-4">
+              <Icon size={120} />
+            </div>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
               <Icon size={20} />
             </div>

@@ -197,7 +197,18 @@ export function useProfile() {
   const save = async () => {
     setSaving(true);
     try {
-      await api.put(endpoints.student.profile, profile);
+      const { student, ...rest } = profile ?? {};
+      const payload = {
+        ...rest,
+        dateOfBirth: student?.dateOfBirth,
+        stateOfOrigin: student?.stateOfOrigin,
+        homeAddress: student?.homeAddress,
+        fatherName: student?.fatherName,
+        motherName: student?.motherName,
+        religion: student?.religion,
+        bloodGroup: student?.bloodGroup,
+      };
+      await api.put(endpoints.student.profile, payload);
       toast.success('Profile updated');
     } catch { toast.error('Failed to update profile'); }
     finally { setSaving(false); }
