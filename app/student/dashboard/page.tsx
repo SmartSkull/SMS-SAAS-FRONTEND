@@ -1,9 +1,9 @@
 'use client';
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { GraduationCap, Bell, BookOpen, Calendar, BarChart2, ClipboardList, Monitor, Library, Mail, ArrowRight, User } from 'lucide-react';
 import { useDashboard } from '@/hooks/student';
 import { getImageUrl } from '@/lib/api';
+import { ArrowRight, BarChart2, Bell, BookOpen, Calendar, ClipboardList, GraduationCap, Library, Mail, Monitor, User } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 function LiveClock() {
   const [now, setNow] = useState(new Date());
@@ -141,7 +141,7 @@ export default function StudentDashboard() {
         {stats.map(({ icon: Icon, label, value, color }) => (
           <div key={label} className="relative bg-white rounded-2xl card shadow-sm border border-gray-100 p-5 overflow-hidden">
             {/* Faint background icon */}
-            <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end opacity-[0.08] animate-pulse pointer-events-none translate-x-4">
+            <div className="absolute right-0 top-0 bottom-0 hidden md:flex items-center justify-end opacity-[0.08] animate-pulse pointer-events-none translate-x-4">
               <Icon size={120} />
             </div>
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
