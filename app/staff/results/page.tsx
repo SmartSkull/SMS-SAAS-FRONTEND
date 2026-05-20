@@ -1,13 +1,13 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
-import { Plus, Trash2, MessageSquare, Upload, FileBarChart2, Search, X, Eye, Printer, User } from 'lucide-react';
-import { api, endpoints, getImageUrl } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import { EmptyState } from '@/components/ui/StateDisplay';
-import { useSchoolData } from '@/hooks/useSchoolData';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { EmptyState } from '@/components/ui/StateDisplay';
+import { useToast } from '@/components/ui/Toast';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
+import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { SchoolProfile } from '@/types';
+import { Eye, FileBarChart2, MessageSquare, Plus, Printer, Search, Upload, User, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 const EMPTY_ROW = { student_id: '', test_score: '', exam_score: '' };
 
@@ -605,7 +605,18 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {loading ? (
-            <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>
+            <div className="space-y-4 skeleton-stagger">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                  <div className="shimmer h-5 w-3/4" />
+                  <div className="shimmer h-4 w-1/2" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="shimmer h-10 w-full" />
+                    <div className="shimmer h-10 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : !results.length ? (
             <p className="text-center text-gray-500 py-12">No results found for this student.</p>
           ) : (

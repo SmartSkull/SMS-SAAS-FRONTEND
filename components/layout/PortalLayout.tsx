@@ -1,15 +1,19 @@
 'use client';
-import { useState } from 'react';
-import Sidebar from './Sidebar';
-import Navbar from './Navbar';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
+import { useState } from 'react';
+import Navbar from './Navbar';
+import Sidebar from './Sidebar';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { school } = useSelectedSchool();
+  const { school, loading } = useSelectedSchool();
   const primary = school?.primaryColor || '#2563eb';
   const secondary = school?.secondaryColor || '#eff6ff';
   const accent = school?.accentColor || '#84cc16';
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center" />;
+  }
 
   return (
     <div

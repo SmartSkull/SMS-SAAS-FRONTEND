@@ -1,8 +1,10 @@
 'use client';
-import { Users, BookOpen, TrendingUp, Calendar, User } from 'lucide-react';
 import { useStaffDashboard } from '@/hooks/staff';
 import { useAuth } from '@/hooks/useAuth';
 import { getImageUrl } from '@/lib/api';
+import { BarChart3, BookOpen, Calendar, Clock, FileText, TrendingUp, User, Users, Zap } from 'lucide-react';
+import Link from 'next/link';
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string | number; color: string }) {
   return (
@@ -23,8 +25,58 @@ export default function StaffDashboard() {
   const { user } = useAuth();
 
   if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    <div className="space-y-6 skeleton-stagger">
+      {/* Header skeleton */}
+      <div className="flex items-center gap-4">
+        <div className="shimmer w-14 h-14 rounded-full" />
+        <div className="flex-1">
+          <div className="shimmer h-8 w-48" />
+          <div className="shimmer h-4 w-64 mt-2" />
+        </div>
+      </div>
+
+      {/* Stats cards skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl card shadow-sm p-6 flex items-center gap-4">
+            <div className="shimmer w-12 h-12 rounded-xl" />
+            <div className="flex-1">
+              <div className="shimmer h-4 w-24 mb-2" />
+              <div className="shimmer h-8 w-12" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Quick actions skeleton */}
+      <div className="bg-white rounded-2xl card shadow-sm p-6">
+        <div className="shimmer h-6 w-32 mb-4" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex flex-col items-center p-4 rounded-xl">
+              <div className="shimmer w-10 h-10 rounded-lg mb-2" />
+              <div className="shimmer h-3 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Charts skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <div className="shimmer h-6 w-48 mb-4" />
+          <div className="shimmer h-80 w-full" />
+        </div>
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <div className="shimmer h-6 w-48 mb-4" />
+          <div className="shimmer h-80 w-full" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl card shadow-sm p-6">
+        <div className="shimmer h-6 w-48 mb-4" />
+        <div className="shimmer h-80 w-full" />
+      </div>
     </div>
   );
 
@@ -47,6 +99,111 @@ export default function StaffDashboard() {
         <StatCard icon={BookOpen} label="Assignments" value={data?.total_assignments ?? data?.analytics?.assignments?.total ?? 0} color="bg-blue-600" />
         <StatCard icon={TrendingUp} label="Library Docs" value={data?.total_library ?? data?.analytics?.library?.total ?? 0} color="bg-purple-600" />
         <StatCard icon={Calendar} label="Current Term" value={data?.current_term ?? '—'} color="bg-rose-500" />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-2xl card shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Link href="/staff/assignments" className="flex flex-col items-center p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors group">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2 group-hover:bg-blue-200">
+              <BookOpen size={20} className="text-blue-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700 text-center">Assignments</span>
+          </Link>
+
+          <Link href="/staff/students" className="flex flex-col items-center p-4 rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors group">
+            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center mb-2 group-hover:bg-purple-200">
+              <Users size={20} className="text-purple-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700 text-center">Students</span>
+          </Link>
+
+          <Link href="/staff/results" className="flex flex-col items-center p-4 rounded-xl bg-green-50 hover:bg-green-100 transition-colors group">
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mb-2 group-hover:bg-green-200">
+              <BarChart3 size={20} className="text-green-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700 text-center">Results</span>
+          </Link>
+
+          <Link href="/staff/library" className="flex flex-col items-center p-4 rounded-xl bg-pink-50 hover:bg-pink-100 transition-colors group">
+            <div className="w-10 h-10 rounded-lg bg-pink-100 flex items-center justify-center mb-2 group-hover:bg-pink-200">
+              <FileText size={20} className="text-pink-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700 text-center">Library</span>
+          </Link>
+
+          <Link href="/staff/cbt" className="flex flex-col items-center p-4 rounded-xl bg-orange-50 hover:bg-orange-100 transition-colors group">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-2 group-hover:bg-orange-200">
+              <Zap size={20} className="text-orange-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700 text-center">CBT</span>
+          </Link>
+
+          <Link href="/staff/attendance" className="flex flex-col items-center p-4 rounded-xl bg-indigo-50 hover:bg-indigo-100 transition-colors group">
+            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-2 group-hover:bg-indigo-200">
+              <Clock size={20} className="text-indigo-600" />
+            </div>
+            <span className="text-xs font-medium text-gray-700 text-center">Attendance</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Performance Distribution */}
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Student Performance Distribution</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data?.analytics?.performanceDistribution ?? []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="grade" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+              <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Assignment Trend */}
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Assignment Submission Trend</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={data?.analytics?.assignmentTrend ?? []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+              <Legend />
+              <Line type="monotone" dataKey="submitted" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} />
+              <Line type="monotone" dataKey="total" stroke="#d1d5db" strokeWidth={2} dot={{ fill: '#d1d5db', r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Class Distribution */}
+      <div className="bg-white rounded-2xl card shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Student Distribution by Class</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={data?.analytics?.classDistribution ?? []}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, value }) => `${name}: ${value}`}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {(data?.analytics?.classDistribution ?? []).map((_, i) => (
+                <Cell key={i} fill={['#3b82f6','#8b5cf6','#f59e0b','#10b981','#ef4444','#f97316','#06b6d4'][i % 7]} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+          </PieChart>
+        </ResponsiveContainer>
       </div>
 
       {data?.recent_results && data.recent_results.length > 0 && (

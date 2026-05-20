@@ -12,6 +12,7 @@
     "@types/js-cookie": "^3.0.6",
     "axios": "^1.16.0",
     "clsx": "^2.1.1",
+    "face-api.js": "^0.22.2",
     "js-cookie": "^3.0.5",
     "lucide-react": "^1.14.0",
     "next": "16.2.6",

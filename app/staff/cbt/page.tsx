@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Plus, Trash2, BarChart2, HelpCircle, Pencil } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
+import { api, endpoints } from '@/lib/api';
 import type { CbtQuestion } from '@/types';
+import { BarChart2, HelpCircle, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface CbtResult {
   id: string; score: string; percentage: string; submittedAt: string;
@@ -209,8 +209,20 @@ export default function StaffCbt() {
 
       <div className="bg-white rounded-2xl card shadow-sm p-6">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-3 skeleton-stagger">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-start justify-between p-4 border border-gray-100 rounded-xl">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="shimmer h-4 w-3/4" />
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {[...Array(4)].map((_, j) => (
+                      <div key={j} className="shimmer h-8 w-full" />
+                    ))}
+                  </div>
+                </div>
+                <div className="shimmer w-12 h-12 rounded-lg shrink-0" />
+              </div>
+            ))}
           </div>
         ) : tab === 'questions' ? (
           questions.length === 0 ? (

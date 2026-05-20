@@ -7,7 +7,7 @@ import {
   LayoutDashboard, User, BarChart2, BookOpen, Library, Calendar, Monitor,
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
   Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
-  Wallet, CalendarDays,
+  Wallet, CalendarDays, BookCopy, UserCheck,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -17,6 +17,7 @@ const MENUS = {
     { icon: User, label: 'Profile', path: '/student/profile' },
     { icon: BarChart2, label: 'Results', path: '/student/results' },
     { icon: BookOpen, label: 'Assignments', path: '/student/assignments' },
+    { icon: UserCheck, label: 'Attendance', path: '/student/attendance' },
     { icon: Library, label: 'Library', path: '/student/library' },
     { icon: Calendar, label: 'Timetable', path: '/student/timetable' },
     { icon: Monitor, label: 'CBT', path: '/student/cbt' },
@@ -36,6 +37,7 @@ const MENUS = {
     { icon: Wallet, label: 'Payroll', path: '/staff/payroll' },
     { icon: BookOpen, label: 'Assignments', path: '/staff/assignments' },
     { icon: CalendarDays, label: 'Timetable', path: '/staff/timetable' },
+    { icon: BookCopy, label: 'Curriculum', path: '/staff/curriculum' },
     { icon: Library, label: 'Library', path: '/staff/library' },
     { icon: Monitor, label: 'CBT', path: '/staff/cbt' },
     { icon: Newspaper, label: 'Posts', path: '/staff/posts' },
@@ -106,7 +108,7 @@ export default function Sidebar({ open, onClose }: Props) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3 px-2">Menu</p>
           {items.map(({ icon: Icon, label, path }) => (
             <Link key={path} href={path} onClick={onClose}

@@ -1,9 +1,8 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { Calculator, FileText, Plus, Save, Trash2, Wallet } from 'lucide-react';
 import { useAdminPayroll } from '@/hooks/payroll';
-import { Skeleton } from '@/components/ui/Skeleton';
 import type { StaffSalarySetup } from '@/types';
+import { Calculator, FileText, Plus, Save, Trash2, Wallet } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 const money = (n: number) => `NGN ${Number(n || 0).toLocaleString()}`;
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -108,6 +107,110 @@ export default function AdminPayrollPage() {
     setDeduction({ title: '', amount: 0, staffId: '', recurring: false, note: '' });
   };
 
+  if (payroll.loading) {
+    return (
+      <div className="space-y-6 skeleton-stagger">
+        {/* Header skeleton */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="shimmer h-8 w-48" />
+            <div className="shimmer h-4 w-72 mt-2" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="shimmer h-10 w-20" />
+            <div className="shimmer h-10 w-24" />
+            <div className="shimmer h-10 w-40" />
+          </div>
+        </div>
+
+        {/* Stats cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-2xl border bg-white p-4 shadow-sm">
+              <div className="shimmer h-4 w-24" />
+              <div className="shimmer h-8 w-32 mt-4" />
+            </div>
+          ))}
+        </div>
+
+        {/* Salary Setup table skeleton */}
+        <section className="rounded-2xl border bg-white shadow-sm">
+          <div className="border-b p-4">
+            <div className="shimmer h-6 w-40" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  {[...Array(9)].map((_, i) => (
+                    <th key={i} className="p-3">
+                      <div className="shimmer h-4 w-16" />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {[...Array(4)].map((_, i) => (
+                  <tr key={i}>
+                    {[...Array(9)].map((_, j) => (
+                      <td key={j} className="p-3">
+                        <div className="shimmer h-8 w-full" />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Deductions and Payslips skeleton */}
+        <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+          {/* Deductions skeleton */}
+          <section className="rounded-2xl border bg-white p-4 shadow-sm">
+            <div className="shimmer h-6 w-24" />
+            <div className="mt-4 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="shimmer h-10 w-full" />
+              ))}
+            </div>
+          </section>
+
+          {/* Payslips table skeleton */}
+          <section className="rounded-2xl border bg-white shadow-sm">
+            <div className="border-b p-4">
+              <div className="shimmer h-6 w-28" />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {[...Array(6)].map((_, i) => (
+                      <th key={i} className="p-3">
+                        <div className="shimmer h-4 w-16" />
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {[...Array(4)].map((_, i) => (
+                    <tr key={i}>
+                      {[...Array(6)].map((_, j) => (
+                        <td key={j} className="p-3">
+                          <div className="shimmer h-8 w-full" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -177,9 +280,7 @@ export default function AdminPayrollPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {payroll.loading ? (
-                Array.from({ length: 4 }).map((_, i) => <tr key={i}><td colSpan={9} className="p-3"><Skeleton className="h-8 w-full" /></td></tr>)
-              ) : payroll.salarySetups.map((staff) => (
+              {payroll.salarySetups.map((staff) => (
                 <SalaryRow key={`${staff.staffId}-${saveSeq}`} staff={staff} onSave={handleSaveSalary} saving={payroll.saving} />
               ))}
             </tbody>

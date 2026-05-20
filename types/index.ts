@@ -246,6 +246,27 @@ export interface StaffAttendanceReportItem extends StaffAttendanceRecord {
   };
 }
 
+export interface StudentAttendanceRecord {
+  id: string;
+  studentId: string;
+  locationId: string | null;
+  date: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  status: AttendanceStatus;
+  lateMinutes: number;
+  note: string | null;
+}
+
+export interface StudentAttendanceReportItem extends StudentAttendanceRecord {
+  student: {
+    id: string;
+    name: string;
+    studentNo: string;
+    image: string | null;
+  };
+}
+
 export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type LeaveType = 'ANNUAL' | 'SICK' | 'MATERNITY' | 'PATERNITY' | 'UNPAID' | 'OTHER';
 

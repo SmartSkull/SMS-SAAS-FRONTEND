@@ -1,11 +1,11 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Plus, Trash2, FileText, Download } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
+import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
-import type { ApiResponse, LibraryItem } from '@/types';
-import { EmptyState } from '@/components/ui/StateDisplay';
+import { api, endpoints } from '@/lib/api';
+import type { LibraryItem } from '@/types';
+import { Download, FileText, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function StaffLibrary() {
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -128,8 +128,23 @@ export default function StaffLibrary() {
 
       <div className="bg-white rounded-2xl card shadow-sm p-6">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 skeleton-stagger">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="border border-gray-100 rounded-xl p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="shimmer w-10 h-10 rounded-xl shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="shimmer h-4 w-full" />
+                    <div className="shimmer h-3 w-5/6" />
+                    <div className="flex gap-2">
+                      <div className="shimmer h-5 w-16" />
+                      <div className="shimmer h-5 w-20" />
+                    </div>
+                  </div>
+                </div>
+                <div className="shimmer h-8 w-full" />
+              </div>
+            ))}
           </div>
         ) : items.length === 0 ? (
           <EmptyState icon={FileText} message="No documents uploaded yet." card={false} />

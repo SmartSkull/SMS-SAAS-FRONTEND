@@ -1,12 +1,12 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Paperclip, FileText } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
+import { api, endpoints } from '@/lib/api';
 import type { ApiResponse, Assignment } from '@/types';
-import { EmptyState } from '@/components/ui/StateDisplay';
-import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { FileText, Paperclip, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const EMPTY = { subject: '', assignment: '', class: '', deadline: '' };
 
@@ -144,8 +144,28 @@ export default function StaffAssignments() {
 
       <div className="bg-white rounded-2xl card shadow-sm p-6">
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-3 skeleton-stagger">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex items-start justify-between p-4 border border-gray-100 rounded-xl">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="shimmer h-5 w-48" />
+                    <div className="shimmer h-5 w-20" />
+                    <div className="shimmer h-5 w-24" />
+                  </div>
+                  <div className="shimmer h-4 w-full" />
+                  <div className="shimmer h-3 w-3/4" />
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="shimmer h-3 w-32" />
+                    <div className="shimmer h-3 w-24" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-4 shrink-0">
+                  <div className="shimmer w-8 h-8 rounded-lg" />
+                  <div className="shimmer w-8 h-8 rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : assignments.length === 0 ? (
           <EmptyState icon={FileText} message="No assignments yet." card={false} />

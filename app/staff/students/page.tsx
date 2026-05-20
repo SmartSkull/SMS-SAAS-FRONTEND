@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { Search, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
-import { api, endpoints } from '@/lib/api';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse, Student } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { useToast } from '@/components/ui/Toast';
+import { api, endpoints } from '@/lib/api';
+import type { ApiResponse, Student } from '@/types';
+import { ChevronLeft, ChevronRight, GraduationCap, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface StudentsData {
   students: Student[];
@@ -79,8 +79,19 @@ export default function StaffStudents() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="space-y-3 skeleton-stagger">
+            <div className="space-y-2">
+              <div className="shimmer h-4 w-full" />
+              <div className="shimmer h-4 w-5/6" />
+            </div>
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 border border-gray-100 rounded-lg">
+                <div className="shimmer h-10 w-32" />
+                <div className="shimmer h-10 w-40" />
+                <div className="shimmer h-10 w-32" />
+                <div className="shimmer h-10 w-48" />
+              </div>
+            ))}
           </div>
         ) : (
           <>

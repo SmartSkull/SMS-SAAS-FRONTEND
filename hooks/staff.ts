@@ -10,7 +10,13 @@ interface StaffDashboardData {
   total_students?: number; total_results?: number; total_assignments?: number;
   total_library?: number; pending_results?: number; student_count?: number;
   current_session?: string; current_term?: string;
-  analytics?: { assignments?: { total?: number }; library?: { total?: number } };
+  analytics?: {
+    assignments?: { total?: number };
+    library?: { total?: number };
+    performanceDistribution?: { grade: string; count: number }[];
+    assignmentTrend?: { week: string; label: string; submitted: number; total: number }[];
+    classDistribution?: { name: string; value: number }[];
+  };
   recent_results?: { student_name: string; course: string; total: number; grade: string }[];
 }
 
@@ -260,4 +266,58 @@ export function useStaffPosts(limit = 10) {
   };
 
   return { posts, setPosts, loading, hasMore, loadMore };
+}
+
+
+/* ── Curriculum ─────────────────────────────────────────────────────────── */
+export interface CurriculumTopic {
+  id: string; title: string; description?: string; week?: number;
+  term?: string; session?: string; subject?: string; classRoom?: string;
+  subjectId?: string; classRoomId?: string;
+}
+export interface LessonPlan {
+  id: string; title: string; objectives?: string; content?: string;
+  resources?: string; evaluation?: string; date?: string; duration?: number;
+  topic?: string; topicId?: string; subject?: string; subjectId?: string;
+  classRoom?: string; classRoomId?: string;
+}
+export interface WeeklyScheme {
+  id: string; week: number; term: string; session: string; content: string;
+  subject?: string; subjectId?: string; classRoom?: string; classRoomId?: string;
+}
+
+export function useCurriculum() {
+  const [topics, setTopics] = useState<CurriculumTopic[]>([]);
+  const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
+  const [weeklySchemes, setWeeklySchemes] = useState<WeeklyScheme[]>([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [t, l, w] = await Promise.all([
+        api.get<ApiResponse<CurriculumTopic[]>>(endpoints.staff.curriculumTopics),
+        api.get<ApiResponse<LessonPlan[]>>(endpoints.staff.curriculumLessonPlans),
+        api.get<ApiResponse<WeeklyScheme[]>>(endpoints.staff.curriculumWeeklySchemes),
+      ]);
+      setTopics(t.data ?? []);
+      setLessonPlans(l.data ?? []);
+      setWeeklySchemes(w.data ?? []);
+    } catch { toast.error('Failed to load curriculum'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  const saveTopic = async (body: any) => { await api.post(endpoints.staff.curriculumTopics, body); await loadAll(); };
+  const deleteTopic = async (id: string) => { await api.delete(`${endpoints.staff.curriculumTopics}/${id}`); await loadAll(); };
+
+  const saveLessonPlan = async (body: any) => { await api.post(endpoints.staff.curriculumLessonPlans, body); await loadAll(); };
+  const deleteLessonPlan = async (id: string) => { await api.delete(`${endpoints.staff.curriculumLessonPlans}/${id}`); await loadAll(); };
+
+  const saveWeeklyScheme = async (body: any) => { await api.post(endpoints.staff.curriculumWeeklySchemes, body); await loadAll(); };
+  const deleteWeeklyScheme = async (id: string) => { await api.delete(`${endpoints.staff.curriculumWeeklySchemes}/${id}`); await loadAll(); };
+
+  return { topics, lessonPlans, weeklySchemes, loading, loadAll, saveTopic, deleteTopic, saveLessonPlan, deleteLessonPlan, saveWeeklyScheme, deleteWeeklyScheme };
 }
