@@ -7,7 +7,7 @@ import {
   LayoutDashboard, User, BarChart2, BookOpen, Library, Calendar, Monitor,
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
   Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
-  Wallet, CalendarDays, BookCopy, UserCheck,
+  Wallet, CalendarDays, BookCopy, UserCheck, ArrowUpCircle,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -47,6 +47,7 @@ const MENUS = {
   admin: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: GraduationCap, label: 'Students', path: '/admin/students' },
+    { icon: ArrowUpCircle, label: 'Promotions', path: '/admin/promotions' },
     { icon: Users, label: 'Staff', path: '/admin/staff' },
     { icon: BarChart2, label: 'Results', path: '/admin/results' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/admin/attendance' },

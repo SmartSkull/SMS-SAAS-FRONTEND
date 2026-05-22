@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, ChevronDown, FileBarChart2, Search } from 'lucide-react';
+import { CheckCircle, ChevronDown, FileBarChart2, Loader2, Search, XCircle } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -26,6 +26,7 @@ export default function AdminResults() {
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [approving, setApproving] = useState<Record<string, boolean>>({});
   const toast = useToast();
 
   const TERMS = ['FIRST', 'SECOND', 'THIRD'];
@@ -56,10 +57,12 @@ export default function AdminResults() {
   };
 
   const approve = async (studentId: string) => {
+    setApproving(p => ({ ...p, [studentId]: true }));
     try {
       await api.put(endpoints.admin.resultApprove(studentId), { session: selectedSession, term: selectedTerm });
       toast.success('Approved'); fetchResults();
     } catch { toast.error('Failed to approve'); }
+    finally { setApproving(p => { const n = { ...p }; delete n[studentId]; return n; }); }
   };
 
   const bulkApprove = async () => {
@@ -151,8 +154,8 @@ export default function AdminResults() {
                   </span>
                 </td>
                 <td className="p-3">
-                  <button onClick={() => approve(s.student_id)} className="text-blue-600 hover:text-blue-800" title="Approve">
-                    <CheckCircle size={16} />
+                  <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Approve">
+                    {approving[s.student_id] ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                   </button>
                 </td>
               </tr>

@@ -6,7 +6,7 @@ import type { ApiResponse, Assignment, LibraryItem, Result, Staff, Student, Conv
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
 interface StaffDashboardData {
-  user?: { firstname: string; lastname: string; image?: string };
+  user?: { firstname: string; lastname: string; image?: string; class?: string };
   total_students?: number; total_results?: number; total_assignments?: number;
   total_library?: number; pending_results?: number; student_count?: number;
   current_session?: string; current_term?: string;
@@ -16,6 +16,7 @@ interface StaffDashboardData {
     performanceDistribution?: { grade: string; count: number }[];
     assignmentTrend?: { week: string; label: string; submitted: number; total: number }[];
     classDistribution?: { name: string; value: number }[];
+    top3Students?: { firstname: string; lastname: string; image?: string; avg: number }[];
   };
   recent_results?: { student_name: string; course: string; total: number; grade: string }[];
 }

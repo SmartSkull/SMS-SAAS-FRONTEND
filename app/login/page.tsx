@@ -206,6 +206,10 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              <div className="flex justify-end">
+                <button type="button" onClick={() => window.location.href = '/forgot-password'} className="text-xs font-semibold" style={{ color: primary }}>Forgot password?</button>
+              </div>
+
               <button type="submit" disabled={loading} className="w-full py-3.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50 mt-2" style={{ background: primary, boxShadow: loading ? 'none' : `0 4px 20px ${primary}66` }}>
                 {loading
                   ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Signing in...</span>

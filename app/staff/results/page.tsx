@@ -6,10 +6,8 @@ import { useSchoolData } from '@/hooks/useSchoolData';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { SchoolProfile } from '@/types';
-import { Eye, FileBarChart2, MessageSquare, Plus, Printer, Search, Upload, User, X } from 'lucide-react';
+import { Eye, FileBarChart2, Loader2, MessageSquare, Plus, Printer, Search, Upload, User, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-
-const EMPTY_ROW = { student_id: '', test_score: '', exam_score: '' };
 
 const UPLOADS_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
@@ -190,22 +188,137 @@ export default function StaffResults() {
   const [approvalFilter, setApprovalFilter] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [uploadCourse, setUploadCourse] = useState('');
-  const [rows, setRows] = useState([{ ...EMPTY_ROW }]);
+  const [uploadClass, setUploadClass] = useState('');
+  const [uploadStudents, setUploadStudents] = useState<any[]>([]);
+  const [loadingUploadStudents, setLoadingUploadStudents] = useState(false);
+  const [rows, setRows] = useState<Record<string, { test_score: string; exam_score: string }>>({});
+  const [uploadSession, setUploadSession] = useState('');
+  const [uploadTerm, setUploadTerm]       = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [commentModal, setCommentModal] = useState<{ student_id: string; comment: string } | null>(null);
   const [attendanceModal, setAttendanceModal] = useState(false);
-  const [attendance, setAttendance] = useState({ student_id: '', present: '', absent: '' });
+  const [attendanceClass, setAttendanceClass] = useState('');
+  const [attendanceStudents, setAttendanceStudents] = useState<any[]>([]);
+  const [loadingAttStudents, setLoadingAttStudents] = useState(false);
+  const [attendanceRows, setAttendanceRows] = useState<Record<string, { present: string; absent: string }>>({});
+  const [totalSchoolDays, setTotalSchoolDays] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<any | null>(null);
   const [viewingStudent, setViewingStudent] = useState<string | null>(null);
+  const [rowLoading, setRowLoading] = useState<Record<string, string>>({});
   const { classes, subjects, sessions, terms } = useSchoolData();
   const toast = useToast();
 
+  // Fetch current session/term for upload modal
+  useEffect(() => {
+    api.get<any>(endpoints.public.currentPeriod)
+      .then(async r => {
+        const session = r.data?.session ?? '';
+        const term = r.data?.term ?? '';
+        setUploadSession(session);
+        setUploadTerm(term);
+        // Fetch admin-configured school days for this session/term
+        if (session && term) {
+          try {
+            const sd = await api.get<any>(endpoints.staff.schoolDays);
+            const days = (sd.data ?? []).find((d: any) =>
+              d.session === session && d.term?.toUpperCase() === term?.toUpperCase()
+            );
+            setTotalSchoolDays(days?.totalDays ?? null);
+          } catch { setTotalSchoolDays(null); }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Load students + pre-fill existing attendance when class changes
+  useEffect(() => {
+    if (!attendanceClass) { setAttendanceStudents([]); setAttendanceRows({}); return; }
+    setLoadingAttStudents(true);
+    const fetchData = async () => {
+      try {
+        const studentsRes = await api.get<any>(endpoints.staff.students, { class: attendanceClass });
+        const students = studentsRes.data ?? [];
+        setAttendanceStudents(students);
+        const initial: Record<string, { present: string; absent: string }> = {};
+        students.forEach((s: any) => { initial[s.student_id] = { present: '', absent: '' }; });
+        // Pre-fill existing attendance using uniqueId from backend
+        try {
+          const attRes = await api.get<any>(endpoints.staff.attendance, {
+            class: attendanceClass,
+            session: uploadSession || undefined,
+            term: uploadTerm || undefined,
+          });
+          const existing: any[] = Array.isArray(attRes.data) ? attRes.data : [];
+          existing.forEach((a: any) => {
+            const uid = a.uniqueId;
+            if (uid && initial[uid]) {
+              initial[uid] = { present: String(a.present ?? ''), absent: String(a.absent ?? '') };
+            }
+          });
+        } catch { /* no existing attendance */ }
+        setAttendanceRows(initial);
+      } catch {
+        toast.error('Failed to load students');
+      } finally {
+        setLoadingAttStudents(false);
+      }
+    };
+    fetchData();
+  }, [attendanceClass, uploadSession, uploadTerm]);
+
+
+  useEffect(() => {
+    if (!uploadClass) { setUploadStudents([]); setRows({}); return; }
+    setLoadingUploadStudents(true);
+    const fetchData = async () => {
+      try {
+        const studentsRes = await api.get<any>(endpoints.staff.students, { class: uploadClass });
+        const students = studentsRes.data ?? [];
+        setUploadStudents(students);
+
+        // Initialize empty rows
+        const initial: Record<string, { test_score: string; exam_score: string }> = {};
+        students.forEach((s: any) => { initial[s.student_id] = { test_score: '', exam_score: '' }; });
+
+        // Pre-fill existing scores if subject is selected
+        if (uploadCourse && uploadSession && uploadTerm) {
+          try {
+            const resultsRes = await api.get<any>(endpoints.staff.results, {
+              class: uploadClass,
+              course: uploadCourse,
+              session: uploadSession,
+              term: uploadTerm,
+            });
+            const existing: any[] = resultsRes.data ?? [];
+            existing.forEach((r: any) => {
+              if (initial[r.student_id]) {
+                initial[r.student_id] = {
+                  test_score: String(r.test_score ?? r.testScore ?? ''),
+                  exam_score: String(r.exam_score ?? r.examScore ?? ''),
+                };
+              }
+            });
+          } catch { /* no existing results, leave empty */ }
+        }
+        setRows(initial);
+      } catch {
+        toast.error('Failed to load students');
+      } finally {
+        setLoadingUploadStudents(false);
+      }
+    };
+    fetchData();
+  }, [uploadClass, uploadCourse, uploadSession, uploadTerm]);
+
   const openCommentModal = async (student_id: string) => {
+    setRowLoading(p => ({ ...p, [student_id]: 'comment' }));
     try {
       const r = await api.get<any>(endpoints.staff.attendance, { student_id, session: sessionFilter, term: termFilter });
       setCommentModal({ student_id, comment: r.data?.teacherComment || '' });
     } catch {
       setCommentModal({ student_id, comment: '' });
+    } finally {
+      setRowLoading(p => { const n = { ...p }; delete n[student_id]; return n; });
     }
   };
 
@@ -238,19 +351,25 @@ export default function StaffResults() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadCourse) return toast.error('Select a course');
-    const validRows = rows.filter(r => r.student_id && r.test_score !== '' && r.exam_score !== '');
-    if (!validRows.length) return toast.error('Add at least one result row');
+    if (!uploadCourse) return toast.error('Select a subject');
+    if (!uploadClass) return toast.error('Select a class');
+    const validRows = Object.entries(rows)
+      .filter(([, v]) => v.test_score !== '' && v.exam_score !== '')
+      .map(([student_id, v]) => ({ student_id, test_score: Number(v.test_score), exam_score: Number(v.exam_score) }));
+    if (!validRows.length) return toast.error('Enter scores for at least one student');
     setSubmitting(true);
     try {
       await api.post(endpoints.staff.results, {
         course: uploadCourse,
-        results: validRows.map(r => ({ student_id: r.student_id, test_score: Number(r.test_score), exam_score: Number(r.exam_score) })),
+        results: validRows,
       });
       toast.success('Results uploaded');
+      setClassFilter(uploadClass);
       setShowUpload(false);
-      setRows([{ ...EMPTY_ROW }]);
+      setRows({});
       setUploadCourse('');
+      setUploadClass('');
+      setUploadStudents([]);
       load();
     } catch (e: any) { toast.error(e?.message ?? 'Failed to upload'); }
     finally { setSubmitting(false); }
@@ -285,14 +404,21 @@ export default function StaffResults() {
 
   const handleAttendance = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validRows = Object.entries(attendanceRows)
+      .filter(([, v]) => v.present !== '' || v.absent !== '')
+      .map(([student_id, v]) => ({ student_id, present: Number(v.present) || 0, absent: Number(v.absent) || 0 }));
+    if (!validRows.length) return toast.error('Enter attendance for at least one student');
     try {
       await api.post(endpoints.staff.attendance, {
-        student_id: attendance.student_id,
-        present: Number(attendance.present),
-        absent: Number(attendance.absent),
+        students: validRows,
+        session: uploadSession || undefined,
+        term: uploadTerm || undefined,
       });
-      toast.success('Attendance updated'); setAttendanceModal(false);
-      setAttendance({ student_id: '', present: '', absent: '' });
+      toast.success('Attendance updated');
+      setAttendanceModal(false);
+      setAttendanceClass('');
+      setAttendanceStudents([]);
+      setAttendanceRows({});
     } catch { toast.error('Failed to update attendance'); }
   };
 
@@ -400,13 +526,15 @@ export default function StaffResults() {
                       </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <button onClick={() => setViewingStudent(s.student_id)}
-                            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg" title="View Result">
-                            <Eye size={15} />
+                          <button onClick={() => { setViewingStudent(s.student_id); }}
+                            disabled={!!rowLoading[s.student_id]}
+                            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-50" title="View Result">
+                            {viewingStudent === s.student_id ? <Loader2 size={15} className="animate-spin" /> : <Eye size={15} />}
                           </button>
                           <button onClick={() => openCommentModal(s.student_id)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Comment">
-                            <MessageSquare size={15} />
+                            disabled={!!rowLoading[s.student_id]}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg disabled:opacity-50" title="Comment">
+                            {rowLoading[s.student_id] === 'comment' ? <Loader2 size={15} className="animate-spin text-blue-600" /> : <MessageSquare size={15} />}
                           </button>
                         </div>
                       </td>
@@ -422,53 +550,91 @@ export default function StaffResults() {
       {/* Upload Modal */}
       {showUpload && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">Upload Results</h2>
-              <button onClick={() => setShowUpload(false)}><X size={20} className="text-gray-400" /></button>
+              <div>
+                <h2 className="font-semibold text-gray-900">Upload Results</h2>
+                {uploadSession && <p className="text-xs text-gray-400 mt-0.5">{uploadSession} — {uploadTerm} Term</p>}
+              </div>
+              <button onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); }}>
+                <X size={20} className="text-gray-400" />
+              </button>
             </div>
             <form onSubmit={handleUpload} className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
-                <select value={uploadCourse} onChange={e => setUploadCourse(e.target.value)} required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
-                  <option value="">Select subject</option>
-                  {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Class</label>
+                  <select value={uploadClass} onChange={e => setUploadClass(e.target.value)} required
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
+                    <option value="">Select class</option>
+                    {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                  <select value={uploadCourse} onChange={e => setUploadCourse(e.target.value)} required
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
+                    <option value="">Select subject</option>
+                    {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-2 text-left text-xs font-medium text-gray-500">Student ID</th>
-                      <th className="p-2 text-left text-xs font-medium text-gray-500">CA (40)</th>
-                      <th className="p-2 text-left text-xs font-medium text-gray-500">Exam (60)</th>
-                      <th className="p-2 w-8" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((row, i) => (
-                      <tr key={i}>
-                        <td className="p-1"><input value={row.student_id} onChange={e => setRows(p => p.map((r, j) => j === i ? { ...r, student_id: e.target.value } : r))}
-                          placeholder="fpis/2024/xxxx" className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500" /></td>
-                        <td className="p-1"><input type="number" min={0} max={40} value={row.test_score} onChange={e => setRows(p => p.map((r, j) => j === i ? { ...r, test_score: e.target.value } : r))}
-                          className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500" /></td>
-                        <td className="p-1"><input type="number" min={0} max={60} value={row.exam_score} onChange={e => setRows(p => p.map((r, j) => j === i ? { ...r, exam_score: e.target.value } : r))}
-                          className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500" /></td>
-                        <td className="p-1"><button type="button" onClick={() => setRows(p => p.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-600"><X size={14} /></button></td>
+
+              {!uploadClass ? (
+                <p className="text-sm text-gray-400 text-center py-6">Select a class to load students.</p>
+              ) : loadingUploadStudents ? (
+                <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+              ) : uploadStudents.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">No students found in this class.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-100">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
+                        <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
+                        <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">CA (40)</th>
+                        <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Exam (60)</th>
+                        <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <button type="button" onClick={() => setRows(p => [...p, { ...EMPTY_ROW }])}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium">+ Add Row</button>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {uploadStudents.map((s: any) => {
+                        const r = rows[s.student_id] ?? { test_score: '', exam_score: '' };
+                        const ca = Number(r.test_score) || 0;
+                        const exam = Number(r.exam_score) || 0;
+                        const total = ca + exam;
+                        return (
+                          <tr key={s.student_id} className="hover:bg-gray-50">
+                            <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
+                            <td className="p-3 text-xs text-gray-400 font-mono">{s.student_id}</td>
+                            <td className="p-2">
+                              <input type="number" min={0} max={40} value={r.test_score}
+                                onChange={e => setRows(prev => ({ ...prev, [s.student_id]: { ...prev[s.student_id], test_score: e.target.value } }))}
+                                className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:border-blue-500" />
+                            </td>
+                            <td className="p-2">
+                              <input type="number" min={0} max={60} value={r.exam_score}
+                                onChange={e => setRows(prev => ({ ...prev, [s.student_id]: { ...prev[s.student_id], exam_score: e.target.value } }))}
+                                className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:border-blue-500" />
+                            </td>
+                            <td className="p-3 text-center font-semibold text-gray-700">
+                              {r.test_score || r.exam_score ? total : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={submitting}
+                <button type="submit" disabled={submitting || !uploadClass || !uploadCourse}
                   className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
-                  {submitting ? 'Uploading…' : 'Upload Results'}
+                  {submitting ? 'Uploading…' : `Upload Results (${Object.values(rows).filter(r => r.test_score !== '' && r.exam_score !== '').length} students)`}
                 </button>
-                <button type="button" onClick={() => setShowUpload(false)}
+                <button type="button" onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); }}
                   className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
               </div>
             </form>
@@ -495,29 +661,88 @@ export default function StaffResults() {
       {/* Attendance Modal */}
       {attendanceModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl card p-6 w-full max-w-md space-y-4">
-            <h3 className="font-semibold text-gray-900">Update Attendance</h3>
-            <form onSubmit={handleAttendance} className="space-y-3">
+          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Student ID</label>
-                <input value={attendance.student_id} onChange={e => setAttendance(p => ({ ...p, student_id: e.target.value }))} required
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Days Present</label>
-                  <input type="number" min={0} value={attendance.present} onChange={e => setAttendance(p => ({ ...p, present: e.target.value }))} required
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Days Absent</label>
-                  <input type="number" min={0} value={attendance.absent} onChange={e => setAttendance(p => ({ ...p, absent: e.target.value }))} required
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <h2 className="font-semibold text-gray-900">Update Attendance</h2>
+                <div className="flex items-center gap-3 mt-0.5">
+                  {uploadSession && <p className="text-xs text-gray-400">{uploadSession} — {uploadTerm} Term</p>}
+                  {totalSchoolDays !== null
+                    ? <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Total school days: {totalSchoolDays}</span>
+                    : <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">No school days set by admin</span>}
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button type="submit" className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">Save</button>
-                <button type="button" onClick={() => setAttendanceModal(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
+              <button onClick={() => { setAttendanceModal(false); setAttendanceClass(''); setAttendanceStudents([]); setAttendanceRows({}); }}>
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+            <form onSubmit={handleAttendance} className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class</label>
+                <select value={attendanceClass} onChange={e => setAttendanceClass(e.target.value)} required
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              {!attendanceClass ? (
+                <p className="text-sm text-gray-400 text-center py-6">Select a class to load students.</p>
+              ) : loadingAttStudents ? (
+                <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+              ) : attendanceStudents.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">No students found in this class.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-100">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
+                        <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
+                        <th className="p-3 text-center text-xs font-semibold text-green-600 uppercase">Present</th>
+                        <th className="p-3 text-center text-xs font-semibold text-red-500 uppercase">Absent (auto)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {attendanceStudents.map((s: any) => {
+                        const r = attendanceRows[s.student_id] ?? { present: '', absent: '' };
+                        const present = Number(r.present) || 0;
+                        const absent = totalSchoolDays !== null && r.present !== ''
+                          ? Math.max(0, totalSchoolDays - present)
+                          : r.absent;
+                        return (
+                          <tr key={s.student_id} className="hover:bg-gray-50">
+                            <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
+                            <td className="p-3 text-xs text-gray-400 font-mono">{s.student_id}</td>
+                            <td className="p-2">
+                              <input type="number" min={0} max={totalSchoolDays ?? undefined} value={r.present}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  const absentCalc = totalSchoolDays !== null && val !== ''
+                                    ? String(Math.max(0, totalSchoolDays - Number(val)))
+                                    : '';
+                                  setAttendanceRows(prev => ({ ...prev, [s.student_id]: { present: val, absent: absentCalc } }));
+                                }}
+                                className="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:border-green-500" />
+                            </td>
+                            <td className="p-3 text-center font-semibold text-red-500">
+                              {r.present !== '' && totalSchoolDays !== null ? absent : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={!attendanceClass}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
+                  Save Attendance
+                </button>
+                <button type="button" onClick={() => { setAttendanceModal(false); setAttendanceClass(''); setAttendanceStudents([]); setAttendanceRows({}); }}
+                  className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
               </div>
             </form>
           </div>

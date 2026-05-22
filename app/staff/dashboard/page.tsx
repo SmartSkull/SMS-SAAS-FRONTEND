@@ -165,21 +165,60 @@ export default function StaffDashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Assignment Trend */}
+      {/* Top 3 Students + Recent Assignments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Top 3 Best Students */}
         <div className="bg-white rounded-2xl card shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Assignment Submission Trend</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data?.analytics?.assignmentTrend ?? []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-              <Legend />
-              <Line type="monotone" dataKey="submitted" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} />
-              <Line type="monotone" dataKey="total" stroke="#d1d5db" strokeWidth={2} dot={{ fill: '#d1d5db', r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">🏆 Top 3 Students — {data?.user?.class ?? 'Your Class'}</h2>
+          {(data?.analytics?.top3Students ?? []).length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No results available yet.</p>
+          ) : (
+            <ul className="space-y-3">
+              {(data?.analytics?.top3Students ?? []).map((s: any, i: number) => (
+                <li key={i} className="flex items-center gap-4 p-3 rounded-xl bg-gray-50">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                    i === 0 ? 'bg-yellow-400 text-white' :
+                    i === 1 ? 'bg-gray-300 text-gray-700' :
+                               'bg-orange-300 text-white'
+                  }`}>{i + 1}</div>
+                  <div className="w-9 h-9 rounded-full overflow-hidden bg-blue-100 shrink-0 flex items-center justify-center">
+                    {getImageUrl(s.image)
+                      ? <img src={getImageUrl(s.image)!} className="w-full h-full object-cover" />
+                      : <span className="text-xs font-bold text-blue-600">{s.name?.[0]}</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{s.name}</p>
+                    <p className="text-xs text-gray-400">Avg score</p>
+                  </div>
+                  <span className="text-sm font-bold text-blue-600">{s.average}%</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+
+        {/* Recent Assignments */}
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Recent Assignments</h2>
+          {(data?.analytics?.assignmentTrend ?? []).length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No assignments yet.</p>
+          ) : (
+            <ul className="divide-y divide-gray-50">
+              {(data?.analytics?.assignmentTrend ?? []).map((a: any, i: number) => (
+                <li key={i} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600">{i + 1}</div>
+                    <span className="text-sm font-medium text-gray-800">{a.label}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">{a.date}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+      </div>
       </div>
 
       {/* Class Distribution */}

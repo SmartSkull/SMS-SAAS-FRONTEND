@@ -162,11 +162,22 @@ export default function PaymentsPage() {
                     }`}>{p.status}</span>
                   </td>
                   <td className="p-3">
-                    {p.status === 'PENDING' && (
-                      <button onClick={() => verify(p.id)} className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs font-medium">
-                        <CheckCircle size={14} /> Verify
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {p.status === 'PENDING' && (
+                        <button onClick={() => verify(p.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors">
+                          <CheckCircle size={13} /> Verify
+                        </button>
+                      )}
+                      {p.status === 'SUCCESS' && (
+                        <span className="flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-semibold">
+                          <CheckCircle size={12} /> Verified
+                        </span>
+                      )}
+                      {p.status === 'FAILED' && (
+                        <span className="px-2.5 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-semibold">Failed</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
