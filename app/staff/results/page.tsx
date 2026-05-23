@@ -846,7 +846,7 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
             <p className="text-center text-gray-500 py-12">No results found for this student.</p>
           ) : (
             <>
-              {/* Student info */}
+              {/* Student info  */}
               {data.student && (
                 <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
                   <div className="w-14 h-14 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 border-2 border-blue-200">
@@ -929,7 +929,7 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
                         </div>
                       </div>
                       <p className="text-sm text-gray-700 italic">
-                        {data.attendance?.[key] ? `"${data.attendance[key]}"` : 'No comment yet.'}
+                        {data.attendance?.[key] ? `"${data.attendance[key]}"` : 'No comment entered yet.'}
                       </p>
                     </div>
                   ))}
