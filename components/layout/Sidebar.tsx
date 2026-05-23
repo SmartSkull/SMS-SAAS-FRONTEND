@@ -7,7 +7,7 @@ import {
   LayoutDashboard, User, BarChart2, BookOpen, Library, Calendar, Monitor,
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
   Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
-  Wallet, CalendarDays, BookCopy, UserCheck, ArrowUpCircle,
+  Wallet, CalendarDays, BookCopy, UserCheck, ArrowUpCircle, Video,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -21,6 +21,7 @@ const MENUS = {
     { icon: Library, label: 'Library', path: '/student/library' },
     { icon: Calendar, label: 'Timetable', path: '/student/timetable' },
     { icon: Monitor, label: 'CBT', path: '/student/cbt' },
+    { icon: Video, label: 'Online Classes', path: '/student/online-classes' },
     { icon: Gamepad2, label: 'Book Game', path: '/student/book-game' },
     { icon: Newspaper, label: 'Posts', path: '/student/posts' },
     { icon: Mail, label: 'Messages', path: '/student/messages' },
@@ -40,6 +41,7 @@ const MENUS = {
     { icon: BookCopy, label: 'Curriculum', path: '/staff/curriculum' },
     { icon: Library, label: 'Library', path: '/staff/library' },
     { icon: Monitor, label: 'CBT', path: '/staff/cbt' },
+    { icon: Video, label: 'Online Classes', path: '/staff/online-classes' },
     { icon: Newspaper, label: 'Posts', path: '/staff/posts' },
     { icon: Mail, label: 'Messages', path: '/staff/messages' },
     { icon: Bell, label: 'Notifications', path: '/staff/notifications' },

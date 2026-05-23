@@ -118,6 +118,7 @@ export const endpoints = {
     schoolFeesInit: '/student/school-fees/initialize',
     schoolFeesVerify: (ref: string) => `/student/school-fees/verify/${ref}`,
     schoolFeesHistory: '/student/school-fees/history',
+    onlineClasses: '/student/online-classes',
     attendanceClockIn: '/attendance/student/clock-in',
     attendanceClockOut: '/attendance/student/clock-out',
     attendanceToday: '/attendance/student/today',
@@ -164,6 +165,8 @@ export const endpoints = {
     leaveMyLeaves: '/leave/my',
     leaveBalance: '/leave/balance',
     payrollPayslips: '/payroll/my-payslips',
+    onlineClasses: '/staff/online-classes',
+    onlineClass: (id: number) => `/staff/online-classes/${id}`,
   },
   admin: {
     dashboard: '/admin/dashboard',
