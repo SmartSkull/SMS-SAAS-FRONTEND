@@ -1,8 +1,11 @@
 'use client';
-import { useState } from 'react';
-import { MapPin, Clock, LogIn, LogOut, AlertCircle, CheckCircle, Timer } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Clock, LogIn, LogOut, AlertCircle, CheckCircle, Timer, Users, Loader2 } from 'lucide-react';
 import { useStaffAttendance, useStaffAttendanceHistory } from '@/hooks/attendance';
 import { Skeleton, SkeletonCard } from '@/components/ui/Skeleton';
+import { useSchoolData } from '@/hooks/useSchoolData';
+import { api, endpoints } from '@/lib/api';
+import { useToast } from '@/components/ui/Toast';
 import type { AttendanceStatus } from '@/types';
 
 const STATUS_STYLE: Record<AttendanceStatus, string> = {
@@ -55,6 +58,47 @@ export default function StaffAttendancePage() {
   };
 
   const busy = acting || geoLoading;
+
+  // Student attendance state
+  const toast = useToast();
+  const [students, setStudents] = useState<any[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, 'PRESENT' | 'ABSENT'>>({});
+  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get<any>(endpoints.staff.attendanceStudents)
+      .then(r => {
+        if (cancelled) return;
+        const list = r.data ?? r ?? [];
+        setStudents(list);
+        setStatuses(prev => {
+          if (Object.keys(prev).length > 0) return prev;
+          const init: Record<string, 'PRESENT' | 'ABSENT'> = {};
+          list.forEach((s: any) => { init[s.uniqueId] = s.status ?? 'PRESENT'; });
+          return init;
+        });
+      })
+      .catch(() => toast.error('Failed to load students'))
+      .finally(() => { if (!cancelled) setLoadingStudents(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleMarkAll = (status: 'PRESENT' | 'ABSENT') =>
+    setStatuses(Object.fromEntries(students.map(s => [s.uniqueId, status])));
+
+  const handleSubmitAttendance = async () => {
+    if (!students.length) return;
+    setSubmitting(true);
+    try {
+      await api.post(endpoints.staff.attendanceStudents, {
+        students: students.map(s => ({ uniqueId: s.uniqueId, status: statuses[s.uniqueId] ?? 'PRESENT' })),
+      });
+      toast.success('Attendance saved');
+    } catch { toast.error('Failed to save attendance'); }
+    finally { setSubmitting(false); }
+  };
 
   // Summary counts for history
   const present = history.filter((r) => r.status === 'PRESENT').length;
@@ -233,6 +277,72 @@ export default function StaffAttendancePage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Student Attendance */}
+      <div className="bg-white rounded-2xl shadow-sm border p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Users size={18} className="text-blue-600" />
+          <h2 className="font-semibold text-gray-700">Mark Student Attendance</h2>
+        </div>
+
+        <div className="flex gap-3 flex-wrap">
+          {students.length > 0 && (
+            <div className="flex gap-2">
+              <button onClick={() => handleMarkAll('PRESENT')}
+                className="px-3 py-2 text-xs font-medium bg-green-100 text-green-700 rounded-xl hover:bg-green-200">
+                All Present
+              </button>
+              <button onClick={() => handleMarkAll('ABSENT')}
+                className="px-3 py-2 text-xs font-medium bg-red-100 text-red-700 rounded-xl hover:bg-red-200">
+                All Absent
+              </button>
+            </div>
+          )}
+        </div>
+
+        {loadingStudents ? (
+          <div className="space-y-2">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+        ) : students.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">No students assigned to your class.</p>
+        ) : students.length > 0 ? (
+          <>
+            <div className="divide-y border rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50">
+                <span className="text-xs font-semibold text-gray-500 uppercase">Student</span>
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase cursor-pointer">
+                  <input type="checkbox"
+                    checked={students.every(s => statuses[s.uniqueId] === 'PRESENT')}
+                    onChange={e => handleMarkAll(e.target.checked ? 'PRESENT' : 'ABSENT')}
+                    className="w-4 h-4 accent-green-600" />
+                  All Present
+                </label>
+              </div>
+              {students.map(s => (
+                <label key={s.uniqueId} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{s.firstname} {s.lastname}</p>
+                    <p className="text-xs text-gray-400 font-mono">{s.uniqueId}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-semibold ${statuses[s.uniqueId] === 'PRESENT' ? 'text-green-600' : 'text-red-500'}`}>
+                      {statuses[s.uniqueId] === 'PRESENT' ? 'Present' : 'Absent'}
+                    </span>
+                    <input type="checkbox"
+                      checked={statuses[s.uniqueId] === 'PRESENT'}
+                      onChange={e => setStatuses(p => ({ ...p, [s.uniqueId]: e.target.checked ? 'PRESENT' : 'ABSENT' }))}
+                      className="w-5 h-5 accent-green-600" />
+                  </div>
+                </label>
+              ))}
+            </div>
+            <button onClick={handleSubmitAttendance} disabled={submitting}
+              className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2">
+              {submitting && <Loader2 size={15} className="animate-spin" />}
+              {submitting ? 'Saving…' : `Save Attendance (${Object.values(statuses).filter(s => s === 'PRESENT').length} / ${students.length} present)`}
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );

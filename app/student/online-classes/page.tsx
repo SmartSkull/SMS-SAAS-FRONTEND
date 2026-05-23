@@ -44,21 +44,26 @@ export default function StudentOnlineClasses() {
           <div className="divide-y divide-gray-50">
             {classes.map(c => {
               const dt = new Date(c.scheduledAt);
-              const isPast = dt < new Date();
+              const endTime = new Date(dt.getTime() + c.durationMinutes * 60 * 1000);
+              const isExpired = endTime < new Date();
               const teacher = c.staff?.user ? `${c.staff.user.firstname} ${c.staff.user.lastname}` : 'Teacher';
               return (
                 <div key={c.id} className="flex items-center gap-4 p-4 hover:bg-gray-50">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isPast ? 'bg-gray-100' : 'bg-green-100'}`}>
-                    <Video size={18} className={isPast ? 'text-gray-400' : 'text-green-600'} />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isExpired ? 'bg-gray-100' : 'bg-green-100'}`}>
+                    <Video size={18} className={isExpired ? 'text-gray-400' : 'text-green-600'} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 truncate">{c.title}</p>
                     <p className="text-xs text-gray-500">{teacher} · {dt.toLocaleString()} · {c.durationMinutes} min</p>
                   </div>
-                  <a href={c.roomUrl} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 bg-green-600 text-white hover:bg-green-700">
-                    <ExternalLink size={12} /> Join
-                  </a>
+                  {isExpired ? (
+                    <span className="px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 bg-gray-100 text-gray-400">Ended</span>
+                  ) : (
+                    <a href={c.roomUrl} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 bg-green-600 text-white hover:bg-green-700">
+                      <ExternalLink size={12} /> Join
+                    </a>
+                  )}
                 </div>
               );
             })}
