@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapPin, Clock, LogIn, LogOut, AlertCircle, CheckCircle, Timer } from 'lucide-react';
 import { useStudentAttendance, useStudentAttendanceHistory } from '@/hooks/attendance';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -26,6 +26,31 @@ function fmt(dt: string | null) {
 
 function fmtDate(dt: string) {
   return new Date(dt).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function LiveClock() {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const hh = String(time.getHours()).padStart(2, '0');
+  const mm = String(time.getMinutes()).padStart(2, '0');
+  const ss = String(time.getSeconds()).padStart(2, '0');
+  return (
+    <div className="flex flex-col items-center py-4">
+      <div className="flex items-end gap-1 tabular-nums">
+        <span className="text-6xl font-bold tracking-tight text-gray-800">{hh}</span>
+        <span className="text-5xl font-bold text-blue-500 mb-1 animate-pulse">:</span>
+        <span className="text-6xl font-bold tracking-tight text-gray-800">{mm}</span>
+        <span className="text-5xl font-bold text-blue-500 mb-1 animate-pulse">:</span>
+        <span className="text-4xl font-semibold tracking-tight text-gray-400 mb-1">{ss}</span>
+      </div>
+      <p className="text-sm text-gray-400 mt-1">
+        {time.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      </p>
+    </div>
+  );
 }
 
 export default function StudentAttendancePage() {
@@ -68,7 +93,7 @@ export default function StudentAttendancePage() {
       <div className="bg-white rounded-2xl shadow-sm border p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-700 flex items-center gap-2">
-            <Clock size={18} /> Today — {now.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
+            <Clock size={18} /> Today
           </h2>
           {record && (
             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${STATUS_STYLE[record.status as AttendanceStatus]}`}>
@@ -76,6 +101,8 @@ export default function StudentAttendancePage() {
             </span>
           )}
         </div>
+
+        <LiveClock />
 
         {loading ? (
           <div className="space-y-3">

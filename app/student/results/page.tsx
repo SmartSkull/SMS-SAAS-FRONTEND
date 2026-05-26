@@ -245,10 +245,13 @@ export default function StudentResults() {
   }, [session, term]);
 
   const gradeColor = (grade: string) => {
-    if (['A+', 'A'].includes(grade)) return 'text-blue-700 bg-blue-50';
-    if (grade === 'B') return 'text-blue-700 bg-blue-50';
-    if (grade === 'C') return 'text-amber-700 bg-amber-50';
-    return 'text-red-700 bg-red-50';
+    if (grade === 'A1') return 'text-green-700 bg-green-50';
+    if (grade === 'B2') return 'text-green-600 bg-green-50';
+    if (grade === 'B3') return 'text-blue-700 bg-blue-50';
+    if (['C4', 'C5', 'C6'].includes(grade)) return 'text-amber-700 bg-amber-50';
+    if (grade === 'D7') return 'text-purple-700 bg-purple-50';
+    if (grade === 'E8') return 'text-gray-600 bg-gray-100';
+    return 'text-red-700 bg-red-50'; // F9
   };
 
   const results: any[]   = data?.results ?? [];

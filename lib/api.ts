@@ -162,6 +162,7 @@ export const endpoints = {
     attendanceToday: '/attendance/today',
     attendanceHistory: '/attendance/history',
     attendanceStudents: '/attendance/staff/students',
+    attendanceStudentsDates: '/attendance/staff/students/history-dates',
     leaveRequest: '/leave/request',
     leaveMyLeaves: '/leave/my',
     leaveBalance: '/leave/balance',
