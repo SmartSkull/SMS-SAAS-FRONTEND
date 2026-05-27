@@ -229,10 +229,10 @@ export default function StaffDashboard() {
             <Pie
               data={data?.analytics?.classDistribution ?? []}
               cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={({ name, value }) => `${name}: ${value}`}
-              outerRadius={80}
+              cy="45%"
+              labelLine={true}
+              label={({ name, percent }) => percent > 0.05 ? `${name} (${(percent * 100).toFixed(0)}%)` : ''}
+              outerRadius={70}
               fill="#8884d8"
               dataKey="value"
             >
@@ -241,6 +241,7 @@ export default function StaffDashboard() {
               ))}
             </Pie>
             <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
           </PieChart>
         </ResponsiveContainer>
       </div>

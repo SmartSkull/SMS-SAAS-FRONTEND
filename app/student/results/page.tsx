@@ -1,14 +1,13 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { EmptyState, LoadingState } from '@/components/ui/StateDisplay';
+import { useToast } from '@/components/ui/Toast';
+import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { auth } from '@/lib/auth';
-import { useToast } from '@/components/ui/Toast';
-import type { ApiResponse } from '@/types';
+import type { ApiResponse, SchoolProfile } from '@/types';
 import clsx from 'clsx';
-import { User, BookOpen, BarChart2, Users, CheckCircle2, Clock, Printer, FileBarChart2, Search } from 'lucide-react';
-import { EmptyState, LoadingState } from '@/components/ui/StateDisplay';
-import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
-import type { SchoolProfile } from '@/types';
+import { BarChart2, BookOpen, CheckCircle2, Clock, FileBarChart2, Printer, Search, User, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 const UPLOADS = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
@@ -95,6 +94,12 @@ async function printResultSheet(data: any, results: any[], session: string, term
     .sig-img{height:35px;width:auto;display:block;margin:0 auto}
     .date-val{font-size:11px;font-weight:600;color:#333;padding:5px 0;border-bottom:1px solid #333;min-width:120px;text-align:center}
     .sum td{font-weight:700;border-top:2px solid ${primary};background:#eff6ff!important}
+    .traits-section{margin:8px 0;font-size:8px}
+    .traits-title{font-weight:700;padding:4px 6px;background:#f3f4f6;border-radius:4px;margin-bottom:3px;text-transform:uppercase}
+    .traits-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+    .trait-item{padding:3px;background:#fafafa;border:1px solid #e5e7eb;border-radius:2px;text-align:center}
+    .trait-label{font-weight:600;color:#374151;font-size:6px;display:block;margin-bottom:1px}
+    .trait-score{font-weight:700;color:${primary};font-size:9px}
     @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
   </style></head><body><div>
   <div class="hdr">
@@ -174,42 +179,59 @@ async function printResultSheet(data: any, results: any[], session: string, term
     ${[['A1','75-100','Excellent','#16a34a'],['B2','70-74','V.Good','#22c55e'],['B3','65-69','Good','#3b82f6'],
        ['C4','60-64','Credit','#60a5fa'],['C5','55-59','Credit','#eab308'],['C6','50-54','Credit','#d97706'],
        ['D7','45-49','Pass','#a855f7'],['E8','40-44','Pass','#6b7280'],['F9','0-39','Fail','#dc2626']]
-      .map(([g,r,d,c]) => `<div class="sc-item"><span class="c" style="background:${c}">${g}</span><div class="r">${r}</div><div class="d">${d}</div></div>`).join('')}
+      .map(([g,r,d,c]) => '<div class="sc-item"><span class="c" style="background:' + c + '">' + g + '</span><div class="r">' + r + '</div><div class="d">' + d + '</div></div>').join('')}
   </div>
 
+  ${data.trait ? `
+  <div class="traits-section">
+    <div class="traits-title">Affective Traits</div>
+    <div class="traits-grid">
+      <div class="trait-item"><span class="trait-label">Punctuality</span><span class="trait-score">${data.trait.punctuality}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Perseverance</span><span class="trait-score">${data.trait.perseverance}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Responsibility</span><span class="trait-score">${data.trait.responsibility}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Diligence</span><span class="trait-score">${data.trait.diligence}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Self Control</span><span class="trait-score">${data.trait.selfControl}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Honesty</span><span class="trait-score">${data.trait.honesty}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Attendance</span><span class="trait-score">${data.trait.attendance}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Attentiveness</span><span class="trait-score">${data.trait.attentiveness}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Creativity</span><span class="trait-score">${data.trait.creativity}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Curiosity</span><span class="trait-score">${data.trait.curiosity}/5</span></div>
+    </div>
+  </div>
+
+  <div class="traits-section">
+    <div class="traits-title">Psychomotor Traits</div>
+    <div class="traits-grid">
+      <div class="trait-item"><span class="trait-label">Drawing</span><span class="trait-score">${data.trait.drawing}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Physical Activity</span><span class="trait-score">${data.trait.physicalActivity}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Accuracy</span><span class="trait-score">${data.trait.accuracy}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Handling of Tools</span><span class="trait-score">${data.trait.handlingOfTools}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Mental Skills</span><span class="trait-score">${data.trait.mentalSkills}/5</span></div>
+    </div>
+  </div>
+  ` : ''}
+
   <div class="cmts">
-    <div class="cmt t">
-      <div class="ttl">Teacher's Comment</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid #fde047">
-        ${teacherB64 ? `<img src="${teacherB64}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : ''}
-        <div><div style="font-size:9px;font-weight:700">${data.teacher?.name || 'Class Teacher'}</div><div style="font-size:6px;color:#666;text-transform:uppercase">Form Teacher</div></div>
-      </div>
-      <div class="txt">${data.attendance?.teacherComment || 'No comment provided'}</div>
-    </div>
-    <div class="cmt p">
-      <div class="ttl">Principal's Comment</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid #a5b4fc">
-        ${principalB64 ? `<img src="${principalB64}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : ''}
-        <div><div style="font-size:9px;font-weight:700">${data.principal?.name || 'The Principal'}</div><div style="font-size:6px;color:#666;text-transform:uppercase">School Head</div></div>
-      </div>
-      <div class="txt">${data.attendance?.principalComment || 'No comment provided'}</div>
-    </div>
+    ${data.teacher ? `<div class="cmt t"><div class="ttl">Teacher's Comment</div><div class="txt">"${data.teacher.comment || '—'}"</div></div>` : ''}
+    ${data.principal ? `<div class="cmt p"><div class="ttl">Principal's Comment</div><div class="txt">"${data.principal.comment || '—'}"</div></div>` : ''}
   </div>
 
   <div class="foot">
     <div class="sig">
-      ${sigB64 ? `<img src="${sigB64}" class="sig-img" alt="Signature">` : '<div style="height:35px"></div>'}
-      <div class="ttl">Principal</div>
+      ${teacherB64 ? `<img src="${teacherB64}" class="sig-img">` : ''}
+      <div class="ttl">Teacher</div>
+      <div class="date-val"></div>
     </div>
     <div class="sig">
-      <div class="date-val">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
-      <div class="ttl">Date Approved</div>
+      ${principalB64 ? `<img src="${principalB64}" class="sig-img">` : ''}
+      <div class="ttl">Principal</div>
+      <div class="date-val"></div>
     </div>
   </div>
-</div>
-<script>window.print();<\/script>
-</body></html>`);
+</div></body></html>`);
   win.document.close();
+  win.focus();
+  win.print();
 }
 
 const TERMS = ['FIRST', 'SECOND', 'THIRD'];
@@ -290,17 +312,41 @@ export default function StudentResults() {
       {data && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print:hidden">
           {([
-            { label: 'Subjects',   value: results.length,          icon: BookOpen,     color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-100' },
-            { label: 'Average',    value: `${avg}%`,               icon: BarChart2,    color: 'text-blue-600',  bg: 'bg-blue-50',  border: 'border-blue-100' },
-            { label: 'Class Size', value: data.class_size,         icon: Users,        color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
-            { label: 'Status',     value: data.approved ? 'Approved' : 'Pending',
-              icon: data.approved ? CheckCircle2 : Clock,
-              color: data.approved ? 'text-emerald-600' : 'text-amber-600',
-              bg:    data.approved ? 'bg-emerald-50'    : 'bg-amber-50',
-              border: data.approved ? 'border-emerald-100' : 'border-amber-100' },
+            { 
+              label: 'Subjects', 
+              value: results.length, 
+              icon: BookOpen, 
+              color: 'text-blue-600', 
+              bg: 'bg-blue-50', 
+              border: 'border-blue-100' 
+            },
+            { 
+              label: 'Average', 
+              value: String(avg) + '%', 
+              icon: BarChart2, 
+              color: 'text-blue-600', 
+              bg: 'bg-blue-50', 
+              border: 'border-blue-100' 
+            },
+            { 
+              label: 'Class Size', 
+              value: data.class_size, 
+              icon: Users, 
+              color: 'text-purple-600', 
+              bg: 'bg-purple-50', 
+              border: 'border-purple-100' 
+            },
+            { 
+              label: 'Status', 
+              value: data.approved ? 'Approved' : 'Pending', 
+              icon: data.approved ? CheckCircle2 : Clock, 
+              color: data.approved ? 'text-emerald-600' : 'text-amber-600', 
+              bg: data.approved ? 'bg-emerald-50' : 'bg-amber-50', 
+              border: data.approved ? 'border-emerald-100' : 'border-amber-100' 
+            },
           ] as const).map(({ label, value, icon: Icon, color, bg, border }) => (
-            <div key={label} className={`bg-white rounded-2xl card border ${border} shadow-sm p-5 flex items-center gap-4`}>
-              <div className={`w-11 h-11 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
+            <div key={label} className={'bg-white rounded-2xl card border ' + border + ' shadow-sm p-5 flex items-center gap-4'}>
+              <div className={'w-11 h-11 rounded-xl ' + bg + ' flex items-center justify-center flex-shrink-0'}>
                 <Icon size={20} className={color} />
               </div>
               <div>
@@ -319,7 +365,7 @@ export default function StudentResults() {
         ) : !data ? (
           <EmptyState icon={Search} message="Select a session and term to view results." card={false} />
         ) : results.length === 0 ? (
-          <EmptyState icon={FileBarChart2} message={`No results for ${term} Term, ${session}.`} card={false} />
+          <EmptyState icon={FileBarChart2} message={'No results for ' + term + ' Term, ' + session + '.'} card={false} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -360,6 +406,66 @@ export default function StudentResults() {
         )}
       </div>
 
+      {/* Traits Display - Table Format */}
+      {data?.trait && (
+        <div className="grid lg:grid-cols-2 gap-6 print:hidden">
+          {/* Affective Traits */}
+          <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-blue-600 text-white px-6 py-4">
+              <h3 className="text-lg font-bold">PART B: AFFECTIVE TRAITS</h3>
+            </div>
+            <table className="w-full">
+              <tbody className="divide-y divide-gray-200">
+                {[
+                  { label: 'Punctuality', value: data.trait.punctuality },
+                  { label: 'Perseverance', value: data.trait.perseverance },
+                  { label: 'Responsibility', value: data.trait.responsibility },
+                  { label: 'Diligence', value: data.trait.diligence },
+                  { label: 'Self Control', value: data.trait.selfControl },
+                  { label: 'Honesty', value: data.trait.honesty },
+                  { label: 'Attendance', value: data.trait.attendance },
+                  { label: 'Attentiveness', value: data.trait.attentiveness },
+                  { label: 'Creativity', value: data.trait.creativity },
+                  { label: 'Curiosity', value: data.trait.curiosity },
+                ].map((trait) => (
+                  <tr key={trait.label} className="hover:bg-gray-50">
+                    <td className="px-6 py-3 text-sm font-medium text-gray-700">{trait.label}</td>
+                    <td className="px-6 py-3 text-right">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm">{trait.value}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Psychomotor Traits */}
+          <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-purple-600 text-white px-6 py-4">
+              <h3 className="text-lg font-bold">PART C: PSYCHOMOTOR TRAITS</h3>
+            </div>
+            <table className="w-full">
+              <tbody className="divide-y divide-gray-200">
+                {[
+                  { label: 'Drawing', value: data.trait.drawing },
+                  { label: 'Physical Activity', value: data.trait.physicalActivity },
+                  { label: 'Accuracy', value: data.trait.accuracy },
+                  { label: 'Handling of Tools', value: data.trait.handlingOfTools },
+                  { label: 'Mental Skills', value: data.trait.mentalSkills },
+                ].map((trait) => (
+                  <tr key={trait.label} className="hover:bg-gray-50">
+                    <td className="px-6 py-3 text-sm font-medium text-gray-700">{trait.label}</td>
+                    <td className="px-6 py-3 text-right">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-sm">{trait.value}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Teacher & Principal Comments */}
       {data && (data.teacher || data.principal) && (
         <div className="grid md:grid-cols-2 gap-4 print:hidden">
@@ -367,7 +473,7 @@ export default function StudentResults() {
             { key: 'teacherComment',   person: data.teacher,   title: "Teacher's Comment",  border: 'border-yellow-200', bg: 'bg-yellow-50' },
             { key: 'principalComment', person: data.principal, title: "Principal's Comment", border: 'border-indigo-200', bg: 'bg-indigo-50' },
           ] as const).map(({ key, person, title, border, bg }) => (
-            <div key={key} className={`rounded-2xl border ${border} ${bg} p-5`}>
+            <div key={key} className={'rounded-2xl border ' + border + ' ' + bg + ' p-5'}>
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-black/10">
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
                   {getImageUrl(person?.image)
@@ -380,7 +486,7 @@ export default function StudentResults() {
                 </div>
               </div>
               <p className="text-sm text-gray-700 italic">
-                {data.attendance?.[key] ? `"${data.attendance[key]}"` : 'No comment provided yet.'}
+                {data.attendance?.[key] ? '"' + data.attendance[key] + '"' : 'No comment provided yet.'}
               </p>
             </div>
           ))}

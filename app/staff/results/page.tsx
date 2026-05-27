@@ -87,6 +87,12 @@ async function printResultSheet(data: any, results: any[], session: string, term
     .sig-img{height:35px;width:auto;display:block;margin:0 auto}
     .date-val{font-size:11px;font-weight:600;color:#333;padding:5px 0;border-bottom:1px solid #333;min-width:120px;text-align:center}
     .sum td{font-weight:700;border-top:2px solid ${primary};background:#eff6ff!important}
+    .traits-section{margin:8px 0;font-size:8px}
+    .traits-title{font-weight:700;padding:4px 6px;background:#f3f4f6;border-radius:4px;margin-bottom:3px;text-transform:uppercase}
+    .traits-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+    .trait-item{padding:3px;background:#fafafa;border:1px solid #e5e7eb;border-radius:2px;text-align:center}
+    .trait-label{font-weight:600;color:#374151;font-size:6px;display:block;margin-bottom:1px}
+    .trait-score{font-weight:700;color:${primary};font-size:9px}
     @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
   </style></head><body><div>
   <div class="hdr">
@@ -151,6 +157,36 @@ async function printResultSheet(data: any, results: any[], session: string, term
        ['D7','45-49','Pass','#a855f7'],['E8','40-44','Pass','#6b7280'],['F9','0-39','Fail','#dc2626']]
       .map(([g,r,d,c]) => `<div class="sc-item"><span class="c" style="background:${c}">${g}</span><div class="r">${r}</div><div class="d">${d}</div></div>`).join('')}
   </div>
+
+  ${data.trait ? `
+  <div class="traits-section">
+    <div class="traits-title">Affective Traits</div>
+    <div class="traits-grid">
+      <div class="trait-item"><span class="trait-label">Punctuality</span><span class="trait-score">${data.trait.punctuality}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Perseverance</span><span class="trait-score">${data.trait.perseverance}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Responsibility</span><span class="trait-score">${data.trait.responsibility}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Diligence</span><span class="trait-score">${data.trait.diligence}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Self Control</span><span class="trait-score">${data.trait.selfControl}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Honesty</span><span class="trait-score">${data.trait.honesty}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Attendance</span><span class="trait-score">${data.trait.attendance}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Attentiveness</span><span class="trait-score">${data.trait.attentiveness}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Creativity</span><span class="trait-score">${data.trait.creativity}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Curiosity</span><span class="trait-score">${data.trait.curiosity}/5</span></div>
+    </div>
+  </div>
+
+  <div class="traits-section">
+    <div class="traits-title">Psychomotor Traits</div>
+    <div class="traits-grid">
+      <div class="trait-item"><span class="trait-label">Drawing</span><span class="trait-score">${data.trait.drawing}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Physical Activity</span><span class="trait-score">${data.trait.physicalActivity}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Accuracy</span><span class="trait-score">${data.trait.accuracy}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Handling of Tools</span><span class="trait-score">${data.trait.handlingOfTools}/5</span></div>
+      <div class="trait-item"><span class="trait-label">Mental Skills</span><span class="trait-score">${data.trait.mentalSkills}/5</span></div>
+    </div>
+  </div>
+  ` : ''}
+
   <div class="cmts">
     <div class="cmt t">
       <div class="ttl">Teacher's Comment</div>
@@ -173,8 +209,10 @@ async function printResultSheet(data: any, results: any[], session: string, term
     <div class="sig">${sigB64 ? `<img src="${sigB64}" class="sig-img" alt="Signature">` : '<div style="height:35px"></div>'}<div class="ttl">Principal</div></div>
     <div class="sig"><div class="date-val">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div><div class="ttl">Date Approved</div></div>
   </div>
-</div><script>window.print();<\/script></body></html>`);
+</div></body></html>`);
   win.document.close();
+  win.focus();
+  win.print();
 }
 
 export default function StaffResults() {
@@ -205,6 +243,12 @@ export default function StaffResults() {
   const [confirmDelete, setConfirmDelete] = useState<any | null>(null);
   const [viewingStudent, setViewingStudent] = useState<string | null>(null);
   const [rowLoading, setRowLoading] = useState<Record<string, string>>({});
+  const [traitsModal, setTraitsModal] = useState(false);
+  const [traitsClass, setTraitsClass] = useState('');
+  const [traitsStudents, setTraitsStudents] = useState<any[]>([]);
+  const [traitsRows, setTraitsRows] = useState<Record<string, Record<string, number>>>({});
+  const [loadingTraits, setLoadingTraits] = useState(false);
+  const [submittingTraits, setSubmittingTraits] = useState(false);
   const { classes, subjects, sessions, terms } = useSchoolData();
   const toast = useToast();
 
@@ -422,6 +466,62 @@ export default function StaffResults() {
     } catch { toast.error('Failed to update attendance'); }
   };
 
+  const AFFECTIVE_TRAITS = [
+    { key: 'punctuality', label: 'Punctuality' },
+    { key: 'perseverance', label: 'Perseverance' },
+    { key: 'responsibility', label: 'Responsibility' },
+    { key: 'diligence', label: 'Diligence' },
+    { key: 'selfControl', label: 'Self Control' },
+    { key: 'honesty', label: 'Honesty' },
+    { key: 'attendance', label: 'Attendance' },
+    { key: 'attentiveness', label: 'Attentiveness' },
+    { key: 'creativity', label: 'Creativity' },
+    { key: 'curiosity', label: 'Curiosity' },
+  ];
+  const PSYCHOMOTOR_TRAITS = [
+    { key: 'drawing', label: 'Drawing' },
+    { key: 'physicalActivity', label: 'Physical Activity' },
+    { key: 'accuracy', label: 'Accuracy' },
+    { key: 'handlingOfTools', label: 'Handling of Tools' },
+    { key: 'mentalSkills', label: 'Mental Skills' },
+  ];
+  const ALL_TRAITS = [...AFFECTIVE_TRAITS, ...PSYCHOMOTOR_TRAITS];
+
+  useEffect(() => {
+    if (!traitsClass) { setTraitsStudents([]); setTraitsRows({}); return; }
+    setLoadingTraits(true);
+    api.get<any>(endpoints.staff.traits, { class: traitsClass, session: uploadSession || undefined, term: uploadTerm || undefined })
+      .then(r => {
+        const students: any[] = r.data ?? [];
+        setTraitsStudents(students);
+        const initial: Record<string, Record<string, number>> = {};
+        students.forEach((s: any) => {
+          const row: Record<string, number> = {};
+          ALL_TRAITS.forEach(t => { row[t.key] = s[t.key] ?? 0; });
+          initial[s.student_id] = row;
+        });
+        setTraitsRows(initial);
+      })
+      .catch(() => toast.error('Failed to load traits'))
+      .finally(() => setLoadingTraits(false));
+  }, [traitsClass, uploadSession, uploadTerm]);
+
+  const handleSaveTraits = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const traits = Object.entries(traitsRows).map(([student_id, vals]) => ({ student_id, ...vals }));
+    if (!traits.length) return toast.error('No students loaded');
+    setSubmittingTraits(true);
+    try {
+      await api.post(endpoints.staff.traits, { traits, session: uploadSession || undefined, term: uploadTerm || undefined });
+      toast.success('Traits saved');
+      setTraitsModal(false);
+      setTraitsClass('');
+      setTraitsStudents([]);
+      setTraitsRows({});
+    } catch { toast.error('Failed to save traits'); }
+    finally { setSubmittingTraits(false); }
+  };
+
   const getGrade = (total: number) => {
     if (total >= 70) return { g: 'A', cls: 'bg-green-100 text-green-700' };
     if (total >= 60) return { g: 'B', cls: 'bg-blue-100 text-blue-700' };
@@ -438,6 +538,10 @@ export default function StaffResults() {
           <button onClick={() => setAttendanceModal(true)}
             className="flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-50">
             <Upload size={16} /> Attendance
+          </button>
+          <button onClick={() => setTraitsModal(true)}
+            className="flex items-center gap-2 border border-purple-600 text-purple-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-purple-50">
+            <Plus size={16} /> Traits
           </button>
           <button onClick={() => setShowUpload(true)}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">
@@ -751,6 +855,99 @@ export default function StaffResults() {
 
       {confirmDelete && <ConfirmModal onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />}
 
+      {/* Traits Modal */}
+      {traitsModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="font-semibold text-gray-900">Affective &amp; Psychomotor Traits</h2>
+                {uploadSession && <p className="text-xs text-gray-400 mt-0.5">{uploadSession} — {uploadTerm} Term · Score: 0–5</p>}
+              </div>
+              <button onClick={() => { setTraitsModal(false); setTraitsClass(''); setTraitsStudents([]); setTraitsRows({}); }}>
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveTraits} className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class</label>
+                <select value={traitsClass} onChange={e => setTraitsClass(e.target.value)} required
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              {!traitsClass ? (
+                <p className="text-sm text-gray-400 text-center py-6">Select a class to load students.</p>
+              ) : loadingTraits ? (
+                <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+              ) : traitsStudents.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">No students found.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-gray-100">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="p-2 text-left font-semibold text-gray-600 min-w-[140px]">Student</th>
+                        <th colSpan={AFFECTIVE_TRAITS.length} className="p-2 text-center font-semibold text-amber-700 bg-amber-50 border-x border-amber-100">
+                          Affective Traits
+                        </th>
+                        <th colSpan={PSYCHOMOTOR_TRAITS.length} className="p-2 text-center font-semibold text-purple-700 bg-purple-50 border-x border-purple-100">
+                          Psychomotor Traits
+                        </th>
+                      </tr>
+                      <tr>
+                        <th className="p-2 text-left font-semibold text-gray-500 uppercase">Name</th>
+                        {AFFECTIVE_TRAITS.map(t => (
+                          <th key={t.key} className="p-2 text-center font-semibold text-gray-500 uppercase bg-amber-50 whitespace-nowrap">{t.label}</th>
+                        ))}
+                        {PSYCHOMOTOR_TRAITS.map(t => (
+                          <th key={t.key} className="p-2 text-center font-semibold text-gray-500 uppercase bg-purple-50 whitespace-nowrap">{t.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {traitsStudents.map((s: any) => {
+                        const row = traitsRows[s.student_id] ?? {};
+                        return (
+                          <tr key={s.student_id} className="hover:bg-gray-50">
+                            <td className="p-2 font-medium text-gray-900 whitespace-nowrap">{s.firstname} {s.lastname}</td>
+                            {AFFECTIVE_TRAITS.map(t => (
+                              <td key={t.key} className="p-1 bg-amber-50/40">
+                                <input type="number" min={0} max={5} value={row[t.key] ?? 0}
+                                  onChange={e => setTraitsRows(prev => ({ ...prev, [s.student_id]: { ...prev[s.student_id], [t.key]: Number(e.target.value) } }))}
+                                  className="w-12 px-1 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:border-amber-500" />
+                              </td>
+                            ))}
+                            {PSYCHOMOTOR_TRAITS.map(t => (
+                              <td key={t.key} className="p-1 bg-purple-50/40">
+                                <input type="number" min={0} max={5} value={row[t.key] ?? 0}
+                                  onChange={e => setTraitsRows(prev => ({ ...prev, [s.student_id]: { ...prev[s.student_id], [t.key]: Number(e.target.value) } }))}
+                                  className="w-12 px-1 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:border-purple-500" />
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit" disabled={submittingTraits || !traitsClass || traitsStudents.length === 0}
+                  className="flex-1 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
+                  {submittingTraits ? 'Saving…' : 'Save Traits'}
+                </button>
+                <button type="button" onClick={() => { setTraitsModal(false); setTraitsClass(''); setTraitsStudents([]); setTraitsRows({}); }}
+                  className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Student Result View Modal */}
       {viewingStudent && (
         <StudentResultModal
@@ -908,6 +1105,66 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
                   </tfoot>
                 </table>
               </div>
+
+              {/* Traits Display - Table Format */}
+              {data?.trait && (
+                <div className="grid sm:grid-cols-2 gap-6">
+                  {/* Affective Traits */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-blue-600 text-white px-4 py-2.5">
+                      <h3 className="text-sm font-bold uppercase tracking-wider">Affective Traits</h3>
+                    </div>
+                    <table className="w-full text-xs">
+                      <tbody className="divide-y divide-gray-100">
+                        {[
+                          { label: 'Punctuality', value: data.trait.punctuality },
+                          { label: 'Perseverance', value: data.trait.perseverance },
+                          { label: 'Responsibility', value: data.trait.responsibility },
+                          { label: 'Diligence', value: data.trait.diligence },
+                          { label: 'Self Control', value: data.trait.selfControl },
+                          { label: 'Honesty', value: data.trait.honesty },
+                          { label: 'Attendance', value: data.trait.attendance },
+                          { label: 'Attentiveness', value: data.trait.attentiveness },
+                          { label: 'Creativity', value: data.trait.creativity },
+                          { label: 'Curiosity', value: data.trait.curiosity },
+                        ].map((trait) => (
+                          <tr key={trait.label} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-2 font-medium text-gray-700">{trait.label}</td>
+                            <td className="px-4 py-2 text-right">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 font-bold text-xs">{trait.value}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Psychomotor Traits */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-purple-600 text-white px-4 py-2.5">
+                      <h3 className="text-sm font-bold uppercase tracking-wider">Psychomotor Traits</h3>
+                    </div>
+                    <table className="w-full text-xs">
+                      <tbody className="divide-y divide-gray-100">
+                        {[
+                          { label: 'Drawing', value: data.trait.drawing },
+                          { label: 'Physical Activity', value: data.trait.physicalActivity },
+                          { label: 'Accuracy', value: data.trait.accuracy },
+                          { label: 'Handling of Tools', value: data.trait.handlingOfTools },
+                          { label: 'Mental Skills', value: data.trait.mentalSkills },
+                        ].map((trait) => (
+                          <tr key={trait.label} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-2 font-medium text-gray-700">{trait.label}</td>
+                            <td className="px-4 py-2 text-right">
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-xs">{trait.value}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Teacher & Principal Comments */}
               {(data.teacher || data.principal) && (

@@ -109,9 +109,9 @@ export default function PaymentsPage() {
         <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5">
           <h2 className="font-semibold text-gray-900 mb-4">Payments by Class</h2>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={summary} margin={{ top: 4, right: 8, left: -16, bottom: 40 }}>
+            <BarChart data={summary} margin={{ top: 4, right: 8, left: -16, bottom: 50 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis dataKey="class" tick={{ fontSize: 11, fill: '#6b7280' }} angle={-35} textAnchor="end" interval={0} />
+              <XAxis dataKey="class" tick={{ fontSize: 9, fill: '#6b7280' }} angle={-45} textAnchor="end" interval={0} />
               <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
               <Tooltip
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}

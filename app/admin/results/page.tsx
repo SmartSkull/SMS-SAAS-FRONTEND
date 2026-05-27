@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { CheckCircle, ChevronDown, FileBarChart2, Loader2, Search, XCircle } from 'lucide-react';
+import { BadgeCheck, Check, CheckCircle, ChevronDown, FileBarChart2, Loader2, Search, XCircle } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -149,14 +149,20 @@ export default function AdminResults() {
                 <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
                 <td className="p-3 text-gray-500 font-mono text-xs">{s.student_id}</td>
                 <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.approved ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {s.approved ? 'Approved' : 'Pending'}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.approved == 1 || s.approved === true || s.approved === '1' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {s.approved == 1 || s.approved === true || s.approved === '1' ? 'Approved' : 'Pending'}
                   </span>
                 </td>
                 <td className="p-3">
-                  <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Approve">
-                    {approving[s.student_id] ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                  </button>
+                  {s.approved == 1 || s.approved === true || s.approved === '1' ? (
+                    <span className="text-green-500" title="Verified">
+                      <BadgeCheck size={18} />
+                    </span>
+                  ) : (
+                    <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Verify">
+                      {approving[s.student_id] ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

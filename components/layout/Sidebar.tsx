@@ -8,6 +8,7 @@ import {
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
   Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
   Wallet, CalendarDays, BookCopy, UserCheck, ArrowUpCircle, Video,
+  BarChart3,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -59,6 +60,7 @@ const MENUS = {
     { icon: BookMarked, label: 'Courses', path: '/admin/courses' },
     { icon: Calendar, label: 'Sessions', path: '/admin/sessions' },
     { icon: CreditCard, label: 'Payments', path: '/admin/payments' },
+    { icon: BarChart3, label: 'Financial Reports', path: '/admin/financial-reports' },
     { icon: Library, label: 'Library', path: '/admin/library' },
     { icon: Newspaper, label: 'Posts', path: '/admin/posts' },
     { icon: Mail, label: 'Messages', path: '/admin/messages' },

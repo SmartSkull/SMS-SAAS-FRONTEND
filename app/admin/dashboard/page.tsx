@@ -56,10 +56,10 @@ export default function AdminDashboard() {
           <ResponsiveContainer width="100%" height={260}>
             <BarChart
               data={(data?.studentsByClass ?? []).map(({ class: cls, count }) => ({ name: cls, count }))}
-              margin={{ top: 4, right: 8, left: -16, bottom: 40 }}
+              margin={{ top: 4, right: 8, left: -16, bottom: 50 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} angle={-35} textAnchor="end" interval={0} />
+              <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#6b7280' }} angle={-45} textAnchor="end" interval={0} />
               <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
               <Tooltip
                 contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}
