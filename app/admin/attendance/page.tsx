@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Users, AlertCircle, Save, RefreshCw } from 'lucide-react';
 import { useAdminAttendanceLocation, useAdminAttendanceReport, useAdminStudentAttendanceReport } from '@/hooks/attendance';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { AttendanceStatus } from '@/types';
 
@@ -29,8 +30,10 @@ export default function AdminAttendancePage() {
   const [form, setForm] = useState({ name: '', latitude: '', longitude: '', radiusMeters: '100', resumptionTime: '08:00' });
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState('');
+  const [geoAccuracy, setGeoAccuracy] = useState<number | null>(null);
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [tab, setTab] = useState<'staff' | 'students'>('staff');
+  const { classes } = useSchoolData();
 
   useEffect(() => {
     if (location) {
@@ -46,12 +49,21 @@ export default function AdminAttendancePage() {
 
   const useMyLocation = () => {
     setGeoError('');
+    setGeoAccuracy(null);
     setResolvedAddress('');
     if (!navigator.geolocation) { setGeoError('Geolocation not supported'); return; }
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const { latitude, longitude } = pos.coords;
+        const { latitude, longitude, accuracy } = pos.coords;
+        const accuracyMeters = Number(accuracy);
+        setGeoAccuracy(Number.isFinite(accuracyMeters) ? accuracyMeters : null);
+        const minimumAccuracy = Math.max(Number(form.radiusMeters || 100) * 2, 150);
+        if (Number.isFinite(accuracyMeters) && accuracyMeters > minimumAccuracy) {
+          setGeoLoading(false);
+          setGeoError(`Browser location is only accurate to about ${Math.round(accuracyMeters)}m, so it may point to the wrong place. Use a phone GPS near the school or enter the coordinates manually.`);
+          return;
+        }
         setForm((f) => ({ ...f, latitude: String(latitude), longitude: String(longitude) }));
         try {
           const res = await fetch(
@@ -90,9 +102,18 @@ export default function AdminAttendancePage() {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
   const [reportDate, setReportDate] = useState(todayStr);
+  const [classFilter, setClassFilter] = useState('');
+  const previewLat = Number(form.latitude);
+  const previewLng = Number(form.longitude);
+  const previewRadius = Number(form.radiusMeters) || 100;
+  const hasLocationPreview = Number.isFinite(previewLat) && Number.isFinite(previewLng);
+  const previewSpan = Math.min(Math.max((previewRadius / 111000) * 4, 0.002), 0.03);
+  const locationPreviewUrl = hasLocationPreview
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${previewLng - previewSpan}%2C${previewLat - previewSpan}%2C${previewLng + previewSpan}%2C${previewLat + previewSpan}&layer=mapnik&marker=${previewLat}%2C${previewLng}`
+    : '';
 
   const { records: staffRecords, loading: staffLoading, markAbsent: markStaffAbsent, reload: reloadStaff } = useAdminAttendanceReport({ date: reportDate });
-  const { records: studentRecords, loading: studentLoading, markAbsent: markStudentsAbsent, reload: reloadStudents } = useAdminStudentAttendanceReport({ date: reportDate });
+  const { records: studentRecords, loading: studentLoading, markAbsent: markStudentsAbsent, reload: reloadStudents } = useAdminStudentAttendanceReport({ date: reportDate, className: classFilter || undefined });
 
   const staffPresent = staffRecords.filter((r) => r.status === 'PRESENT').length;
   const staffLate = staffRecords.filter((r) => r.status === 'LATE').length;
@@ -129,22 +150,21 @@ export default function AdminAttendancePage() {
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input placeholder="Latitude" value={form.latitude} onChange={(e) => setForm((f) => ({ ...f, latitude: e.target.value }))} className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               <input placeholder="Longitude" value={form.longitude} onChange={(e) => setForm((f) => ({ ...f, longitude: e.target.value }))} className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[10rem_9rem_auto] gap-3 items-end">
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-gray-500 font-medium">Radius (metres)</label>
-                <input placeholder="Radius (metres)" value={form.radiusMeters} onChange={(e) => setForm((f) => ({ ...f, radiusMeters: e.target.value }))} className="border rounded-xl px-4 py-2.5 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                <input placeholder="Radius (metres)" value={form.radiusMeters} onChange={(e) => setForm((f) => ({ ...f, radiusMeters: e.target.value }))} className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-gray-500 font-medium">Resumption time</label>
-                <input type="time" value={form.resumptionTime} onChange={(e) => setForm((f) => ({ ...f, resumptionTime: e.target.value }))} className="border rounded-xl px-4 py-2.5 text-sm w-36 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                <input type="time" value={form.resumptionTime} onChange={(e) => setForm((f) => ({ ...f, resumptionTime: e.target.value }))} className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-gray-500 font-medium invisible">action</label>
-                <button onClick={useMyLocation} disabled={geoLoading} className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 border border-blue-200 rounded-xl px-4 py-2.5 transition">
+              <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
+                <button onClick={useMyLocation} disabled={geoLoading} className="flex w-full items-center justify-center gap-2 text-sm text-blue-600 hover:text-blue-800 border border-blue-200 rounded-xl px-4 py-2.5 transition disabled:opacity-60">
                   <MapPin size={15} /> {geoLoading ? 'Getting…' : 'Use my location'}
                 </button>
               </div>
@@ -153,6 +173,11 @@ export default function AdminAttendancePage() {
             {geoError && (
               <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 rounded-xl p-3">
                 <AlertCircle size={15} /> {geoError}
+              </div>
+            )}
+            {geoAccuracy !== null && !geoError && (
+              <div className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
+                Browser accuracy: approximately {Math.round(geoAccuracy)} metres
               </div>
             )}
             {resolvedAddress && (
@@ -164,6 +189,27 @@ export default function AdminAttendancePage() {
             {location && (
               <div className="text-xs text-gray-400 bg-gray-50 rounded-xl p-3">
                 Current: <strong>{location.name}</strong> · {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)} · {location.radiusMeters}m radius · resumption <strong>{location.resumptionTime}</strong>
+              </div>
+            )}
+            {hasLocationPreview && (
+              <div className="overflow-hidden rounded-xl border bg-gray-50">
+                <iframe
+                  title="Attendance location preview"
+                  src={locationPreviewUrl}
+                  className="h-64 w-full"
+                  loading="lazy"
+                />
+                <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-gray-500">
+                  <span>Location preview for the selected coordinates</span>
+                  <a
+                    href={`https://www.openstreetmap.org/?mlat=${previewLat}&mlon=${previewLng}#map=18/${previewLat}/${previewLng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-blue-600 hover:text-blue-800"
+                  >
+                    Open map
+                  </a>
+                </div>
               </div>
             )}
             <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl transition">
@@ -186,6 +232,16 @@ export default function AdminAttendancePage() {
               onChange={(e) => setReportDate(e.target.value)}
               className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
+            {tab === 'students' && (
+              <select
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+              >
+                <option value="">All Classes</option>
+                {classes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
             <button onClick={() => tab === 'staff' ? reloadStaff() : reloadStudents()} className="p-2 border rounded-xl hover:bg-gray-50 transition">
               <RefreshCw size={16} className="text-gray-500" />
             </button>

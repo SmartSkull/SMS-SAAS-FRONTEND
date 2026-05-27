@@ -221,7 +221,7 @@ export function useStudentAttendanceHistory(month: number, year: number) {
 }
 
 /* ── Admin: student attendance report ─────────────────────────────────── */
-export function useAdminStudentAttendanceReport(params: { date?: string; month?: number; year?: number }) {
+export function useAdminStudentAttendanceReport(params: { date?: string; month?: number; year?: number; className?: string }) {
   const [records, setRecords] = useState<StudentAttendanceReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
@@ -232,7 +232,7 @@ export function useAdminStudentAttendanceReport(params: { date?: string; month?:
       .then((r) => setRecords(r.data ?? []))
       .catch(() => toast.error('Failed to load student report'))
       .finally(() => setLoading(false));
-  }, [params.date, params.month, params.year]);
+  }, [params.date, params.month, params.year, params.className]);
 
   useEffect(() => { load(); }, [load]);
 
