@@ -115,6 +115,11 @@ export interface Assignment {
   assignment?: string;
   deadline?: string;
   file?: string;
+  content?: string;
+  dueAt?: string;
+  firstname?: string;
+  lastname?: string;
+  status?: 'PUBLISHED' | 'HIDDEN' | string;
   createdAt?: string;
 }
 

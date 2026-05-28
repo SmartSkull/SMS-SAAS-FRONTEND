@@ -208,6 +208,14 @@ input, select, textarea {
   color: #111827;
 }
 
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 input::placeholder, textarea::placeholder {
   color: #9ca3af;
 }

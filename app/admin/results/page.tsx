@@ -1,13 +1,22 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, Check, CheckCircle, Eye, FileBarChart2, Loader2, Search, User, X } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface ClassItem { id: string; name: string; }
 interface SessionItem { id: string; name: string; isCurrent: boolean; }
 interface StudentResult { student_id: string; firstname: string; lastname: string; [key: string]: any; }
+interface ClassResultStat {
+  className: string;
+  students: number;
+  average: number;
+  approved: number;
+  pending: number;
+  subjects: number;
+}
 
 interface InitData {
   students: StudentResult[];
@@ -31,6 +40,7 @@ export default function AdminResults() {
   const toast = useToast();
 
   const TERMS = ['FIRST', 'SECOND', 'THIRD'];
+  const chartColors = ['#2563eb', '#16a34a', '#d97706', '#7c3aed', '#dc2626'];
 
   useEffect(() => {
     api.get<{ success: boolean; data: InitData }>(endpoints.admin.results)
@@ -45,11 +55,12 @@ export default function AdminResults() {
   }, []);
 
   const fetchResults = async () => {
-    if (!selectedClass) return toast.info('Select a class first');
     setFetching(true);
     try {
       const r = await api.get<{ success: boolean; data: any }>(endpoints.admin.results, {
-        class: selectedClass, session: selectedSession, term: selectedTerm,
+        ...(selectedClass ? { class: selectedClass } : {}),
+        session: selectedSession,
+        term: selectedTerm,
       });
       setStudents(r.data?.students ?? []);
       setSelected([]);
@@ -74,6 +85,56 @@ export default function AdminResults() {
   };
 
   const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  const classStats = useMemo<ClassResultStat[]>(() => {
+    const grouped = new Map<string, { students: number; totalAverage: number; approved: number; pending: number; subjects: number }>();
+
+    students.forEach((student) => {
+      const className = student.class || 'Unassigned';
+      const current = grouped.get(className) ?? { students: 0, totalAverage: 0, approved: 0, pending: 0, subjects: 0 };
+      const isApproved = student.approved == 1 || student.approved === true || student.approved === '1';
+      current.students += 1;
+      current.totalAverage += Number(student.average) || 0;
+      current.subjects += Number(student.subject_count) || 0;
+      if (isApproved) current.approved += 1;
+      else current.pending += 1;
+      grouped.set(className, current);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([className, stat]) => ({
+        className,
+        students: stat.students,
+        average: stat.students ? Math.round((stat.totalAverage / stat.students) * 10) / 10 : 0,
+        approved: stat.approved,
+        pending: stat.pending,
+        subjects: stat.subjects,
+      }))
+      .sort((a, b) => a.className.localeCompare(b.className));
+  }, [students]);
+
+  const approvedTotal = classStats.reduce((sum, item) => sum + item.approved, 0);
+  const pendingTotal = classStats.reduce((sum, item) => sum + item.pending, 0);
+  const overallAverage = classStats.length
+    ? Math.round((classStats.reduce((sum, item) => sum + item.average * item.students, 0) / students.length) * 10) / 10
+    : 0;
+  const performanceBands = useMemo(() => {
+    const bands = [
+      { name: 'Excellent', value: 0 },
+      { name: 'Good', value: 0 },
+      { name: 'Credit', value: 0 },
+      { name: 'Pass', value: 0 },
+      { name: 'Needs Support', value: 0 },
+    ];
+    students.forEach((student) => {
+      const avg = Number(student.average) || 0;
+      if (avg >= 70) bands[0].value += 1;
+      else if (avg >= 60) bands[1].value += 1;
+      else if (avg >= 50) bands[2].value += 1;
+      else if (avg >= 40) bands[3].value += 1;
+      else bands[4].value += 1;
+    });
+    return bands;
+  }, [students]);
 
   if (loading) return <div className="h-64 bg-gray-200 rounded-2xl animate-pulse" />;
 
@@ -87,7 +148,7 @@ export default function AdminResults() {
           <label className="block text-xs font-medium text-gray-600 mb-1">Class</label>
           <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500">
-            <option value="">Select class</option>
+            <option value="">All classes</option>
             {(init?.classes ?? []).filter(c => c.name !== 'none').map(c => (
               <option key={c.id} value={c.name}>{c.name}</option>
             ))}
@@ -120,6 +181,134 @@ export default function AdminResults() {
           </button>
         )}
       </div>
+
+      {students.length > 0 && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium text-gray-500 uppercase">Classes</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{classStats.length}</p>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium text-gray-500 uppercase">Students</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{students.length}</p>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium text-gray-500 uppercase">Overall Average</p>
+              <p className="mt-1 text-2xl font-bold text-blue-700">{overallAverage}%</p>
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium text-gray-500 uppercase">Approval</p>
+              <p className="mt-1 text-2xl font-bold text-green-700">{approvedTotal}/{students.length}</p>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="mb-3">
+                <h2 className="font-semibold text-gray-900">Class Average Performance</h2>
+                <p className="text-xs text-gray-500">{selectedSession} · {selectedTerm} Term</p>
+              </div>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={classStats} margin={{ top: 8, right: 12, left: -18, bottom: 42 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="className" interval={0} angle={-30} textAnchor="end" height={58} tick={{ fontSize: 11 }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+                    <Tooltip formatter={(value) => [`${value}%`, 'Average']} />
+                    <Bar dataKey="average" radius={[6, 6, 0, 0]} fill="#2563eb" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="mb-3">
+                <h2 className="font-semibold text-gray-900">Approval Status</h2>
+                <p className="text-xs text-gray-500">Approved vs pending result sets</p>
+              </div>
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Approved', value: approvedTotal },
+                        { name: 'Pending', value: pendingTotal },
+                      ]}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={58}
+                      outerRadius={92}
+                      paddingAngle={4}
+                    >
+                      <Cell fill="#16a34a" />
+                      <Cell fill="#d97706" />
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg bg-green-50 px-3 py-2 text-green-700">Approved: <strong>{approvedTotal}</strong></div>
+                <div className="rounded-lg bg-amber-50 px-3 py-2 text-amber-700">Pending: <strong>{pendingTotal}</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-[1fr_1.2fr] gap-4">
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="mb-3">
+                <h2 className="font-semibold text-gray-900">Performance Bands</h2>
+                <p className="text-xs text-gray-500">Student averages grouped by range</p>
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={performanceBands} margin={{ top: 8, right: 12, left: -18, bottom: 42 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" interval={0} angle={-25} textAnchor="end" height={58} tick={{ fontSize: 10 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                      {performanceBands.map((_, index) => <Cell key={index} fill={chartColors[index]} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm overflow-hidden">
+              <div className="mb-3">
+                <h2 className="font-semibold text-gray-900">Class Snapshot</h2>
+                <p className="text-xs text-gray-500">A quick scan of every class with uploaded results</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left text-xs uppercase text-gray-500 border-b">
+                    <tr>
+                      <th className="py-2 font-semibold">Class</th>
+                      <th className="py-2 font-semibold">Students</th>
+                      <th className="py-2 font-semibold">Average</th>
+                      <th className="py-2 font-semibold">Approved</th>
+                      <th className="py-2 font-semibold">Pending</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {classStats.map((item) => (
+                      <tr key={item.className}>
+                        <td className="py-2 font-medium text-gray-900">{item.className}</td>
+                        <td className="py-2 text-gray-600">{item.students}</td>
+                        <td className="py-2 font-semibold text-blue-700">{item.average}%</td>
+                        <td className="py-2 text-green-700">{item.approved}</td>
+                        <td className="py-2 text-amber-700">{item.pending}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">

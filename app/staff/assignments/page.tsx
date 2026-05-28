@@ -5,10 +5,10 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { ApiResponse, Assignment } from '@/types';
-import { FileText, Paperclip, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, FileText, Paperclip, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-const EMPTY = { subject: '', assignment: '', class: '', deadline: '' };
+const EMPTY = { subject: '', assignment: '', class: '', deadline: '', status: 'PUBLISHED' };
 
 export default function StaffAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -35,7 +35,13 @@ export default function StaffAssignments() {
   const openCreate = () => { setEditing(null); setForm(EMPTY); setFile(null); setShowForm(true); };
   const openEdit = (a: Assignment) => {
     setEditing(a);
-    setForm({ subject: a.subject ?? a.title, assignment: a.assignment ?? a.description, class: a.class, deadline: a.deadline ?? a.due_date });
+    setForm({
+      subject: a.subject ?? a.title,
+      assignment: a.assignment ?? a.description,
+      class: a.class,
+      deadline: a.deadline ?? a.due_date,
+      status: a.status === 'HIDDEN' ? 'HIDDEN' : 'PUBLISHED',
+    });
     setFile(null);
     setShowForm(true);
   };
@@ -112,6 +118,14 @@ export default function StaffAssignments() {
                   onChange={e => setForm(p => ({ ...p, deadline: e.target.value }))}
                   className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Student Visibility</label>
+                <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="PUBLISHED">Visible to students</option>
+                  <option value="HIDDEN">Hidden from students</option>
+                </select>
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Assignment</label>
@@ -178,6 +192,15 @@ export default function StaffAssignments() {
                     <p className="font-semibold text-gray-800">{a.subject ?? a.title}</p>
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{a.subject ?? a.course}</span>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{a.class}</span>
+                    {a.status === 'HIDDEN' ? (
+                      <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                        <EyeOff size={12} /> Hidden
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                        <Eye size={12} /> Visible
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-500 mt-1 line-clamp-2">{a.assignment ?? a.description}</p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
