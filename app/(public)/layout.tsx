@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import clsx from 'clsx';
-import PageLoader from '@/components/ui/PageLoader';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 
 const NAV_LINKS = [
@@ -91,7 +90,6 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen flex flex-col">
-      <PageLoader />
       <PublicNavbar />
       <main className="flex-1">{children}</main>
       <footer className="text-white/70 text-center text-sm py-6" style={{ backgroundColor: primary }}>

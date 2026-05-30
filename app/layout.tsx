@@ -1,5 +1,6 @@
 import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
+import PageLoader from '@/components/ui/PageLoader';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${inter.className} h-full antialiased`}>
         <ToastProvider>
+          <PageLoader />
           {children}
         </ToastProvider>
         <OfflineIndicator />
