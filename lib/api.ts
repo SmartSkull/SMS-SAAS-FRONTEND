@@ -35,6 +35,13 @@ client.interceptors.response.use(
     const original = error.config as AxiosRequestConfig & { _retry?: boolean };
     const isLoginEndpoint = original.url?.includes('/auth/') && original.url?.includes('/login');
 
+    // Detect network errors
+    if (!error.response || error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('api-network-error'));
+      }
+    }
+
     if (error.response?.status === 401 && !isLoginEndpoint && !original._retry) {
       original._retry = true;
       const refreshToken = auth.getRefreshToken();

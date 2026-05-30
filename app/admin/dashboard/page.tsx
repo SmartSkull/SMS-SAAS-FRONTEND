@@ -31,7 +31,7 @@ export default function AdminDashboard() {
             : <User size={24} className="text-blue-600" />}
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome, {user?.firstname ?? 'Admin'}! 🎓</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Welcome back, {user?.firstname ?? 'Admin'}! <span className="animate-wave">👋</span></h1>
           <p className="text-sm text-gray-500 mt-0.5 capitalize">{data?.current_term} Term · {data?.current_session} Session</p>
         </div>
       </div>

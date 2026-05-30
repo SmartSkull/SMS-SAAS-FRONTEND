@@ -89,7 +89,7 @@ export default function StaffDashboard() {
             : <User size={24} className="text-blue-600" />}
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Welcome, {data?.user?.firstname ?? user?.firstname}!</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Welcome back, {data?.user?.firstname ?? user?.firstname}! <span className="animate-wave">👋</span></h1>
           <p className="text-gray-500 text-sm mt-0.5">{data?.current_session} — {data?.current_term}</p>
         </div>
       </div>

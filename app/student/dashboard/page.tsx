@@ -128,7 +128,7 @@ export default function StudentDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Welcome back, <span className="text-blue-600">{data?.user.firstname}!</span> 👋
+              Welcome back, <span className="text-blue-600">{data?.user.firstname}!</span> <span className="animate-wave">👋</span>
             </h1>
             <p className="text-gray-500 text-sm mt-0.5">{data?.current_term} Term · {data?.current_session} Session</p>
           </div>
