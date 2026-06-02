@@ -1,5 +1,6 @@
 'use client';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
+import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
@@ -12,7 +13,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const accent = school?.accentColor || '#84cc16';
 
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center" />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
   }
 
   return (

@@ -236,6 +236,11 @@ input::placeholder, textarea::placeholder {
   100% { background-position: -200% 0; }
 }
 
+@keyframes skeletonIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Staggered fade-in for skeleton blocks */
 .skeleton-stagger > * {
   opacity: 0;

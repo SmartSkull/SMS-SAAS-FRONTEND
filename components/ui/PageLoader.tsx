@@ -11,7 +11,14 @@ export default function PageLoader() {
   const logo = normalizeSchoolLogo(school?.logo);
   const primary = school?.primaryColor ?? '#3b82f6';
 
+  // Only show on entry/auth/public pages, not in dashboards
+  const isDashboard = pathname.startsWith('/admin') || 
+                      pathname.startsWith('/staff') || 
+                      pathname.startsWith('/student');
+
   useEffect(() => {
+    if (isDashboard) return;
+
     setLoading(true);
     setProgress(20);
 
@@ -23,9 +30,9 @@ export default function PageLoader() {
     }, 500);
 
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [pathname]);
+  }, [pathname, isDashboard]);
 
-  if (!loading && progress === 0) return null;
+  if (isDashboard || (!loading && progress === 0)) return null;
 
   return (
     <>
