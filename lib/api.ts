@@ -121,6 +121,7 @@ export const endpoints = {
     bookgameUpload: '/student/bookgame/upload',
     bookgameGenerate: '/student/bookgame/generate',
     bookgameCheck: '/student/bookgame/check',
+    quizGameUpload: '/student/quiz-game/upload-and-generate',
     schoolFees: '/student/school-fees',
     schoolFeesInit: '/student/school-fees/initialize',
     schoolFeesVerify: (ref: string) => `/student/school-fees/verify/${ref}`,

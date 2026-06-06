@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import { Upload, Play, Trophy, Users, BookOpen, Loader2, Check, X, Zap, ArrowRight, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
+import { api, endpoints } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Mode = 'menu' | 'solo' | 'multiplayer';
@@ -30,14 +31,9 @@ function getToken() {
 async function uploadAndGenerate(file: File): Promise<Question[]> {
   const fd = new FormData();
   fd.append('document', file);
-  const res = await fetch(`${API}/student/quiz-game/upload-and-generate`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
-    body: fd,
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message || 'Failed to generate questions');
-  return data.questions;
+  const res: any = await api.upload(endpoints.student.quizGameUpload, fd);
+  if (!res?.questions) throw new Error(res?.message || 'Failed to generate questions');
+  return res.questions;
 }
 
 // ─── Upload Panel ─────────────────────────────────────────────────────────────
