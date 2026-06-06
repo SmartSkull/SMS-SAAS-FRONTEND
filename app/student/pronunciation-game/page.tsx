@@ -46,8 +46,15 @@ function speak(text: string) {
 function useSpeechRecognition() {
   const recRef = useRef<any>(null);
   const [supported, setSupported] = useState(true);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
+    // iOS Safari has broken/no SpeechRecognition — detect and fall back to text input
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    setIsIOS(ios);
+    if (ios) { setSupported(false); return; }
+
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { setSupported(false); return; }
     const r = new SR();
@@ -60,17 +67,18 @@ function useSpeechRecognition() {
   const listen = useCallback((): Promise<string> => {
     return new Promise((resolve, reject) => {
       const r = recRef.current;
-      if (!r) return reject('Not supported');
-      r.onresult = (e: any) => resolve(e.results[0][0].transcript);
+      if (!r) return reject('not-supported');
+      let resolved = false;
+      r.onresult = (e: any) => { resolved = true; resolve(e.results[0][0].transcript); };
       r.onerror = (e: any) => reject(e.error);
-      r.onend = () => {};
+      r.onend = () => { if (!resolved) reject('no-speech'); };
       r.start();
     });
   }, []);
 
   const stop = useCallback(() => { recRef.current?.stop(); }, []);
 
-  return { listen, stop, supported };
+  return { listen, stop, supported, isIOS };
 }
 
 // ─── Solo Game ────────────────────────────────────────────────────────────────
@@ -82,21 +90,32 @@ function SoloGame({ difficulty, onBack }: { difficulty: Difficulty; onBack: () =
   const [accuracy, setAccuracy] = useState(0);
   const [results, setResults] = useState<SoloResult[]>([]);
   const [listening, setListening] = useState(false);
-  const { listen, stop, supported } = useSpeechRecognition();
+  const [error, setError] = useState('');
+  const [textInput, setTextInput] = useState('');
+  const { listen, stop, supported, isIOS } = useSpeechRecognition();
 
   const currentWord = words.current[idx];
 
+  const submitAnswer = (heard: string) => {
+    const acc = similarity(heard, currentWord);
+    setTranscript(heard);
+    setAccuracy(acc);
+    setPhase('result');
+    setResults(prev => [...prev, { word: currentWord, transcript: heard, accuracy: acc, correct: acc >= 70 }]);
+  };
+
   const startListening = async () => {
+    setError('');
     setListening(true);
     setPhase('listening');
     try {
       const heard = await listen();
-      const acc = similarity(heard, currentWord);
-      setTranscript(heard);
-      setAccuracy(acc);
-      setPhase('result');
-      setResults(prev => [...prev, { word: currentWord, transcript: heard, accuracy: acc, correct: acc >= 70 }]);
-    } catch {
+      submitAnswer(heard);
+    } catch (e: any) {
+      const msg = e === 'not-allowed' ? 'Microphone permission denied. Please allow mic access and try again.'
+        : e === 'no-speech' ? 'No speech detected. Please try again.'
+        : 'Could not capture speech. Try again.';
+      setError(msg);
       setPhase('intro');
     } finally {
       setListening(false);
@@ -176,8 +195,22 @@ function SoloGame({ difficulty, onBack }: { difficulty: Difficulty; onBack: () =
             <button onClick={() => speak(currentWord)} className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 text-sm font-medium">
               <Volume2 size={16} /> Hear pronunciation
             </button>
-            {!supported ? (
-              <p className="text-sm text-red-500">Speech recognition not supported in this browser. Try Chrome.</p>
+            {error && <p className="text-sm text-red-500">{error}</p>}
+            {isIOS || !supported ? (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-400">Type the word as you would pronounce it (spell it out phonetically)</p>
+                <input
+                  value={textInput}
+                  onChange={e => setTextInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && textInput.trim()) { submitAnswer(textInput.trim()); setTextInput(''); } }}
+                  placeholder={`Type "${currentWord}"...`}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 text-center"
+                />
+                <button onClick={() => { submitAnswer(textInput.trim()); setTextInput(''); }} disabled={!textInput.trim()}
+                  className="w-full py-3 btn-brand text-white rounded-xl font-semibold text-sm disabled:opacity-50">
+                  Submit
+                </button>
+              </div>
             ) : (
               <button onClick={startListening}
                 className="w-full py-3 btn-brand text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
@@ -241,9 +274,10 @@ function MultiplayerGame({ playerName, onBack }: { playerName: string; onBack: (
   const [submittedPlayers, setSubmittedPlayers] = useState<Set<string>>(new Set());
   const socketRef = useRef<Socket | null>(null);
   const myIdRef = useRef('');
-  const { listen, stop, supported } = useSpeechRecognition();
+  const { listen, stop, supported, isIOS } = useSpeechRecognition();
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
+  const [textInput, setTextInput] = useState('');
 
   const WS_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
 
@@ -311,17 +345,29 @@ function MultiplayerGame({ playerName, onBack }: { playerName: string; onBack: (
   };
 
   const recordAndSubmit = async () => {
+    setError('');
     setListening(true);
     try {
       const heard = await listen();
       setTranscript(heard);
       setSubmitted(true);
       socketRef.current?.emit('submit-transcript', { roomId, transcript: heard });
-    } catch {
-      setError('Could not capture speech. Please try again.');
+    } catch (e: any) {
+      const msg = e === 'not-allowed' ? 'Microphone permission denied.'
+        : e === 'no-speech' ? 'No speech detected. Try again.'
+        : 'Could not capture speech. Try again.';
+      setError(msg);
     } finally {
       setListening(false);
     }
+  };
+
+  const submitText = () => {
+    if (!textInput.trim()) return;
+    setTranscript(textInput.trim());
+    setSubmitted(true);
+    socketRef.current?.emit('submit-transcript', { roomId, transcript: textInput.trim() });
+    setTextInput('');
   };
 
   // Lobby
@@ -408,18 +454,33 @@ function MultiplayerGame({ playerName, onBack }: { playerName: string; onBack: (
           <h1 className="text-5xl font-bold text-gray-900">{currentWord}</h1>
           {!submitted ? (
             <div className="space-y-3">
-              {listening ? (
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              {isIOS || !supported ? (
+                <>
+                  <p className="text-xs text-gray-400">Type the word as you pronounce it</p>
+                  <input
+                    value={textInput}
+                    onChange={e => setTextInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') submitText(); }}
+                    placeholder={`Type "${currentWord}"...`}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 text-center"
+                  />
+                  <button onClick={submitText} disabled={!textInput.trim()}
+                    className="w-full py-3 btn-brand text-white rounded-xl font-semibold text-sm disabled:opacity-50">
+                    Submit
+                  </button>
+                </>
+              ) : listening ? (
                 <div className="flex items-center justify-center gap-2 text-red-500">
                   <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
                   <span className="text-sm font-medium">Listening…</span>
                 </div>
               ) : (
-                <button onClick={recordAndSubmit} disabled={!supported}
+                <button onClick={recordAndSubmit}
                   className="w-full py-3 btn-brand text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
                   <Mic size={18} /> Record & Submit
                 </button>
               )}
-              {!supported && <p className="text-xs text-red-500">Speech recognition requires Chrome</p>}
             </div>
           ) : (
             <div className="space-y-2">
