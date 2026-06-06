@@ -8,7 +8,7 @@ import {
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
   Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
   Wallet, CalendarDays, BookCopy, UserCheck, ArrowUpCircle, Video,
-  BarChart3, Mic,
+  BarChart3, Mic, Zap,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -25,6 +25,7 @@ const MENUS = {
     { icon: Video, label: 'Online Classes', path: '/student/online-classes' },
     { icon: Gamepad2, label: 'Book Game', path: '/student/book-game' },
     { icon: Mic, label: 'Pronunciation Game', path: '/student/pronunciation-game' },
+    { icon: Zap, label: 'Quiz Battle', path: '/student/quiz-game' },
     { icon: Newspaper, label: 'Posts', path: '/student/posts' },
     { icon: Mail, label: 'Messages', path: '/student/messages' },
     { icon: Bell, label: 'Notifications', path: '/student/notifications' },
