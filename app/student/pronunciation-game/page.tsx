@@ -49,12 +49,6 @@ function useSpeechRecognition() {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // iOS Safari has broken/no SpeechRecognition — detect and fall back to text input
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    setIsIOS(ios);
-    if (ios) { setSupported(false); return; }
-
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { setSupported(false); return; }
     const r = new SR();
@@ -78,7 +72,7 @@ function useSpeechRecognition() {
 
   const stop = useCallback(() => { recRef.current?.stop(); }, []);
 
-  return { listen, stop, supported, isIOS };
+  return { listen, stop, supported };
 }
 
 // ─── Solo Game ────────────────────────────────────────────────────────────────
@@ -92,7 +86,8 @@ function SoloGame({ difficulty, onBack }: { difficulty: Difficulty; onBack: () =
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
   const [textInput, setTextInput] = useState('');
-  const { listen, stop, supported, isIOS } = useSpeechRecognition();
+  const [isIOS, setIsIOS] = useState(false);
+  const { listen, stop, supported } = useSpeechRecognition();
 
   const currentWord = words.current[idx];
 
@@ -112,10 +107,15 @@ function SoloGame({ difficulty, onBack }: { difficulty: Difficulty; onBack: () =
       const heard = await listen();
       submitAnswer(heard);
     } catch (e: any) {
-      const msg = e === 'not-allowed' ? 'Microphone permission denied. Please allow mic access and try again.'
-        : e === 'no-speech' ? 'No speech detected. Please try again.'
-        : 'Could not capture speech. Try again.';
-      setError(msg);
+      if (e === 'not-allowed' || e === 'not-supported' || e === 'service-not-allowed') {
+        // Permanently fall back to text input on this device
+        setIsIOS(true);
+        setError('Microphone not available. Please type your answer instead.');
+      } else if (e === 'no-speech') {
+        setError('No speech detected. Please try again.');
+      } else {
+        setError('Could not capture speech. Try again.');
+      }
       setPhase('intro');
     } finally {
       setListening(false);
@@ -274,10 +274,11 @@ function MultiplayerGame({ playerName, onBack }: { playerName: string; onBack: (
   const [submittedPlayers, setSubmittedPlayers] = useState<Set<string>>(new Set());
   const socketRef = useRef<Socket | null>(null);
   const myIdRef = useRef('');
-  const { listen, stop, supported, isIOS } = useSpeechRecognition();
+  const { listen, stop, supported } = useSpeechRecognition();
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
   const [textInput, setTextInput] = useState('');
+  const [isIOS, setIsIOS] = useState(false);
 
   const WS_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
 
@@ -353,10 +354,14 @@ function MultiplayerGame({ playerName, onBack }: { playerName: string; onBack: (
       setSubmitted(true);
       socketRef.current?.emit('submit-transcript', { roomId, transcript: heard });
     } catch (e: any) {
-      const msg = e === 'not-allowed' ? 'Microphone permission denied.'
-        : e === 'no-speech' ? 'No speech detected. Try again.'
-        : 'Could not capture speech. Try again.';
-      setError(msg);
+      if (e === 'not-allowed' || e === 'not-supported' || e === 'service-not-allowed') {
+        setIsIOS(true);
+        setError('Microphone not available. Please type your answer instead.');
+      } else if (e === 'no-speech') {
+        setError('No speech detected. Try again.');
+      } else {
+        setError('Could not capture speech. Try again.');
+      }
     } finally {
       setListening(false);
     }
