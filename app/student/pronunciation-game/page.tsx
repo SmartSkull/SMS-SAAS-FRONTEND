@@ -64,8 +64,8 @@ function useSpeechRecognition() {
       if (!r) return reject('not-supported');
       let resolved = false;
       r.onresult = (e: any) => { resolved = true; resolve(e.results[0][0].transcript); };
-      r.onerror = (e: any) => reject(e.error);
-      r.onend = () => { if (!resolved) reject('no-speech'); };
+      r.onerror = (e: any) => { if (!resolved) reject(e.error); };
+      r.onend = () => { if (!resolved) setTimeout(() => { if (!resolved) reject('no-speech'); }, 100); };
       r.start();
     });
   }, []);
@@ -108,13 +108,12 @@ function SoloGame({ difficulty, onBack }: { difficulty: Difficulty; onBack: () =
       submitAnswer(heard);
     } catch (e: any) {
       if (e === 'not-allowed' || e === 'not-supported' || e === 'service-not-allowed') {
-        // Permanently fall back to text input on this device
         setIsIOS(true);
         setError('Microphone not available. Please type your answer instead.');
       } else if (e === 'no-speech') {
-        setError('No speech detected. Please try again.');
+        setError('No speech detected. Please speak clearly and try again.');
       } else {
-        setError('Could not capture speech. Try again.');
+        setError(`Speech error: "${e}". Try again or use a different browser.`);
       }
       setPhase('intro');
     } finally {
@@ -360,7 +359,7 @@ function MultiplayerGame({ playerName, onBack }: { playerName: string; onBack: (
       } else if (e === 'no-speech') {
         setError('No speech detected. Try again.');
       } else {
-        setError('Could not capture speech. Try again.');
+        setError(`Speech error: "${e}". Try again or use a different browser.`);
       }
     } finally {
       setListening(false);
