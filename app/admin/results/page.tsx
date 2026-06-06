@@ -312,7 +312,8 @@ export default function AdminResults() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
               <th className="p-3 w-10"><input type="checkbox"
@@ -367,6 +368,7 @@ export default function AdminResults() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {viewingStudent && (
         <StudentResultModal
