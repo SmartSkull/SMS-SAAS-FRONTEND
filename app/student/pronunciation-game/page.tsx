@@ -623,28 +623,33 @@ export default function PronunciationGamePage() {
   const playerName = user ? `${user.firstname} ${user.lastname}`.trim() : 'Student';
 
   if (mode === 'solo') return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setMode('menu')} className="text-sm text-gray-400 hover:text-gray-600">← Back</button>
-        <h1 className="text-xl font-bold text-gray-900">Pronunciation Game — Solo</h1>
+    <div className="flex flex-col items-center min-h-full">
+      <div className="w-full max-w-2xl space-y-4">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setMode('menu')} className="text-sm text-gray-400 hover:text-gray-600">← Back</button>
+          <h1 className="text-xl font-bold text-gray-900">Pronunciation Game — Solo</h1>
+        </div>
+        <SoloGame difficulty={difficulty} onBack={() => setMode('menu')} />
       </div>
-      <SoloGame difficulty={difficulty} onBack={() => setMode('menu')} />
     </div>
   );
 
   if (mode === 'multiplayer') return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setMode('menu')} className="text-sm text-gray-400 hover:text-gray-600">← Back</button>
-        <h1 className="text-xl font-bold text-gray-900">Pronunciation Game — Multiplayer</h1>
+    <div className="flex flex-col items-center min-h-full">
+      <div className="w-full max-w-2xl space-y-4">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setMode('menu')} className="text-sm text-gray-400 hover:text-gray-600">← Back</button>
+          <h1 className="text-xl font-bold text-gray-900">Pronunciation Game — Multiplayer</h1>
+        </div>
+        <MultiplayerGame playerName={playerName} onBack={() => setMode('menu')} />
       </div>
-      <MultiplayerGame playerName={playerName} onBack={() => setMode('menu')} />
     </div>
   );
 
   // Menu
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="flex flex-col items-center min-h-full">
+    <div className="w-full max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Pronunciation Game</h1>
         <p className="text-gray-500 text-sm mt-1">Practice pronouncing words — solo or compete with classmates!</p>
@@ -704,6 +709,7 @@ export default function PronunciationGamePage() {
           <li>In multiplayer, the player with the best pronunciation wins the round</li>
         </ul>
       </div>
+    </div>
     </div>
   );
 }
