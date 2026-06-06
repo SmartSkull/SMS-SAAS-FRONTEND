@@ -58,17 +58,60 @@ function useSpeechRecognition() {
     recRef.current = r;
   }, []);
 
-  const listen = useCallback((): Promise<string> => {
+  const listenViaBrowser = useCallback((): Promise<string> => {
     return new Promise((resolve, reject) => {
       const r = recRef.current;
       if (!r) return reject('not-supported');
       let resolved = false;
       r.onresult = (e: any) => { resolved = true; resolve(e.results[0][0].transcript); };
       r.onerror = (e: any) => { if (!resolved) reject(e.error); };
-      r.onend = () => { if (!resolved) setTimeout(() => { if (!resolved) reject('no-speech'); }, 100); };
+      r.onend = () => { setTimeout(() => { if (!resolved) reject('no-speech'); }, 100); };
       r.start();
     });
   }, []);
+
+  const listenViaWhisper = useCallback((): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mimeType = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        const chunks: BlobPart[] = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = async () => {
+          stream.getTracks().forEach(t => t.stop());
+          const ext = mimeType.includes('mp4') ? 'm4a' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+          const blob = new Blob(chunks, { type: mimeType || 'audio/webm' });
+          const fd = new FormData();
+          fd.append('audio', blob, `audio.${ext}`);
+          const token = document.cookie.split('; ').find(r => r.startsWith('gka_token='))?.split('=')[1] || '';
+          try {
+            const res = await fetch('/api/student/pronunciation-game/transcribe', {
+              method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd,
+            });
+            const data = await res.json();
+            if (data.transcript) resolve(data.transcript.trim());
+            else reject('no-speech');
+          } catch { reject('network'); }
+        };
+        recorder.start();
+        setTimeout(() => { if (recorder.state === 'recording') recorder.stop(); }, 5000);
+      } catch (e: any) {
+        reject(e.name === 'NotAllowedError' ? 'not-allowed' : 'audio-capture');
+      }
+    });
+  }, []);
+
+  const listen = useCallback(async (): Promise<string> => {
+    if (recRef.current) {
+      try { return await listenViaBrowser(); }
+      catch (e: any) {
+        if (e === 'not-allowed' || e === 'service-not-allowed') throw e;
+        // Falls through to Whisper on iOS/no-speech/other failures
+      }
+    }
+    return listenViaWhisper();
+  }, [listenViaBrowser, listenViaWhisper]);
 
   const stop = useCallback(() => { recRef.current?.stop(); }, []);
 
@@ -223,12 +266,8 @@ function SoloGame({ difficulty, onBack }: { difficulty: Difficulty; onBack: () =
           <div className="space-y-4">
             <div className="flex items-center justify-center gap-2 text-red-500">
               <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-sm font-medium">Listening…</span>
+              <span className="text-sm font-medium">Recording… speak now (up to 5s)</span>
             </div>
-            <button onClick={() => { stop(); setPhase('intro'); setListening(false); }}
-              className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl border border-gray-200 text-gray-500 text-sm">
-              <MicOff size={16} /> Cancel
-            </button>
           </div>
         )}
 
