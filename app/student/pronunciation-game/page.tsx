@@ -620,7 +620,7 @@ export default function PronunciationGamePage() {
   const { user } = useAuth();
   const [mode, setMode] = useState<GameMode>('menu');
   const [difficulty, setDifficulty] = useState<Difficulty>('beginner');
-  const playerName = user ? `${user.firstname} ${user.lastname}`.trim() : 'Student';
+  const playerName = user ? (`${(user as any).firstName || user.firstname || ''} ${(user as any).lastName || user.lastname || ''}`.trim() || 'Student') : 'Student';
 
   if (mode === 'solo') return (
     <div className="flex flex-col items-center min-h-full">
