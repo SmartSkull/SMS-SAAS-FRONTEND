@@ -23,9 +23,7 @@ const MENUS = {
     { icon: Calendar, label: 'Timetable', path: '/student/timetable' },
     { icon: Monitor, label: 'CBT', path: '/student/cbt' },
     { icon: Video, label: 'Online Classes', path: '/student/online-classes' },
-    { icon: Gamepad2, label: 'Book Game', path: '/student/book-game' },
-    { icon: Mic, label: 'Pronunciation Game', path: '/student/pronunciation-game' },
-    { icon: Zap, label: 'Quiz Battle', path: '/student/quiz-game' },
+    { icon: Gamepad2, label: 'Games', path: '/student/games' },
     { icon: Newspaper, label: 'Posts', path: '/student/posts' },
     { icon: Mail, label: 'Messages', path: '/student/messages' },
     { icon: Bell, label: 'Notifications', path: '/student/notifications' },
@@ -93,7 +91,7 @@ export default function Sidebar({ open, onClose }: Props) {
         'lg:translate-x-0',
         open ? 'translate-x-0' : '-translate-x-full',
       )}
-        style={{ background: `linear-gradient(180deg, ${primary}, #111827)` }}>
+        style={{ backgroundColor: primary }}>
         {/* Logo */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <Link href={role ? `/${role}/dashboard` : '/'} className="flex items-center gap-3">
@@ -117,19 +115,23 @@ export default function Sidebar({ open, onClose }: Props) {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3 px-2">Menu</p>
-          {items.map(({ icon: Icon, label, path }) => (
+          {items.map(({ icon: Icon, label, path }) => {
+            const GAME_PATHS = ['/student/book-game', '/student/pronunciation-game', '/student/quiz-game', '/student/nursery-game'];
+            const isActive = pathname === path || (path === '/student/games' && GAME_PATHS.includes(pathname));
+            return (
             <Link key={path} href={path} onClick={onClose}
               className={clsx(
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                pathname === path
+                isActive
                   ? 'bg-white/20 text-white'
                   : 'text-white/70 hover:bg-white/10 hover:text-white',
               )}>
               <Icon size={18} />
               {label}
-              {pathname === path && <span className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />}
+              {isActive && <span className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />}
             </Link>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Footer */}

@@ -1,15 +1,15 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Upload, Play, Trophy, Users, BookOpen, Loader2, Check, X, Zap, ArrowRight, RotateCcw } from 'lucide-react';
+import { Play, Trophy, Users, BookOpen, Loader2, Check, X, Zap, ArrowRight, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Mode = 'menu' | 'solo' | 'multiplayer';
-type SoloPhase = 'upload' | 'generating' | 'playing' | 'done';
-type MultiPhase = 'upload' | 'generating' | 'lobby' | 'waiting' | 'question' | 'round-result' | 'done';
+type SoloPhase = 'select' | 'generating' | 'playing' | 'done';
+type MultiPhase = 'select' | 'generating' | 'lobby' | 'waiting' | 'question' | 'round-result' | 'done';
 
 interface Question {
   id: number;
@@ -24,34 +24,27 @@ interface LobbyRoom { id: string; hostName: string; subject: string; playerCount
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
 
-function getToken() {
-  return document.cookie.split('; ').find(r => r.startsWith('gka_token='))?.split('=')[1] || '';
-}
+const SUBJECTS = ['Mathematics', 'English Language', 'Basic Science', 'Social Studies', 'Civic Education', 'Agricultural Science', 'Computer Studies'];
 
-async function uploadAndGenerate(file: File): Promise<Question[]> {
-  const fd = new FormData();
-  fd.append('document', file);
-  const res: any = await api.upload(endpoints.student.quizGameUpload, fd);
+async function generateBySubject(subject: string): Promise<Question[]> {
+  const res: any = await api.post(endpoints.student.quizGameGenerate, { subject, count: 10 });
   if (!res?.questions) throw new Error(res?.message || 'Failed to generate questions');
   return res.questions;
 }
 
-// ─── Upload Panel ─────────────────────────────────────────────────────────────
-function UploadPanel({ onQuestions, generating, setGenerating }: {
+// ─── Subject Panel ────────────────────────────────────────────────────────────
+function SubjectPanel({ onQuestions, generating, setGenerating }: {
   onQuestions: (qs: Question[], subject: string) => void;
   generating: boolean;
   setGenerating: (v: boolean) => void;
 }) {
-  const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handle = async (file: File) => {
+  const handle = async (subject: string) => {
     setError('');
     setGenerating(true);
     try {
-      const questions = await uploadAndGenerate(file);
-      const subject = file.name.replace(/\.[^.]+$/, '');
+      const questions = await generateBySubject(subject);
       onQuestions(questions, subject);
     } catch (e: any) {
       setError(e.message);
@@ -60,32 +53,25 @@ function UploadPanel({ onQuestions, generating, setGenerating }: {
     }
   };
 
+  if (generating) return (
+    <div className="flex flex-col items-center gap-3 py-8">
+      <Loader2 size={32} className="text-blue-500 animate-spin" />
+      <p className="text-sm font-medium text-gray-600">Generating questions…</p>
+    </div>
+  );
+
   return (
-    <div className="max-w-md mx-auto space-y-4">
-      <div
-        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handle(f); }}
-        onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'}`}
-      >
-        <input ref={inputRef} type="file" accept=".pdf,.docx,.txt" className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) handle(f); }} />
-        {generating ? (
-          <div className="space-y-3">
-            <Loader2 size={36} className="mx-auto text-blue-500 animate-spin" />
-            <p className="text-sm font-medium text-gray-600">Scanning document & generating questions…</p>
-            <p className="text-xs text-gray-400">This may take a moment</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <Upload size={36} className="mx-auto text-gray-400" />
-            <p className="text-sm font-semibold text-gray-700">Drop your handout here or click to browse</p>
-            <p className="text-xs text-gray-400">PDF, Word (.docx), or TXT — max 15 MB</p>
-          </div>
-        )}
+    <div className="space-y-3">
+      <p className="text-sm text-gray-500">Choose a subject to generate questions:</p>
+      <div className="grid grid-cols-2 gap-2">
+        {SUBJECTS.map(s => (
+          <button key={s} onClick={() => handle(s)}
+            className="p-3 rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 text-sm font-medium text-gray-700 text-left transition-all">
+            {s}
+          </button>
+        ))}
       </div>
-      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+      {error && <p className="text-sm text-red-500">{error}</p>}
     </div>
   );
 }
@@ -209,7 +195,7 @@ function SoloGame({ questions, onBack }: { questions: Question[]; onBack: () => 
 
 // ─── Multiplayer Game ─────────────────────────────────────────────────────────
 function MultiplayerGame({ playerName, schoolId, onBack }: { playerName: string; schoolId: string; onBack: () => void }) {
-  const [phase, setPhase] = useState<MultiPhase>('upload');
+  const [phase, setPhase] = useState<MultiPhase>('select');
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subject, setSubject] = useState('');
@@ -240,18 +226,17 @@ function MultiplayerGame({ playerName, schoolId, onBack }: { playerName: string;
     socket.on('error', ({ message }) => setError(message));
     socket.on('question', (q) => {
       setCurrentQ(q); setSelected(null); setWrongAnswers(new Set()); setPhase('question');
-      setTimeLeft(20);
+      // Use server-provided timeLeft (handles late joiners getting remaining time)
+      const startTime = Date.now();
+      const serverTimeLeft = q.timeLeft ?? 20;
+      setTimeLeft(serverTimeLeft);
       clearInterval(timerRef.current!);
       timerRef.current = setInterval(() => {
-        setTimeLeft(t => {
-          if (t <= 1) {
-            clearInterval(timerRef.current!);
-            socket.emit('time-up', { roomId });
-            return 0;
-          }
-          return t - 1;
-        });
-      }, 1000);
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const remaining = Math.max(0, serverTimeLeft - elapsed);
+        setTimeLeft(remaining);
+        if (remaining === 0) clearInterval(timerRef.current!);
+      }, 500);
     });
     socket.on('wrong-answer', ({ answer }) => setWrongAnswers(prev => new Set([...prev, answer])));
     socket.on('round-result', (data) => { clearInterval(timerRef.current!); setRoundResult(data); setPhase('round-result'); });
@@ -279,13 +264,13 @@ function MultiplayerGame({ playerName, schoolId, onBack }: { playerName: string;
     socketRef.current?.emit('join-room', { roomId: id, playerName });
   };
 
-  // ── Upload phase ──
-  if (phase === 'upload') return (
+  // ── Subject selection phase ──
+  if (phase === 'select') return (
     <div className="max-w-md mx-auto space-y-4">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
         <h2 className="font-bold text-gray-900">Active Games</h2>
         {lobbyRooms.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">No active games. Upload a handout to create one!</p>
+          <p className="text-sm text-gray-400 text-center py-4">No active games. Pick a subject to create one!</p>
         ) : (
           <div className="space-y-2">
             {lobbyRooms.map(r => (
@@ -301,11 +286,11 @@ function MultiplayerGame({ playerName, schoolId, onBack }: { playerName: string;
         )}
       </div>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
-        <p className="text-sm font-semibold text-gray-700">Create a Game — Upload a Handout</p>
-        <UploadPanel generating={generating} setGenerating={setGenerating} onQuestions={(qs, subj) => { setQuestions(qs); setSubject(subj); setPhase('generating'); setTimeout(() => setPhase('upload'), 0); }} />
+        <p className="text-sm font-semibold text-gray-700">Create a Game</p>
+        <SubjectPanel generating={generating} setGenerating={setGenerating} onQuestions={(qs, subj) => { setQuestions(qs); setSubject(subj); }} />
         {questions.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-green-600 font-medium">✓ {questions.length} questions generated from "{subject}"</p>
+            <p className="text-xs text-green-600 font-medium">✓ {questions.length} questions ready for "{subject}"</p>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <button onClick={createRoom} className="w-full py-2.5 btn-brand text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
               <Play size={16} /> Create Game
@@ -336,9 +321,9 @@ function MultiplayerGame({ playerName, schoolId, onBack }: { playerName: string;
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
           {isHost ? (
-            <button onClick={() => socketRef.current?.emit('start-game', { roomId })} disabled={players.length < 2}
-              className="w-full py-3 btn-brand text-white rounded-xl font-semibold text-sm disabled:opacity-50 flex items-center justify-center gap-2">
-              <Play size={16} /> Start Game ({players.length} players)
+            <button onClick={() => socketRef.current?.emit('start-game', { roomId })}
+              className="w-full py-3 btn-brand text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+              <Play size={16} /> Start Game ({players.length} player{players.length !== 1 ? 's' : ''})
             </button>
           ) : (
             <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
@@ -458,7 +443,7 @@ export default function QuizGamePage() {
   const { school } = useSelectedSchool();
   const [mode, setMode] = useState<Mode>('menu');
   const [soloQuestions, setSoloQuestions] = useState<Question[]>([]);
-  const [soloPhase, setSoloPhase] = useState<SoloPhase>('upload');
+  const [soloPhase, setSoloPhase] = useState<SoloPhase>('select');
   const [generating, setGenerating] = useState(false);
 
   const playerName = user ? (`${(user as any).firstName || user.firstname || ''} ${(user as any).lastName || user.lastname || ''}`.trim() || 'Student') : 'Student';
@@ -468,18 +453,18 @@ export default function QuizGamePage() {
     <div className="flex flex-col items-center min-h-full">
       <div className="w-full max-w-2xl space-y-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => { setMode('menu'); setSoloPhase('upload'); setSoloQuestions([]); }} className="text-sm text-gray-400 hover:text-gray-600">← Back</button>
+          <button onClick={() => { setMode('menu'); setSoloPhase('select'); setSoloQuestions([]); }} className="text-sm text-gray-400 hover:text-gray-600">← Back</button>
           <h1 className="text-xl font-bold text-gray-900">Quiz Battle — Solo</h1>
         </div>
-        {soloPhase === 'upload' && (
+        {soloPhase === 'select' && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
-            <p className="text-sm font-semibold text-gray-700">Upload a handout to start</p>
-            <UploadPanel generating={generating} setGenerating={setGenerating}
+            <p className="text-sm font-semibold text-gray-700">Pick a subject to start</p>
+            <SubjectPanel generating={generating} setGenerating={setGenerating}
               onQuestions={(qs) => { setSoloQuestions(qs); setSoloPhase('playing'); }} />
           </div>
         )}
         {soloPhase === 'playing' && soloQuestions.length > 0 && (
-          <SoloGame questions={soloQuestions} onBack={() => { setSoloPhase('upload'); setSoloQuestions([]); }} />
+          <SoloGame questions={soloQuestions} onBack={() => { setSoloPhase('select'); setSoloQuestions([]); }} />
         )}
       </div>
     </div>
@@ -502,7 +487,7 @@ export default function QuizGamePage() {
       <div className="w-full max-w-2xl space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Quiz Battle</h1>
-          <p className="text-gray-500 text-sm mt-1">Upload a class handout — AI generates questions. First to answer correctly wins!</p>
+          <p className="text-gray-500 text-sm mt-1">Pick a subject — AI generates questions. First to answer correctly wins!</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -512,7 +497,7 @@ export default function QuizGamePage() {
               <BookOpen size={24} className="text-blue-600" />
             </div>
             <h3 className="font-bold text-gray-900">Solo Practice</h3>
-            <p className="text-sm text-gray-400 mt-1">Upload a handout, get AI-generated questions, and test yourself with a timer.</p>
+            <p className="text-sm text-gray-400 mt-1">Pick a subject, get AI-generated questions, and test yourself with a timer.</p>
             <div className="mt-4 flex items-center gap-1 text-sm font-medium text-blue-600">
               Practice Solo <ArrowRight size={14} />
             </div>
@@ -524,7 +509,7 @@ export default function QuizGamePage() {
               <Users size={24} className="text-purple-600" />
             </div>
             <h3 className="font-bold text-gray-900">Multiplayer</h3>
-            <p className="text-sm text-gray-400 mt-1">Host uploads a handout, everyone sees the same questions — fastest correct answer wins!</p>
+            <p className="text-sm text-gray-400 mt-1">Host picks a subject, everyone sees the same questions — fastest correct answer wins!</p>
             <div className="mt-4 flex items-center gap-1 text-sm font-medium text-purple-600">
               Play with Others <ArrowRight size={14} />
             </div>
@@ -534,8 +519,8 @@ export default function QuizGamePage() {
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700 space-y-1">
           <p className="font-semibold">💡 How it works</p>
           <ul className="text-blue-600 space-y-0.5 text-xs list-disc list-inside">
-            <li>Upload a PDF, Word doc, or text file (class notes, handouts, textbook pages)</li>
-            <li>AI scans it and generates multiple choice questions</li>
+            <li>Pick a subject (Maths, English, Science, etc.)</li>
+            <li>AI generates 10 multiple choice questions instantly</li>
             <li>In multiplayer, all players see the same question at the same time</li>
             <li>First player to answer correctly scores a point — fastest finger wins!</li>
           </ul>
