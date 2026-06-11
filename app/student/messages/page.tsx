@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRight, ChevronLeft, Pencil, Trash2, Check } from 'lucide-react';
 import { useMessages } from '@/hooks/student';
 import { api, endpoints, getImageUrl } from '@/lib/api';
@@ -19,6 +20,7 @@ function Avatar({ name, image, size = 10 }: { name?: string; image?: string | nu
 
 export default function StudentMessages() {
   const { convos, messages, active, loading, openConvo, sendMessage, clearActive, partnerLastLogin } = useMessages();
+  const searchParams = useSearchParams();
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
   const [showNew, setShowNew] = useState(false);
@@ -36,6 +38,12 @@ export default function StudentMessages() {
 
   // Keep localMessages in sync with hook messages
   useEffect(() => { setLocalMessages(messages as any[]); }, [messages]);
+
+  // Auto-open conversation from ?userId= query param (e.g. from transport page)
+  useEffect(() => {
+    const userId = searchParams.get('userId');
+    if (userId && !active) openConvo(userId);
+  }, [searchParams]);
 
   const deleteMsg = async (id: string) => {
     try {
@@ -155,13 +163,13 @@ export default function StudentMessages() {
 
       {/* ── Main area ── */}
       <div className={clsx(
-        'flex flex-col min-w-0',
+        'flex flex-col min-w-0 min-h-0',
         active || showNew ? 'flex flex-1' : 'hidden md:flex md:flex-1'
       )}>
 
         {/* New chat panel */}
         {showNew ? (
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <button onClick={() => setShowNew(false)} className="md:hidden p-1 -ml-1 text-gray-400 hover:text-gray-600">

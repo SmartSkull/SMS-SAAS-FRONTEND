@@ -13,7 +13,8 @@ interface StaffMember {
 }
 interface Meta { total: number; page: number; per_page: number; }
 
-const EMPTY = { firstname: '', lastname: '', email: '', telephone: '', subject: '', class: '', password: '' };
+const ROLES = ['teacher', 'driver', 'accountant', 'admin'] as const;
+const EMPTY = { firstname: '', lastname: '', email: '', telephone: '', subject: '', class: '', password: '', role: '' };
 
 export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -92,6 +93,7 @@ export default function StaffPage() {
             <tr>
               <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Staff</th>
               <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
+              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Role</th>
               <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Phone</th>
               <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
               <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
@@ -99,9 +101,9 @@ export default function StaffPage() {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? [...Array(5)].map((_, i) => (
-              <tr key={i}><td colSpan={5} className="p-3"><div className="h-5 bg-gray-100 rounded animate-pulse" /></td></tr>
+              <tr key={i}><td colSpan={6} className="p-3"><div className="h-5 bg-gray-100 rounded animate-pulse" /></td></tr>
             )) : staff.length === 0 ? (
-              <tr><td colSpan={5}><EmptyState icon={UserCog} message="No staff found." card={false} /></td></tr>
+              <tr><td colSpan={6}><EmptyState icon={UserCog} message="No staff found." card={false} /></td></tr>
             ) : staff.map((m) => (
               <tr key={m.staff_id} className="hover:bg-gray-50">
                 <td className="p-3">
@@ -109,6 +111,7 @@ export default function StaffPage() {
                   <p className="text-xs text-gray-400">{m.email}</p>
                 </td>
                 <td className="p-3 text-gray-500 font-mono text-xs">{m.unique_id}</td>
+                <td className="p-3"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 capitalize">{m.role || '—'}</span></td>
                 <td className="p-3 text-gray-600">{m.telephone}</td>
                 <td className="p-3">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${m.admin_verify === '1' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
@@ -120,7 +123,7 @@ export default function StaffPage() {
                     {m.admin_verify !== '1' && (
                       <button onClick={() => verify(m.staff_id)} className="text-blue-600 hover:text-blue-800"><CheckCircle size={16} /></button>
                     )}
-                    <button onClick={() => { setForm({ firstname: m.firstname, lastname: m.lastname, email: m.email, telephone: m.telephone, subject: '', class: '', password: '' }); setModal({ open: true, member: m }); }}
+                    <button onClick={() => { setForm({ firstname: m.firstname, lastname: m.lastname, email: m.email, telephone: m.telephone, subject: '', class: '', password: '', role: m.role ?? '' }); setModal({ open: true, member: m }); }}
                       className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
                     <button onClick={() => setConfirmId(m.staff_id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                   </div>
@@ -157,6 +160,14 @@ export default function StaffPage() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500" />
                 </div>
               ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+                <select value={form.role} onChange={(e) => setForm(p => ({ ...p, role: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+                  <option value="">Select role</option>
+                  {ROLES.map(r => <option key={r} value={r} className="capitalize">{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                </select>
+              </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
                 <select value={form.subject} onChange={(e) => setForm(p => ({ ...p, subject: e.target.value }))}

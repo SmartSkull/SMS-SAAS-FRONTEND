@@ -61,11 +61,16 @@ export default function AdminMessages() {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() || !active) return;
+    const optimistic = { id: `tmp-${Date.now()}`, isMe: true, message: text, deleted: false, edited: false, createdAt: new Date().toISOString() };
+    setMessages(p => [...p, optimistic]);
+    setText('');
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     try {
-      await api.post(MESSAGES_EP, { receiver_id: active, message: text });
-      setText('');
-      openConvo(active);
-    } catch { toast.error('Failed to send'); }
+      await api.post(MESSAGES_EP, { receiver_id: active, message: optimistic.message });
+    } catch {
+      setMessages(p => p.filter(m => m.id !== optimistic.id));
+      toast.error('Failed to send');
+    }
   };
 
   const deleteMsg = async (id: string) => {

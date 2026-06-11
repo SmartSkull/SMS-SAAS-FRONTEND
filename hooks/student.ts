@@ -154,10 +154,14 @@ export function useMessages() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || !active) return;
+    const optimistic: Message = { id: `tmp-${Date.now()}` as any, isMe: true, message: text, deleted: false, edited: false, createdAt: new Date().toISOString() } as any;
+    setMessages(p => [...p, optimistic]);
     try {
       await api.post(endpoints.student.messages, { receiver_id: active, message: text });
-      openConvo(active);
-    } catch { toast.error('Failed to send message'); }
+    } catch {
+      setMessages(p => p.filter(m => (m as any).id !== optimistic.id));
+      toast.error('Failed to send message');
+    }
   };
 
   return { convos, messages, active, loading, openConvo, sendMessage, clearActive: () => setActive(null), partnerLastLogin };

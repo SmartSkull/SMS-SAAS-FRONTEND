@@ -1,14 +1,19 @@
 'use client';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Bus, Wifi, WifiOff, AlertTriangle, CheckCircle, Clock, Navigation, MapPin } from 'lucide-react';
+import { Bus, Wifi, WifiOff, AlertTriangle, CheckCircle, Clock, Navigation, MapPin, Phone, Share2, Gauge, MessageCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
 interface BusInfo {
   busId: string;
   plateNumber: string;
   routeName?: string;
+  routeFare?: number | null;
+  routePolyline?: [number, number][] | null;
   driverName?: string;
+  driverPhone?: string | null;
+  driverUserId?: string | null;
   tripActive: boolean;
   schoolName?: string;
   lat: number | null;
@@ -39,12 +44,13 @@ function formatDistance(meters: number): string {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`;
 }
 
-function LiveMap({ busCoords, homeCoords }: {
+function LiveMap({ busCoords, homeCoords, routePolyline }: {
   busCoords: { lat: number; lng: number } | null;
   homeCoords: { lat: number; lng: number } | null;
+  routePolyline?: [number, number][] | null;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const instanceRef = useRef<{ map: any; busMarker: any } | null>(null);
+  const instanceRef = useRef<{ map: any; busMarker: any; routeLine: any } | null>(null);
 
   useEffect(() => {
     if (!mapRef.current || instanceRef.current) return;
@@ -53,6 +59,12 @@ function LiveMap({ busCoords, homeCoords }: {
       link.id = 'leaflet-css'; link.rel = 'stylesheet';
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       document.head.appendChild(link);
+    }
+    if (!document.getElementById('leaflet-z-fix')) {
+      const style = document.createElement('style');
+      style.id = 'leaflet-z-fix';
+      style.textContent = '.leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; } .leaflet-control { z-index: 2 !important; }';
+      document.head.appendChild(style);
     }
     import('leaflet').then(L => {
       delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -65,9 +77,12 @@ function LiveMap({ busCoords, homeCoords }: {
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
       const busMarker = busCoords ? L.marker([busCoords.lat, busCoords.lng], { icon: busIcon }).addTo(map) : null;
       if (homeCoords) L.marker([homeCoords.lat, homeCoords.lng], { icon: homeIcon }).addTo(map).bindTooltip('Your stop', { permanent: false });
-      instanceRef.current = { map, busMarker };
+      const routeLine = routePolyline?.length ? L.polyline(routePolyline, { color: '#7c3aed', weight: 3, opacity: 0.5, dashArray: '6,4' }).addTo(map) : null;
+      instanceRef.current = { map, busMarker, routeLine };
       if (busCoords && homeCoords) {
         map.fitBounds([[busCoords.lat, busCoords.lng], [homeCoords.lat, homeCoords.lng]], { padding: [40, 40] });
+      } else if (routePolyline?.length) {
+        map.fitBounds(routePolyline as any, { padding: [30, 30] });
       }
     });
     return () => {
@@ -100,6 +115,7 @@ function LiveMap({ busCoords, homeCoords }: {
 }
 
 export default function StudentTransportPage() {
+  const router = useRouter();
   const [busInfo, setBusInfo] = useState<BusInfo | null>(null);
   const [busCoords, setBusCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [homeCoords, setHomeCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -112,6 +128,8 @@ export default function StudentTransportPage() {
   const [etaLoading, setEtaLoading] = useState(false);
   const [settingHome, setSettingHome] = useState(false);
   const [homeMsg, setHomeMsg] = useState('');
+  const [busMoving, setBusMoving] = useState<boolean | null>(null);
+  const prevCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const etaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -151,7 +169,13 @@ export default function StudentTransportPage() {
     socketRef.current = socket;
     socket.on('connect', () => { setConnected(true); socket.emit('student:watch', { busId: busInfo.busId }); });
     socket.on('disconnect', () => setConnected(false));
-    socket.on('bus:location', (data: { lat: number; lng: number }) => setBusCoords({ lat: data.lat, lng: data.lng }));
+    socket.on('bus:location', (data: { lat: number; lng: number }) => {
+      setBusCoords(prev => {
+        const moved = prev ? (Math.abs(data.lat - prev.lat) > 0.00001 || Math.abs(data.lng - prev.lng) > 0.00001) : null;
+        if (moved !== null) setBusMoving(moved);
+        return { lat: data.lat, lng: data.lng };
+      });
+    });
     return () => { socket.disconnect(); };
   }, [busInfo?.tripActive, busInfo?.busId]);
 
@@ -187,7 +211,62 @@ export default function StudentTransportPage() {
     );
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-[60vh]"><Bus size={36} className="text-purple-400 animate-pulse" /></div>;
+  const shareBusLocation = () => {
+    if (!busCoords) return;
+    const url = `https://www.google.com/maps?q=${busCoords.lat},${busCoords.lng}`;
+    const text = `Track my school bus live: ${url}`;
+    if (navigator.share) {
+      navigator.share({ title: 'Bus Location', text, url });
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    }
+  };
+
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+      <style>{`
+        @keyframes drive {
+          0%   { transform: translateX(-80px); }
+          100% { transform: translateX(80px); }
+        }
+        @keyframes road-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes wheel-spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        .car-drive { animation: drive 1.4s ease-in-out infinite alternate; }
+        .road-scroll { animation: road-scroll 0.7s linear infinite; }
+        .wheel-spin { animation: wheel-spin 0.5s linear infinite; }
+      `}</style>
+
+      {/* Road + car scene */}
+      <div className="relative w-52 overflow-hidden">
+        {/* Car */}
+        <div className="car-drive flex flex-col items-center mb-1">
+          <Bus size={52} className="text-purple-600 drop-shadow-md" />
+          {/* Wheels */}
+          <div className="flex gap-7 -mt-1">
+            <div className="w-3 h-3 rounded-full border-2 border-purple-800 bg-gray-200 wheel-spin" />
+            <div className="w-3 h-3 rounded-full border-2 border-purple-800 bg-gray-200 wheel-spin" />
+          </div>
+        </div>
+
+        {/* Road */}
+        <div className="h-3 bg-gray-700 rounded-full overflow-hidden relative mt-1">
+          <div className="road-scroll absolute top-1/2 -translate-y-1/2 flex gap-4" style={{ width: '200%' }}>
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="w-6 h-0.5 bg-yellow-400 rounded-full shrink-0" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-purple-500 text-sm font-medium animate-pulse tracking-wide">Loading transport info…</p>
+    </div>
+  );
 
   if (!busInfo) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center">
@@ -206,7 +285,9 @@ export default function StudentTransportPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-gray-900">{busInfo.plateNumber}</div>
-          <div className="text-xs text-gray-500 truncate">{busInfo.routeName ?? 'No route'} · {busInfo.schoolName}</div>
+          <div className="text-xs text-gray-500 truncate">
+            {busInfo.routeName ?? 'No route'}{busInfo.routeFare ? ` · ₦${busInfo.routeFare.toLocaleString()}` : ''} · {busInfo.schoolName}
+          </div>
           {busInfo.driverName && <div className="text-xs text-gray-400">Driver: {busInfo.driverName}</div>}
         </div>
         <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ${busInfo.tripActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -214,6 +295,14 @@ export default function StudentTransportPage() {
           {busInfo.tripActive ? 'On the way' : 'Not active'}
         </span>
       </div>
+
+      {/* Speed indicator */}
+      {busInfo.tripActive && busMoving !== null && (
+        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ${busMoving ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-600'}`}>
+          <Gauge size={16} />
+          {busMoving ? 'Bus is moving' : 'Bus is currently stopped'}
+        </div>
+      )}
 
       {/* ETA card */}
       {busInfo.tripActive && homeCoords && (
@@ -249,9 +338,49 @@ export default function StudentTransportPage() {
             </span>
           )}
         </div>
-        <LiveMap busCoords={busCoords} homeCoords={homeCoords} />
+        <LiveMap busCoords={busCoords} homeCoords={homeCoords} routePolyline={busInfo.routePolyline} />
         {!busCoords && <p className="text-center text-xs text-gray-400 mt-2">{busInfo.tripActive ? 'Waiting for GPS signal…' : 'Trip not started yet'}</p>}
       </div>
+
+      {/* Route stops */}
+      {busInfo.routePolyline && busInfo.routePolyline.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Route Stops · {busInfo.routeName}
+          </p>
+          <div className="relative">
+            {/* Vertical line */}
+            <div className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-purple-100" />
+            <div className="space-y-3">
+              {busInfo.routePolyline.map((pt, i) => {
+                const isFirst = i === 0;
+                const isLast = i === busInfo.routePolyline!.length - 1;
+                return (
+                  <div key={i} className="flex items-center gap-3 relative">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10 border-2 ${
+                      isFirst ? 'bg-green-500 border-green-500' :
+                      isLast  ? 'bg-purple-600 border-purple-600' :
+                                'bg-white border-purple-300'
+                    }`}>
+                      {isFirst ? <span className="text-white text-[9px] font-bold">S</span> :
+                       isLast  ? <span className="text-white text-[9px] font-bold">E</span> :
+                                 <span className="text-purple-400 text-[9px] font-bold">{i}</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-600 font-mono">
+                        {pt[0].toFixed(4)}, {pt[1].toFixed(4)}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        {isFirst ? 'Start' : isLast ? 'End' : `Stop ${i}`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Home location setup — shown when not yet set */}
       {!homeCoords && (
@@ -270,6 +399,37 @@ export default function StudentTransportPage() {
           </div>
         </div>
       )}
+
+      {/* Driver actions + share */}
+      <div className="bg-white rounded-2xl shadow-sm p-4">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Driver & Location</p>
+        <div className={`grid gap-3 ${busInfo.driverUserId ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {busInfo.driverPhone ? (
+            <a href={`tel:${busInfo.driverPhone}`}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-500 text-white hover:bg-green-600 transition-colors">
+              <Phone size={17} />
+              <span className="text-sm font-semibold">Call Driver</span>
+            </a>
+          ) : (
+            <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 text-gray-400">
+              <Phone size={17} />
+              <span className="text-sm font-medium">No phone set</span>
+            </div>
+          )}
+          {busInfo.driverUserId && (
+            <button onClick={() => router.push(`/student/messages?userId=${busInfo.driverUserId}`)}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+              <MessageCircle size={17} />
+              <span className="text-sm font-semibold">Message</span>
+            </button>
+          )}
+          <button onClick={shareBusLocation} disabled={!busCoords}
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            <Share2 size={17} />
+            <span className="text-sm font-semibold">Share Location</span>
+          </button>
+        </div>
+      </div>
 
       {/* Sick / absent toggle */}
       <div className="bg-white rounded-2xl shadow-sm p-4">

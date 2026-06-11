@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Trash2, Bus, MapPin, User, Search, ChevronDown, ChevronUp, X, Play, Square, Link2, RefreshCw } from 'lucide-react';import { api, endpoints } from '@/lib/api';
+import { Plus, Trash2, Bus, MapPin, User, Search, ChevronDown, ChevronUp, X, Play, Square, Link2, RefreshCw, Pencil, Check } from 'lucide-react';import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -9,7 +9,7 @@ import { io, Socket } from 'socket.io-client';
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface RouteObj { id: number; name: string; description?: string; fare: number; polyline?: [number,number][]; buses: BusObj[]; }
-interface Driver { id: number; name: string; phone?: string; licenseNo?: string; buses: { id: number; plateNumber: string; driverToken?: string }[]; }
+interface Driver { id: number; name: string; phone?: string; licenseNo?: string; userId?: string | null; user?: { uniqueId: string; firstName: string; lastName: string } | null; buses: { id: number; plateNumber: string; driverToken?: string }[]; }
 interface BusObj {
   id: number; plateNumber: string; capacity: number; driverToken?: string;
   gpsLat?: number; gpsLng?: number; gpsUpdatedAt?: string;
@@ -21,6 +21,38 @@ type Tab = 'buses' | 'routes' | 'drivers' | 'gps';
 
 const BACKEND = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
 const FRONTEND = typeof window !== 'undefined' ? window.location.origin : '';
+
+// ── Transport Loader ──────────────────────────────────────────────────────
+
+function TransportLoader() {
+  return (
+    <div className="flex flex-col items-center justify-center py-10 gap-4">
+      <style>{`
+        @keyframes drive{0%{transform:translateX(-80px)}100%{transform:translateX(80px)}}
+        @keyframes road-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        @keyframes wheel-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        .car-drive{animation:drive 1.4s ease-in-out infinite alternate}
+        .road-scroll{animation:road-scroll 0.7s linear infinite}
+        .wheel-spin{animation:wheel-spin 0.5s linear infinite}
+      `}</style>
+      <div className="relative w-52 overflow-hidden">
+        <div className="car-drive flex flex-col items-center mb-1">
+          <Bus size={52} className="text-purple-600 drop-shadow-md" />
+          <div className="flex gap-7 -mt-1">
+            <div className="w-3 h-3 rounded-full border-2 border-purple-800 bg-gray-200 wheel-spin" />
+            <div className="w-3 h-3 rounded-full border-2 border-purple-800 bg-gray-200 wheel-spin" />
+          </div>
+        </div>
+        <div className="h-3 bg-gray-700 rounded-full overflow-hidden relative mt-1">
+          <div className="road-scroll absolute top-1/2 -translate-y-1/2 flex gap-4" style={{ width: '200%' }}>
+            {[...Array(12)].map((_, i) => <div key={i} className="w-6 h-0.5 bg-yellow-400 rounded-full shrink-0" />)}
+          </div>
+        </div>
+      </div>
+      <p className="text-purple-500 text-sm font-medium animate-pulse tracking-wide">Loading transport data…</p>
+    </div>
+  );
+}
 
 // ── Live GPS Map (Leaflet + WebSocket) ───────────────────────────────────
 
@@ -41,6 +73,12 @@ function LiveGpsMap({ buses, watchBusIds }: { buses: BusObj[]; watchBusIds: numb
         link.id = 'leaflet-css'; link.rel = 'stylesheet';
         link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
         document.head.appendChild(link);
+      }
+      if (!document.getElementById('leaflet-z-fix')) {
+        const style = document.createElement('style');
+        style.id = 'leaflet-z-fix';
+        style.textContent = '.leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; } .leaflet-control { z-index: 2 !important; }';
+        document.head.appendChild(style);
       }
       const map = L.map(mapRef.current!).setView([9.082, 8.6753], 6);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
@@ -166,15 +204,19 @@ export default function TransportPage() {
   const [routeForm, setRouteForm] = useState({ name: '', description: '', fare: 0 });
   const [routePolyline, setRoutePolyline] = useState<[number,number][]>([]);
   const [showDriverForm, setShowDriverForm] = useState(false);
-  const [driverForm, setDriverForm] = useState({ name: '', phone: '', licenseNo: '' });
+  const [driverForm, setDriverForm] = useState({ name: '', phone: '', licenseNo: '', userId: '' });
 
   // route edit
   const [editRouteId, setEditRouteId] = useState<number | null>(null);
+  // driver edit
+  const [editDriverId, setEditDriverId] = useState<number | null>(null);
+  const [editDriverForm, setEditDriverForm] = useState({ name: '', phone: '', licenseNo: '', userId: '' });
   const [editPolyline, setEditPolyline] = useState<[number,number][]>([]);
 
   // assign student
   const [assignBusId, setAssignBusId] = useState<number | null>(null);
   const [assignClass, setAssignClass] = useState('');
+  const [staffOptions, setStaffOptions] = useState<{ uniqueId: string; firstName: string; lastName: string }[]>([]);
   const [studentOptions, setStudentOptions] = useState<{ uniqueId: string; firstName: string; lastName: string }[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   const [studentsLoading, setStudentsLoading] = useState(false);
@@ -191,6 +233,7 @@ export default function TransportPage() {
       api.get<any>(endpoints.admin.transportBuses).then(r => { setBuses(r.data ?? []); setLiveBuses(r.data ?? []); }),
       api.get<any>(endpoints.admin.transportRoutes).then(r => setRoutes(r.data ?? [])),
       api.get<any>(endpoints.admin.transportDrivers).then(r => setDrivers(r.data ?? [])),
+      api.get<any>(endpoints.admin.staff, { per_page: 1000 }).then(r => setStaffOptions((r.data ?? []).filter((s: any) => s.role === 'driver').map((s: any) => ({ uniqueId: s.unique_id, firstName: s.firstname, lastName: s.lastname })))),
     ]).catch(() => toast.error('Failed to load transport data')).finally(() => setLoading(false));
   }, []);
 
@@ -288,7 +331,7 @@ export default function TransportPage() {
     if (!driverForm.name.trim()) return toast.error('Name required');
     try {
       await api.post(endpoints.admin.transportDrivers, driverForm);
-      toast.success('Driver added'); setShowDriverForm(false); setDriverForm({ name: '', phone: '', licenseNo: '' }); loadAll();
+      toast.success('Driver added'); setShowDriverForm(false); setDriverForm({ name: '', phone: '', licenseNo: '', userId: '' }); loadAll();
     } catch { toast.error('Failed'); }
   };
 
@@ -296,6 +339,14 @@ export default function TransportPage() {
     if (!confirm('Delete driver?')) return;
     try { await api.delete(endpoints.admin.transportDriver(String(id))); toast.success('Deleted'); loadAll(); }
     catch { toast.error('Failed'); }
+  };
+
+  const saveDriver = async (id: number) => {
+    if (!editDriverForm.name.trim()) return toast.error('Name required');
+    try {
+      await api.put(endpoints.admin.transportDriver(String(id)), editDriverForm);
+      toast.success('Driver updated'); setEditDriverId(null); loadAll();
+    } catch { toast.error('Failed to update'); }
   };
 
   // ── Assign ────────────────────────────────────────────────────────────────
@@ -364,9 +415,7 @@ export default function TransportPage() {
             </div>
           )}
 
-          {loading ? (
-            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-white rounded-2xl animate-pulse" />)}</div>
-          ) : buses.length === 0 ? <EmptyState icon={Bus} message="No buses yet." /> : buses.map(bus => {
+          {loading ? <TransportLoader /> : buses.length === 0 ? <EmptyState icon={Bus} message="No buses yet." /> : buses.map(bus => {
             const isOpen = expanded[bus.id];
             return (
               <div key={bus.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -473,7 +522,7 @@ export default function TransportPage() {
           )}
 
           <div className="space-y-3">
-            {loading ? Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-white rounded-2xl animate-pulse" />) :
+            {loading ? <TransportLoader /> :
               routes.length === 0 ? <EmptyState icon={MapPin} message="No routes yet." /> :
               routes.map(r => (
                 <div key={r.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -517,13 +566,18 @@ export default function TransportPage() {
           {showDriverForm && (
             <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
               <h2 className="font-semibold text-gray-900">New Driver</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input value={driverForm.name} onChange={e => setDriverForm(f => ({ ...f, name: e.target.value }))} placeholder="Full name *"
                   className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 <input value={driverForm.phone} onChange={e => setDriverForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone"
                   className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 <input value={driverForm.licenseNo} onChange={e => setDriverForm(f => ({ ...f, licenseNo: e.target.value }))} placeholder="License number"
                   className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                <select value={driverForm.userId} onChange={e => setDriverForm(f => ({ ...f, userId: e.target.value }))}
+                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option value="">Link staff account (optional)</option>
+                  {staffOptions.map(s => <option key={s.uniqueId} value={s.uniqueId}>{s.firstName} {s.lastName}</option>)}
+                </select>
               </div>
               <div className="flex gap-2">
                 <button onClick={createDriver} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-medium">Add</button>
@@ -532,24 +586,45 @@ export default function TransportPage() {
             </div>
           )}
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
               <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>{['Name', 'Phone', 'License No.', 'Assigned Bus', ''].map(h => <th key={h} className="p-3 text-left font-medium text-gray-600">{h}</th>)}</tr>
+                <tr>{['Name', 'Phone', 'License No.', 'Linked Account', 'Assigned Bus', ''].map(h => <th key={h} className="p-3 text-left font-medium text-gray-600">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {loading ? Array.from({ length: 3 }).map((_, i) => <tr key={i}><td colSpan={5} className="p-3"><div className="h-5 bg-gray-100 rounded animate-pulse" /></td></tr>)
-                  : drivers.length === 0 ? <tr><td colSpan={5}><EmptyState icon={User} message="No drivers yet." card={false} /></td></tr>
-                  : drivers.map(d => (
+                {loading ? <tr><td colSpan={6}><TransportLoader /></td></tr>
+                  : drivers.length === 0 ? <tr><td colSpan={6}><EmptyState icon={User} message="No drivers yet." card={false} /></td></tr>
+                  : drivers.map(d => editDriverId === d.id ? (
+                    <tr key={d.id} className="bg-purple-50">
+                      <td className="p-2"><input value={editDriverForm.name} onChange={e => setEditDriverForm(f => ({ ...f, name: e.target.value }))} className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400" /></td>
+                      <td className="p-2"><input value={editDriverForm.phone} onChange={e => setEditDriverForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400" /></td>
+                      <td className="p-2"><input value={editDriverForm.licenseNo} onChange={e => setEditDriverForm(f => ({ ...f, licenseNo: e.target.value }))} placeholder="License No." className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-purple-400" /></td>
+                      <td className="p-2"><select value={editDriverForm.userId} onChange={e => setEditDriverForm(f => ({ ...f, userId: e.target.value }))} className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400">
+                        <option value="">Not linked</option>
+                        {staffOptions.map(s => <option key={s.uniqueId} value={s.uniqueId}>{s.firstName} {s.lastName}</option>)}
+                      </select></td>
+                      <td className="p-3 text-gray-400 text-xs">{d.buses?.map(b => b.plateNumber).join(', ') || '—'}</td>
+                      <td className="p-2 flex gap-1">
+                        <button onClick={() => saveDriver(d.id)} className="p-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"><Check size={13} /></button>
+                        <button onClick={() => setEditDriverId(null)} className="p-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"><X size={13} /></button>
+                      </td>
+                    </tr>
+                  ) : (
                     <tr key={d.id} className="hover:bg-gray-50">
                       <td className="p-3 font-medium text-gray-900">{d.name}</td>
                       <td className="p-3 text-gray-500">{d.phone ?? '—'}</td>
                       <td className="p-3 text-gray-500 font-mono text-xs">{d.licenseNo ?? '—'}</td>
+                      <td className="p-3 text-xs">{d.user ? <span className="text-green-700 font-medium">{d.user.firstName} {d.user.lastName}</span> : <span className="text-gray-400">Not linked</span>}</td>
                       <td className="p-3 text-gray-500 text-xs">{d.buses?.map(b => b.plateNumber).join(', ') || '—'}</td>
-                      <td className="p-3"><button onClick={() => deleteDriver(d.id)} className="text-red-400 hover:text-red-600"><Trash2 size={15} /></button></td>
+                      <td className="p-3 flex gap-1">
+                        <button onClick={() => { setEditDriverId(d.id); setEditDriverForm({ name: d.name, phone: d.phone ?? '', licenseNo: d.licenseNo ?? '', userId: d.user?.uniqueId ?? '' }); }} className="text-gray-400 hover:text-purple-600 p-1"><Pencil size={14} /></button>
+                        <button onClick={() => deleteDriver(d.id)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={14} /></button>
+                      </td>
                     </tr>
                   ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
