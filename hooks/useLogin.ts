@@ -55,7 +55,8 @@ export function useLogin() {
       const res = await api.post<ApiResponse<{ token: string; refresh_token: string; user: any }>>(ep, body);
       if (res.success) {
         auth.setSession(res.data.token, res.data.refresh_token, res.data.user, tab);
-        router.push(`/${tab}/dashboard`);
+        const destination = res.data.user?.isDriver ? '/staff/transport' : `/${tab}/dashboard`;
+        router.push(destination);
       }
     } catch (err: any) {
       toast.error(err?.message || 'Invalid credentials');

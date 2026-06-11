@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Plus, Trash2, Bus, MapPin, User, Search, ChevronDown, ChevronUp, X, Play, Square, Link2, RefreshCw, Pencil, Check } from 'lucide-react';import { api, endpoints } from '@/lib/api';
+import { Plus, Trash2, Bus, MapPin, User, Search, ChevronDown, ChevronUp, X, Play, Square, RefreshCw, Pencil, Check } from 'lucide-react';import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -14,13 +14,12 @@ interface BusObj {
   id: number; plateNumber: string; capacity: number; driverToken?: string;
   gpsLat?: number; gpsLng?: number; gpsUpdatedAt?: string;
   tripActive: boolean; route?: RouteObj; driver?: Driver;
-  assignments: { student: { user: { uniqueId: string; firstName: string; lastName: string } } }[];
+  assignments: { absentToday: boolean; pickedUp: boolean; pickedUpAt?: string | null; student: { parentLat?: number | null; parentLng?: number | null; user: { uniqueId: string; firstName: string; lastName: string } } }[];
 }
 
-type Tab = 'buses' | 'routes' | 'drivers' | 'gps';
+type Tab = 'buses' | 'routes' | 'drivers' | 'gps' | 'analytics';
 
 const BACKEND = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
-const FRONTEND = typeof window !== 'undefined' ? window.location.origin : '';
 
 // ── Transport Loader ──────────────────────────────────────────────────────
 
@@ -56,72 +55,93 @@ function TransportLoader() {
 
 // ── Live GPS Map (Leaflet + WebSocket) ───────────────────────────────────
 
-function LiveGpsMap({ buses, watchBusIds }: { buses: BusObj[]; watchBusIds: number[] }) {
+function LiveGpsMap({ buses }: { buses: BusObj[] }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const instanceRef = useRef<{ map: any; L: any; markers: Map<string, any>; polylines: any[] }>( null as any);
+  const instanceRef = useRef<{ map: any; L: any; markers: Map<string, any> } | null>(null);
+  const busesRef = useRef(buses);
+  busesRef.current = buses;
 
+  // Init map once
   useEffect(() => {
     if (!mapRef.current || instanceRef.current) return;
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css'; link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    if (!document.getElementById('leaflet-z-fix')) {
+      const style = document.createElement('style');
+      style.id = 'leaflet-z-fix';
+      style.textContent = '.leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1!important}.leaflet-control{z-index:2!important}';
+      document.head.appendChild(style);
+    }
     import('leaflet').then(L => {
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
       });
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css'; link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-      }
-      if (!document.getElementById('leaflet-z-fix')) {
-        const style = document.createElement('style');
-        style.id = 'leaflet-z-fix';
-        style.textContent = '.leaflet-pane, .leaflet-top, .leaflet-bottom { z-index: 1 !important; } .leaflet-control { z-index: 2 !important; }';
-        document.head.appendChild(style);
-      }
       const map = L.map(mapRef.current!).setView([9.082, 8.6753], 6);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-      instanceRef.current = { map, L, markers: new Map(), polylines: [] };
+      const markers = new Map<string, any>();
+      instanceRef.current = { map, L, markers };
+      // Draw any buses that already have GPS coords right now
+      drawMarkers(L, map, markers, busesRef.current);
     });
-    return () => { if (instanceRef.current) { instanceRef.current.map.remove(); (instanceRef as any).current = null; } };
+    return () => { if (instanceRef.current) { instanceRef.current.map.remove(); instanceRef.current = null; } };
   }, []);
 
-  // Draw bus markers
+  // Update markers whenever buses (live coords) change
   useEffect(() => {
     if (!instanceRef.current) return;
     const { map, L, markers } = instanceRef.current;
-    buses.forEach(b => {
-      if (!b.gpsLat || !b.gpsLng) return;
-      const key = String(b.id);
-      const lat = Number(b.gpsLat); const lng = Number(b.gpsLng);
-      if (markers.has(key)) {
-        markers.get(key).setLatLng([lat, lng]);
-      } else {
-        const m = L.marker([lat, lng]).bindPopup(`<b>${b.plateNumber}</b><br>${b.route?.name ?? 'No route'}<br>${b.driver?.name ?? 'No driver'}`).addTo(map);
-        markers.set(key, m);
-      }
-    });
-    const located = buses.filter(b => b.gpsLat && b.gpsLng);
-    if (located.length) map.fitBounds(located.map(b => [Number(b.gpsLat), Number(b.gpsLng)]) as any, { maxZoom: 14 });
-  }, [buses]);
-
-  // Draw route polylines
-  useEffect(() => {
-    if (!instanceRef.current) return;
-    const { map, L, polylines } = instanceRef.current;
-    polylines.forEach(p => p.remove());
-    instanceRef.current.polylines = [];
-    buses.forEach(b => {
-      if (!b.route?.polyline?.length) return;
-      const poly = L.polyline(b.route.polyline, { color: '#7c3aed', weight: 3, opacity: 0.7 }).addTo(map);
-      instanceRef.current.polylines.push(poly);
-    });
+    drawMarkers(L, map, markers, buses);
   }, [buses]);
 
   return <div ref={mapRef} className="w-full h-[420px] rounded-2xl overflow-hidden" />;
 }
 
+function drawMarkers(L: any, map: any, markers: Map<string, any>, buses: BusObj[]) {
+  buses.forEach(b => {
+    if (!b.gpsLat || !b.gpsLng) return;
+    const key = String(b.id);
+    const lat = Number(b.gpsLat); const lng = Number(b.gpsLng);
+    const popup = `<b>${b.plateNumber}</b><br>${b.driver?.name ?? 'No driver'}`;
+    if (markers.has(key)) {
+      markers.get(key).setLatLng([lat, lng]);
+    } else {
+      const m = L.marker([lat, lng]).bindPopup(popup).addTo(map);
+      markers.set(key, m);
+    }
+  });
+
+  // Red student home markers
+  const redIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+    iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34],
+  });
+  buses.forEach(b => {
+    b.assignments.forEach(a => {
+      const { parentLat, parentLng } = a.student;
+      if (!parentLat || !parentLng) return;
+      const key = `student-${a.student.user.uniqueId}`;
+      const name = `${a.student.user.firstName} ${a.student.user.lastName}`;
+      if (!markers.has(key)) {
+        const m = L.marker([Number(parentLat), Number(parentLng)], { icon: redIcon })
+          .bindPopup(`<b>${name}</b><br>Home`)
+          .addTo(map);
+        markers.set(key, m);
+      }
+    });
+  });
+
+  const located = buses.filter(b => b.gpsLat && b.gpsLng);
+  if (located.length) map.fitBounds(located.map(b => [Number(b.gpsLat), Number(b.gpsLng)]) as any, { maxZoom: 14 });
+}
 // ── Route Drawing Map ─────────────────────────────────────────────────────
 
 function RouteDrawMap({ initialPolyline, onChange }: { initialPolyline?: [number,number][]; onChange: (pts: [number,number][]) => void }) {
@@ -197,6 +217,10 @@ export default function TransportPage() {
   const [liveBuses, setLiveBuses] = useState<BusObj[]>([]);
   const socketRef = useRef<Socket | null>(null);
 
+  // analytics
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
   // forms
   const [showBusForm, setShowBusForm] = useState(false);
   const [busForm, setBusForm] = useState({ plateNumber: '', capacity: 40, routeId: '', driverId: '' });
@@ -222,9 +246,6 @@ export default function TransportPage() {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState('');
 
-  // driver link modal
-  const [driverLinkBus, setDriverLinkBus] = useState<BusObj | null>(null);
-
   // ── Loaders ───────────────────────────────────────────────────────────────
 
   const loadAll = useCallback(() => {
@@ -239,6 +260,15 @@ export default function TransportPage() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  useEffect(() => {
+    if (tab !== 'analytics') return;
+    setAnalyticsLoading(true);
+    api.get<any>(endpoints.admin.transportAnalytics)
+      .then(r => setAnalytics(r.data))
+      .catch(() => toast.error('Failed to load analytics'))
+      .finally(() => setAnalyticsLoading(false));
+  }, [tab]);
+
   // WebSocket for live GPS
   useEffect(() => {
     const socket = io(`${BACKEND}/transport`, { transports: ['websocket'] });
@@ -248,6 +278,16 @@ export default function TransportPage() {
     });
     socket.on('bus:location', (data: { busId: string; lat: number; lng: number }) => {
       setLiveBuses(prev => prev.map(b => String(b.id) === data.busId ? { ...b, gpsLat: data.lat, gpsLng: data.lng, gpsUpdatedAt: new Date().toISOString() } : b));
+    });
+    socket.on('student:pickedup', (data: { busId: string; studentUniqueId: string; pickedUp: boolean; pickedUpAt: string }) => {
+      setLiveBuses(prev => prev.map(b => String(b.id) !== data.busId ? b : {
+        ...b,
+        assignments: b.assignments.map(a =>
+          a.student.user.uniqueId === data.studentUniqueId
+            ? { ...a, pickedUp: data.pickedUp, pickedUpAt: data.pickedUpAt }
+            : a
+        ),
+      }));
     });
     return () => { socket.disconnect(); };
   }, [buses.length]);
@@ -292,16 +332,6 @@ export default function TransportPage() {
       }
       loadAll();
     } catch (e: any) { toast.error(e?.response?.data?.message ?? 'Failed'); }
-  };
-
-  const regenerateToken = async (bus: BusObj) => {
-    if (!confirm('Regenerate driver token? The old link will stop working.')) return;
-    try {
-      const r = await api.post<any>(endpoints.admin.transportToken(String(bus.id)), {});
-      toast.success('Token regenerated');
-      loadAll();
-      setDriverLinkBus({ ...bus, driverToken: r.data?.token });
-    } catch { toast.error('Failed'); }
   };
 
   // ── Route actions ─────────────────────────────────────────────────────────
@@ -364,14 +394,12 @@ export default function TransportPage() {
     catch { toast.error('Failed'); }
   };
 
-  const driverLink = (token?: string) => token ? `${FRONTEND}/driver/trip?token=${token}` : '';
-
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">Transport</h1>
 
       <div className="flex gap-2 flex-wrap">
-        {([['buses', 'Buses'], ['routes', 'Routes'], ['drivers', 'Drivers'], ['gps', 'GPS Tracking']] as const).map(([key, label]) => (
+        {([['buses', 'Buses'], ['routes', 'Routes'], ['drivers', 'Drivers'], ['gps', 'GPS Tracking'], ['analytics', 'Analytics']] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === key ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm'}`}>
             {label}
@@ -437,7 +465,6 @@ export default function TransportPage() {
                       className={`p-1.5 rounded-lg transition-colors ${bus.tripActive ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
                       {bus.tripActive ? <Square size={15} /> : <Play size={15} />}
                     </button>
-                    <button onClick={() => setDriverLinkBus(bus)} title="Driver link" className="p-1.5 text-purple-500 hover:bg-purple-50 rounded-lg"><Link2 size={15} /></button>
                     <button onClick={() => deleteBus(bus.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
                     {isOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                   </div>
@@ -639,27 +666,142 @@ export default function TransportPage() {
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" /> Live via WebSocket
               </div>
             </div>
-            <LiveGpsMap buses={liveBuses} watchBusIds={buses.map(b => b.id)} />
+            <LiveGpsMap buses={liveBuses} />
           </div>
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>{['Bus', 'Route', 'Driver', 'Status', 'Last GPS', 'Updated'].map(h => <th key={h} className="p-3 text-left font-medium text-gray-600">{h}</th>)}</tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {liveBuses.map(b => (
-                  <tr key={b.id} className="hover:bg-gray-50">
-                    <td className="p-3 font-medium text-gray-900">{b.plateNumber}</td>
-                    <td className="p-3 text-gray-500">{b.route?.name ?? '—'}</td>
-                    <td className="p-3 text-gray-500">{b.driver?.name ?? '—'}</td>
-                    <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.tripActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{b.tripActive ? 'Active' : 'Idle'}</span></td>
-                    <td className="p-3 text-gray-500 font-mono text-xs">{b.gpsLat ? `${Number(b.gpsLat).toFixed(4)}, ${Number(b.gpsLng).toFixed(4)}` : '—'}</td>
-                    <td className="p-3 text-gray-400 text-xs">{b.gpsUpdatedAt ? new Date(b.gpsUpdatedAt).toLocaleTimeString() : '—'}</td>
-                  </tr>
+
+          {liveBuses.map(b => {
+            const picked = b.assignments.filter(a => a.pickedUp);
+            const pending = b.assignments.filter(a => !a.pickedUp && !a.absentToday);
+            const absent  = b.assignments.filter(a => a.absentToday);
+            return (
+              <div key={b.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                {/* Bus header */}
+                <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+                  <div className={`p-2 rounded-xl ${b.tripActive ? 'bg-green-100' : 'bg-gray-100'}`}>
+                    <Bus size={18} className={b.tripActive ? 'text-green-600' : 'text-gray-400'} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900 flex items-center gap-2">
+                      {b.plateNumber}
+                      {b.tripActive && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Live</span>}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {b.route?.name ?? 'No route'} · Driver: {b.driver?.name ?? '—'}
+                      {b.gpsLat ? ` · ${Number(b.gpsLat).toFixed(4)}, ${Number(b.gpsLng).toFixed(4)}` : ' · No GPS'}
+                      {b.gpsUpdatedAt ? ` · ${new Date(b.gpsUpdatedAt).toLocaleTimeString()}` : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs font-medium">
+                    <span className="text-green-700 bg-green-50 px-2 py-1 rounded-lg">{picked.length} picked up</span>
+                    <span className="text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">{pending.length} pending</span>
+                    {absent.length > 0 && <span className="text-red-600 bg-red-50 px-2 py-1 rounded-lg">{absent.length} absent</span>}
+                  </div>
+                </div>
+
+                {/* Student columns */}
+                <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+                  {/* Picked up */}
+                  <div className="p-4">
+                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">
+                      ✅ Picked Up ({picked.length})
+                    </p>
+                    {picked.length === 0 ? (
+                      <p className="text-xs text-gray-400">None yet</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {picked.map(a => (
+                          <div key={a.student.user.uniqueId} className="flex items-center gap-2 text-xs text-gray-800">
+                            <span className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
+                            {a.student.user.firstName} {a.student.user.lastName}
+                            {a.pickedUpAt && <span className="text-gray-400 ml-auto">{new Date(a.pickedUpAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Yet to pick up + absent */}
+                  <div className="p-4">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">
+                      ⏳ Yet to Pick Up ({pending.length + absent.length})
+                    </p>
+                    {pending.length === 0 && absent.length === 0 ? (
+                      <p className="text-xs text-gray-400">All done</p>
+                    ) : (
+                      <div className="space-y-1">
+                        {pending.map(a => (
+                          <div key={a.student.user.uniqueId} className="flex items-center gap-2 text-xs text-gray-800">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                            {a.student.user.firstName} {a.student.user.lastName}
+                          </div>
+                        ))}
+                        {absent.map(a => (
+                          <div key={a.student.user.uniqueId} className="flex items-center gap-2 text-xs text-red-500">
+                            <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+                            {a.student.user.firstName} {a.student.user.lastName}
+                            <span className="text-[10px] text-red-400">(absent)</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Analytics ─────────────────────────────────────────────────────── */}
+      {tab === 'analytics' && (
+        <div className="space-y-4">
+          {analyticsLoading ? <TransportLoader /> : !analytics ? null : (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  { label: 'Total Buses', value: analytics.totalBuses },
+                  { label: 'Students Assigned', value: analytics.totalAssigned },
+                  { label: 'Active Trips', value: analytics.activeTrips },
+                ].map(s => (
+                  <div key={s.label} className="bg-white rounded-2xl shadow-sm p-4 text-center">
+                    <div className="text-2xl font-bold text-purple-600">{s.value}</div>
+                    <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm p-4">
+                <h2 className="font-semibold text-gray-900 mb-3">Bus Fill Rates</h2>
+                <div className="space-y-3">
+                  {analytics.fillRates.map((b: any) => (
+                    <div key={b.id}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-medium text-gray-800">{b.plateNumber} <span className="text-gray-400 font-normal">· {b.route} · {b.driver}</span></span>
+                        <span className="text-gray-500">{b.assigned}/{b.capacity} ({b.fillRate}%)</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-purple-500 transition-all" style={{ width: `${b.fillRate}%`, backgroundColor: b.fillRate >= 90 ? '#dc2626' : b.fillRate >= 70 ? '#f59e0b' : '#7c3aed' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {analytics.absentToday?.length > 0 && (
+                <div className="bg-white rounded-2xl shadow-sm p-4">
+                  <h2 className="font-semibold text-gray-900 mb-2">Absent Today (Top)</h2>
+                  <ul className="space-y-1">
+                    {analytics.absentToday.map((a: any, i: number) => (
+                      <li key={i} className="text-sm text-gray-700 flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-red-100 text-red-600 text-xs flex items-center justify-center font-medium">{i + 1}</span>
+                        {a.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -696,28 +838,6 @@ export default function TransportPage() {
               <button onClick={doAssign} disabled={!selectedStudent}
                 className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium">Assign</button>
               <button onClick={() => setAssignBusId(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Driver Link Modal ──────────────────────────────────────────────── */}
-      {driverLinkBus && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
-            <h2 className="font-semibold text-gray-900">Driver Link — {driverLinkBus.plateNumber}</h2>
-            <p className="text-xs text-gray-500">Share this link with the driver. They open it on their phone to start/end the trip and stream GPS.</p>
-            <div className="bg-gray-50 rounded-xl p-3 text-xs font-mono break-all text-gray-700 select-all">
-              {driverLink(driverLinkBus.driverToken)}
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => { navigator.clipboard.writeText(driverLink(driverLinkBus.driverToken)); toast.success('Copied!'); }}
-                className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-medium">Copy Link</button>
-              <button onClick={() => regenerateToken(driverLinkBus)}
-                className="flex items-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium">
-                <RefreshCw size={13} /> Regenerate
-              </button>
-              <button onClick={() => setDriverLinkBus(null)} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Close</button>
             </div>
           </div>
         </div>

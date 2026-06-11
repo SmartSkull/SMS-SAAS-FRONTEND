@@ -179,6 +179,7 @@ export const endpoints = {
     onlineClasses: '/staff/online-classes',
     onlineClass: (id: number) => `/staff/online-classes/${id}`,
     traits: '/staff/traits',
+    transportOverview: '/staff/transport/overview',
   },
   admin: {
     dashboard: '/admin/dashboard',
@@ -281,6 +282,7 @@ export const endpoints = {
     transportTripEnd: (id: string) => `/admin/transport/buses/${id}/trip/end`,
     transportToken: (id: string) => `/admin/transport/buses/${id}/token`,
     transportParentLocation: (uid: string) => `/admin/transport/students/${uid}/parent-location`,
+    transportAnalytics: '/admin/transport/analytics',
   },
   public: {
     currentPeriod: '/public/current-period',

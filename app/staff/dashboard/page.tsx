@@ -1,4 +1,6 @@
 'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useStaffDashboard } from '@/hooks/staff';
 import { useAuth } from '@/hooks/useAuth';
 import { getImageUrl } from '@/lib/api';
@@ -23,6 +25,13 @@ function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType
 export default function StaffDashboard() {
   const { data, loading } = useStaffDashboard();
   const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.isDriver) router.replace('/staff/transport');
+  }, [user]);
+
+  if (user?.isDriver) return null;
 
   if (loading) return (
     <div className="space-y-6 skeleton-stagger">

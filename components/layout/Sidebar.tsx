@@ -29,6 +29,8 @@ const MENUS = {
     { icon: Bell, label: 'Notifications', path: '/student/notifications' },
     { icon: CreditCard, label: 'Payments', path: '/student/payments' },
     { icon: Bus, label: 'Transport', path: '/student/transport' },
+    { icon: Building2, label: 'Hostel', path: '/student/hostel' },
+    { icon: CalendarDays, label: 'Planner', path: '/student/planner' },
   ],
   staff: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/staff/dashboard' },
@@ -47,6 +49,7 @@ const MENUS = {
     { icon: Newspaper, label: 'Posts', path: '/staff/posts' },
     { icon: Mail, label: 'Messages', path: '/staff/messages' },
     { icon: Bell, label: 'Notifications', path: '/staff/notifications' },
+    { icon: Bus, label: 'Transport', path: '/staff/transport' },
   ],
   admin: [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
@@ -71,6 +74,15 @@ const MENUS = {
     { icon: School, label: 'School Info', path: '/admin/school' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
   ],
+  driver: [
+    { icon: Bus, label: 'Transport', path: '/staff/transport' },
+    { icon: CalendarOff, label: 'Leave', path: '/staff/leave' },
+    { icon: Wallet, label: 'Salary', path: '/staff/payroll' },
+    { icon: Mail, label: 'Messages', path: '/staff/messages' },
+    { icon: Bell, label: 'Notifications', path: '/staff/notifications' },
+    { icon: Settings, label: 'Settings', path: '/staff/settings' },
+    { icon: User, label: 'Profile', path: '/staff/profile' },
+  ],
 };
 
 interface Props { open: boolean; onClose: () => void; }
@@ -79,7 +91,8 @@ export default function Sidebar({ open, onClose }: Props) {
   const { user, role } = useAuth();
   const { school } = useSelectedSchool();
   const pathname = usePathname();
-  const items = MENUS[role as keyof typeof MENUS] ?? [];
+  const menuKey = role === 'staff' && user?.isDriver ? 'driver' : role;
+  const items = MENUS[menuKey as keyof typeof MENUS] ?? [];
   const logo = normalizeSchoolLogo(school?.logo);
   const primary = school?.primaryColor ?? '#1e40af';
   const accent = school?.accentColor ?? '#84cc16';
@@ -147,7 +160,7 @@ export default function Sidebar({ open, onClose }: Props) {
               <p className="text-white text-sm font-medium truncate">
                 {user?.firstname} {user?.lastname}
               </p>
-              <p className="text-white/50 text-xs capitalize">{role}</p>
+              <p className="text-white/50 text-xs capitalize">{role === 'staff' && user?.isDriver ? 'Driver' : role}</p>
             </div>
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
           </div>

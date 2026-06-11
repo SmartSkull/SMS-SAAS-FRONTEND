@@ -8,6 +8,7 @@ import type { ApiResponse, SchoolProfile } from '@/types';
 import clsx from 'clsx';
 import { BarChart2, BookOpen, CheckCircle2, Clock, FileBarChart2, Printer, Search, User, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const UPLOADS = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
@@ -243,6 +244,7 @@ export default function StudentResults() {
   const [session, setSession] = useState('');
   const [term, setTerm]       = useState('');
   const [loading, setLoading] = useState(false);
+  const [trendData, setTrendData] = useState<{ label: string; avg: number }[]>([]);
   const toast = useToast();
 
   useEffect(() => {
@@ -253,6 +255,26 @@ export default function StudentResults() {
       setSessions(s.data);
       setSession(p.data.session);
       setTerm(p.data.term);
+      // Fetch trend: all terms for all sessions
+      const sessionList: { name: string }[] = s.data;
+      const pairs = sessionList.flatMap((sess) =>
+        TERMS.map((t) => ({ session: sess.name, term: t }))
+      );
+      Promise.allSettled(
+        pairs.map((pair) =>
+          api.get<ApiResponse<any>>(endpoints.student.results, { session: pair.session, term: pair.term })
+            .then((r) => ({ ...pair, results: r.data?.results ?? [] }))
+        )
+      ).then((settled) => {
+        const points = settled
+          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value.results.length > 0)
+          .map((r) => {
+            const { session: sess, term: t, results } = r.value;
+            const avg = Math.round(results.reduce((s: number, x: any) => s + Number(x.totalScore), 0) / results.length);
+            return { label: `${sess.slice(-4)} ${t.charAt(0)}`, avg };
+          });
+        setTrendData(points);
+      });
     }).catch(() => toast.error('Failed to load filters'));
   }, []);
 
@@ -295,6 +317,22 @@ export default function StudentResults() {
           </button>
         )}
       </div>
+
+      {/* Trend Chart */}
+      {trendData.length > 1 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 print:hidden">
+          <p className="text-sm font-semibold text-gray-700 mb-3">Performance Trend (Average Score)</p>
+          <ResponsiveContainer width="100%" height={160}>
+            <LineChart data={trendData} margin={{ top: 4, right: 16, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v: number) => [`${v}%`, 'Avg']} />
+              <Line type="monotone" dataKey="avg" stroke="#7c3aed" strokeWidth={2} dot={{ r: 4, fill: '#7c3aed' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 print:hidden">

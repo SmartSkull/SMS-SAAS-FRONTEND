@@ -15,7 +15,7 @@ interface BusInfo {
   lat: number | null; lng: number | null; gpsUpdatedAt: string | null;
   absentToday: boolean; homeLat: number | null; homeLng: number | null;
 }
-interface EtaInfo { durationSeconds: number; distanceMeters: number; source: 'osrm' | 'estimate'; }
+interface EtaInfo { durationSeconds: number; distanceMeters: number; source: 'osrm' | 'estimate'; dest?: 'home' | 'school'; }
 
 const BACKEND_WS = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
 
@@ -358,13 +358,13 @@ export default function StudentTransportPage() {
       )}
 
       {/* ── ETA ── */}
-      {busInfo.tripActive && homeCoords && (
+      {busInfo.tripActive && (homeCoords || absent === false) && (
         <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3">
           <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
             <Clock size={20} className="text-purple-600" />
           </div>
           <div className="flex-1">
-            <p className="text-xs text-purple-500 font-medium uppercase tracking-wide">ETA to your stop</p>
+            <p className="text-xs text-purple-500 font-medium uppercase tracking-wide">{eta?.dest === 'school' ? 'ETA to school' : 'ETA to your stop'}</p>
             {etaLoading && !eta ? (
               <p className="text-gray-400 text-sm mt-0.5">Calculating…</p>
             ) : eta ? (
