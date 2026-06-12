@@ -17,7 +17,7 @@ interface BusObj {
   assignments: { absentToday: boolean; pickedUp: boolean; pickedUpAt?: string | null; student: { parentLat?: number | null; parentLng?: number | null; user: { uniqueId: string; firstName: string; lastName: string } } }[];
 }
 
-type Tab = 'buses' | 'routes' | 'drivers' | 'gps' | 'analytics';
+type Tab = 'buses' | 'routes' | 'drivers' | 'gps' | 'analytics' | 'fare' | 'trips';
 
 const BACKEND = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8080';
 
@@ -246,6 +246,26 @@ export default function TransportPage() {
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState('');
 
+  // bulk assign
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkAssigning, setBulkAssigning] = useState(false);
+
+  // driver staff search
+  const [driverStaffSearch, setDriverStaffSearch] = useState('');
+  const [driverStaffOptions, setDriverStaffOptions] = useState<{ uniqueId: string; firstName: string; lastName: string }[]>([]);
+  const [driverStaffLoading, setDriverStaffLoading] = useState(false);
+
+  // fare payments
+  const [fareData, setFareData] = useState<any[]>([]);
+  const [fareLoading, setFareLoading] = useState(false);
+  const [payModal, setPayModal] = useState<{ assignmentId: string; name: string; balance: number } | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payNote, setPayNote] = useState('');
+
+  // trip logs
+  const [tripLogs, setTripLogs] = useState<any[]>([]);
+  const [tripLogsLoading, setTripLogsLoading] = useState(false);
+
   // ── Loaders ───────────────────────────────────────────────────────────────
 
   const loadAll = useCallback(() => {
@@ -254,7 +274,6 @@ export default function TransportPage() {
       api.get<any>(endpoints.admin.transportBuses).then(r => { setBuses(r.data ?? []); setLiveBuses(r.data ?? []); }),
       api.get<any>(endpoints.admin.transportRoutes).then(r => setRoutes(r.data ?? [])),
       api.get<any>(endpoints.admin.transportDrivers).then(r => setDrivers(r.data ?? [])),
-      api.get<any>(endpoints.admin.staff, { per_page: 1000 }).then(r => setStaffOptions((r.data ?? []).filter((s: any) => s.role === 'driver').map((s: any) => ({ uniqueId: s.unique_id, firstName: s.firstname, lastName: s.lastname })))),
     ]).catch(() => toast.error('Failed to load transport data')).finally(() => setLoading(false));
   }, []);
 
@@ -267,6 +286,24 @@ export default function TransportPage() {
       .then(r => setAnalytics(r.data))
       .catch(() => toast.error('Failed to load analytics'))
       .finally(() => setAnalyticsLoading(false));
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'fare') return;
+    setFareLoading(true);
+    api.get<any>(endpoints.admin.transportFarePayments)
+      .then(r => setFareData(r.data ?? []))
+      .catch(() => toast.error('Failed to load fare payments'))
+      .finally(() => setFareLoading(false));
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 'trips') return;
+    setTripLogsLoading(true);
+    api.get<any>(endpoints.admin.transportTripLogs)
+      .then(r => setTripLogs(r.data ?? []))
+      .catch(() => toast.error('Failed to load trip logs'))
+      .finally(() => setTripLogsLoading(false));
   }, [tab]);
 
   // WebSocket for live GPS
@@ -299,6 +336,15 @@ export default function TransportPage() {
       .then(r => setStudentOptions((r.data ?? []).map((s: any) => ({ uniqueId: s.student_id ?? s.uniqueId, firstName: s.firstname ?? s.firstName, lastName: s.lastname ?? s.lastName }))))
       .catch(() => {}).finally(() => setStudentsLoading(false));
   }, [assignBusId, assignClass, studentSearch]);
+
+  // Driver staff search
+  useEffect(() => {
+    if (!driverStaffSearch.trim()) { setDriverStaffOptions([]); return; }
+    setDriverStaffLoading(true);
+    api.get<any>(endpoints.admin.staff, { search: driverStaffSearch, per_page: 20 })
+      .then(r => setDriverStaffOptions((r.data ?? []).map((s: any) => ({ uniqueId: s.unique_id, firstName: s.firstname, lastName: s.lastname }))))
+      .catch(() => {}).finally(() => setDriverStaffLoading(false));
+  }, [driverStaffSearch]);
 
   // ── Bus actions ───────────────────────────────────────────────────────────
 
@@ -394,12 +440,35 @@ export default function TransportPage() {
     catch { toast.error('Failed'); }
   };
 
+  const doBulkAssign = async () => {
+    if (!assignBusId || bulkSelected.size === 0) return;
+    setBulkAssigning(true);
+    try {
+      const r = await api.post<any>(endpoints.admin.transportBulkAssign(String(assignBusId)), { studentIds: [...bulkSelected] });
+      toast.success(r.message ?? 'Assigned');
+      setAssignBusId(null); setBulkSelected(new Set()); setAssignClass(''); setStudentSearch('');
+      loadAll();
+    } catch (e: any) { toast.error(e?.message ?? 'Failed'); }
+    finally { setBulkAssigning(false); }
+  };
+
+  const recordPayment = async () => {
+    if (!payModal || !payAmount) return;
+    try {
+      await api.post(endpoints.admin.transportFarePayments, { assignmentId: payModal.assignmentId, amount: Number(payAmount), note: payNote || undefined });
+      toast.success('Payment recorded');
+      setPayModal(null); setPayAmount(''); setPayNote('');
+      // Refresh fare data
+      api.get<any>(endpoints.admin.transportFarePayments).then(r => setFareData(r.data ?? []));
+    } catch { toast.error('Failed'); }
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold text-gray-900">Transport</h1>
 
       <div className="flex gap-2 flex-wrap">
-        {([['buses', 'Buses'], ['routes', 'Routes'], ['drivers', 'Drivers'], ['gps', 'GPS Tracking'], ['analytics', 'Analytics']] as const).map(([key, label]) => (
+        {([['buses', 'Buses'], ['routes', 'Routes'], ['drivers', 'Drivers'], ['gps', 'GPS Tracking'], ['fare', 'Fare Payments'], ['trips', 'Trip Logs'], ['analytics', 'Analytics']] as const).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${tab === key ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 shadow-sm'}`}>
             {label}
@@ -492,7 +561,7 @@ export default function TransportPage() {
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-700">Students ({bus.assignments.length}/{bus.capacity})</span>
-                        <button onClick={() => { setAssignBusId(bus.id); setAssignClass(''); setSelectedStudent(''); setStudentSearch(''); }}
+                        <button onClick={() => { setAssignBusId(bus.id); setAssignClass(''); setSelectedStudent(''); setStudentSearch(''); setBulkSelected(new Set()); }}
                           className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-medium">
                           <Plus size={13} /> Assign
                         </button>
@@ -600,11 +669,22 @@ export default function TransportPage() {
                   className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 <input value={driverForm.licenseNo} onChange={e => setDriverForm(f => ({ ...f, licenseNo: e.target.value }))} placeholder="License number"
                   className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
-                <select value={driverForm.userId} onChange={e => setDriverForm(f => ({ ...f, userId: e.target.value }))}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                  <option value="">Link staff account (optional)</option>
-                  {staffOptions.map(s => <option key={s.uniqueId} value={s.uniqueId}>{s.firstName} {s.lastName}</option>)}
-                </select>
+                <div className="relative">
+                  <input value={driverStaffSearch} onChange={e => { setDriverStaffSearch(e.target.value); setDriverForm(f => ({ ...f, userId: '' })); }}
+                    placeholder="Search staff account to link…"
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                  {driverForm.userId && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-600">✓ linked</span>}
+                  {driverStaffOptions.length > 0 && !driverForm.userId && (
+                    <div className="absolute z-10 top-full mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg divide-y divide-gray-100 max-h-40 overflow-y-auto">
+                      {driverStaffOptions.map(s => (
+                        <button key={s.uniqueId} type="button" onClick={() => { setDriverForm(f => ({ ...f, userId: s.uniqueId })); setDriverStaffSearch(`${s.firstName} ${s.lastName}`); setDriverStaffOptions([]); }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50 text-gray-700">
+                          {s.firstName} {s.lastName} <span className="text-gray-400 text-xs">{s.uniqueId}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2">
                 <button onClick={createDriver} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-medium">Add</button>
@@ -626,10 +706,21 @@ export default function TransportPage() {
                       <td className="p-2"><input value={editDriverForm.name} onChange={e => setEditDriverForm(f => ({ ...f, name: e.target.value }))} className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400" /></td>
                       <td className="p-2"><input value={editDriverForm.phone} onChange={e => setEditDriverForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400" /></td>
                       <td className="p-2"><input value={editDriverForm.licenseNo} onChange={e => setEditDriverForm(f => ({ ...f, licenseNo: e.target.value }))} placeholder="License No." className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-purple-400" /></td>
-                      <td className="p-2"><select value={editDriverForm.userId} onChange={e => setEditDriverForm(f => ({ ...f, userId: e.target.value }))} className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400">
-                        <option value="">Not linked</option>
-                        {staffOptions.map(s => <option key={s.uniqueId} value={s.uniqueId}>{s.firstName} {s.lastName}</option>)}
-                      </select></td>
+                      <td className="p-2 relative">
+                        <input value={driverStaffSearch} onChange={e => { setDriverStaffSearch(e.target.value); setEditDriverForm(f => ({ ...f, userId: '' })); }}
+                          placeholder="Search staff…" className="w-full border border-purple-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-purple-400" />
+                        {editDriverForm.userId && <span className="text-[10px] text-green-600 block">✓ linked</span>}
+                        {driverStaffOptions.length > 0 && !editDriverForm.userId && (
+                          <div className="absolute z-10 top-full mt-1 left-0 w-48 bg-white border border-gray-200 rounded-xl shadow-lg divide-y divide-gray-100 max-h-36 overflow-y-auto">
+                            {driverStaffOptions.map(s => (
+                              <button key={s.uniqueId} type="button" onClick={() => { setEditDriverForm(f => ({ ...f, userId: s.uniqueId })); setDriverStaffSearch(`${s.firstName} ${s.lastName}`); setDriverStaffOptions([]); }}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-purple-50 text-gray-700">
+                                {s.firstName} {s.lastName}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </td>
                       <td className="p-3 text-gray-400 text-xs">{d.buses?.map(b => b.plateNumber).join(', ') || '—'}</td>
                       <td className="p-2 flex gap-1">
                         <button onClick={() => saveDriver(d.id)} className="p-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700"><Check size={13} /></button>
@@ -644,7 +735,7 @@ export default function TransportPage() {
                       <td className="p-3 text-xs">{d.user ? <span className="text-green-700 font-medium">{d.user.firstName} {d.user.lastName}</span> : <span className="text-gray-400">Not linked</span>}</td>
                       <td className="p-3 text-gray-500 text-xs">{d.buses?.map(b => b.plateNumber).join(', ') || '—'}</td>
                       <td className="p-3 flex gap-1">
-                        <button onClick={() => { setEditDriverId(d.id); setEditDriverForm({ name: d.name, phone: d.phone ?? '', licenseNo: d.licenseNo ?? '', userId: d.user?.uniqueId ?? '' }); }} className="text-gray-400 hover:text-purple-600 p-1"><Pencil size={14} /></button>
+                        <button onClick={() => { setEditDriverId(d.id); setEditDriverForm({ name: d.name, phone: d.phone ?? '', licenseNo: d.licenseNo ?? '', userId: d.user?.uniqueId ?? '' }); setDriverStaffSearch(d.user ? `${d.user.firstName} ${d.user.lastName}` : ''); setDriverStaffOptions([]); }} className="text-gray-400 hover:text-purple-600 p-1"><Pencil size={14} /></button>
                         <button onClick={() => deleteDriver(d.id)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={14} /></button>
                       </td>
                     </tr>
@@ -805,12 +896,85 @@ export default function TransportPage() {
         </div>
       )}
 
-      {/* ── Assign Student Modal ───────────────────────────────────────────── */}
+      {/* ── Fare Payments ─────────────────────────────────────────────────── */}
+      {tab === 'fare' && (
+        <div className="space-y-3">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>{['Student', 'Bus / Route', 'Fare', 'Paid', 'Balance', ''].map(h => <th key={h} className="p-3 text-left font-medium text-gray-600">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {fareLoading ? <tr><td colSpan={6}><TransportLoader /></td></tr>
+                    : fareData.length === 0 ? <tr><td colSpan={6} className="p-6 text-center text-gray-400 text-sm">No assignments found</td></tr>
+                    : fareData.map((row: any) => (
+                      <tr key={row.assignmentId} className="hover:bg-gray-50">
+                        <td className="p-3 font-medium text-gray-900">{row.student.name}</td>
+                        <td className="p-3 text-gray-500 text-xs">{row.bus}{row.route ? ` · ${row.route}` : ''}</td>
+                        <td className="p-3 text-gray-700">₦{row.fare.toLocaleString()}</td>
+                        <td className="p-3 text-green-700">₦{row.paid.toLocaleString()}</td>
+                        <td className="p-3">
+                          <span className={`font-semibold ${row.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {row.balance > 0 ? `₦${row.balance.toLocaleString()}` : '✓ Paid'}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          {row.balance > 0 && (
+                            <button onClick={() => { setPayModal({ assignmentId: row.assignmentId, name: row.student.name, balance: row.balance }); setPayAmount(''); setPayNote(''); }}
+                              className="px-3 py-1 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg text-xs font-medium">
+                              Record Payment
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Trip Logs ──────────────────────────────────────────────────────── */}
+      {tab === 'trips' && (
+        <div className="space-y-3">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>{['Date', 'Bus', 'Route', 'Driver', 'Onboard', 'Picked Up', 'Absent'].map(h => <th key={h} className="p-3 text-left font-medium text-gray-600">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {tripLogsLoading ? <tr><td colSpan={7}><TransportLoader /></td></tr>
+                    : tripLogs.length === 0 ? <tr><td colSpan={7} className="p-6 text-center text-gray-400 text-sm">No trip logs yet. Logs are saved automatically when a trip ends.</td></tr>
+                    : tripLogs.map((log: any) => (
+                      <tr key={log.id} className="hover:bg-gray-50">
+                        <td className="p-3 text-gray-700">{new Date(log.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        <td className="p-3 font-medium text-gray-900">{log.plateNumber}</td>
+                        <td className="p-3 text-gray-500">{log.route ?? '—'}</td>
+                        <td className="p-3 text-gray-500">{log.driver ?? '—'}</td>
+                        <td className="p-3 text-gray-700">{log.studentsOnboard}</td>
+                        <td className="p-3 text-green-700">{log.studentsPickedUp}</td>
+                        <td className="p-3 text-red-600">{log.studentsAbsent}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Assign Student Modal (bulk) ────────────────────────────────────── */}
       {assignBusId !== null && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
-            <h2 className="font-semibold text-gray-900">Assign Student to Bus</h2>
-            <select value={assignClass} onChange={e => { setAssignClass(e.target.value); setSelectedStudent(''); setStudentSearch(''); }}
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900">Assign Students to Bus</h2>
+              <button onClick={() => setAssignBusId(null)}><X size={18} className="text-gray-400" /></button>
+            </div>
+            <select value={assignClass} onChange={e => { setAssignClass(e.target.value); setBulkSelected(new Set()); setStudentSearch(''); }}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
               <option value="">Select class…</option>
               {classes.map(c => <option key={c} value={c}>{c}</option>)}
@@ -822,22 +986,48 @@ export default function TransportPage() {
                   <input value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
                     placeholder="Search student…" className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
                 </div>
-                <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
+                {bulkSelected.size > 0 && <p className="text-xs text-purple-600 font-medium">{bulkSelected.size} selected</p>}
+                <div className="max-h-52 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
                   {studentsLoading ? <div className="p-3 text-sm text-gray-400 text-center">Loading…</div>
                     : studentOptions.length === 0 ? <div className="p-3 text-sm text-gray-400 text-center">No students</div>
                     : studentOptions.map(s => (
-                      <button key={s.uniqueId} onClick={() => setSelectedStudent(s.uniqueId)}
-                        className={`w-full text-left px-3 py-2 text-sm transition-colors ${selectedStudent === s.uniqueId ? 'bg-purple-50 text-purple-700 font-medium' : 'hover:bg-gray-50 text-gray-700'}`}>
-                        {s.firstName} {s.lastName} <span className="text-gray-400 text-xs">{s.uniqueId}</span>
-                      </button>
+                      <label key={s.uniqueId} className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer ${bulkSelected.has(s.uniqueId) ? 'bg-purple-50' : 'hover:bg-gray-50'}`}>
+                        <input type="checkbox" checked={bulkSelected.has(s.uniqueId)}
+                          onChange={e => setBulkSelected(prev => { const n = new Set(prev); e.target.checked ? n.add(s.uniqueId) : n.delete(s.uniqueId); return n; })}
+                          className="rounded accent-purple-600" />
+                        <span className={bulkSelected.has(s.uniqueId) ? 'text-purple-700 font-medium' : 'text-gray-700'}>
+                          {s.firstName} {s.lastName} <span className="text-gray-400 text-xs">{s.uniqueId}</span>
+                        </span>
+                      </label>
                     ))}
                 </div>
               </>
             )}
             <div className="flex gap-2">
-              <button onClick={doAssign} disabled={!selectedStudent}
-                className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium">Assign</button>
+              <button onClick={doBulkAssign} disabled={bulkSelected.size === 0 || bulkAssigning}
+                className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium">
+                {bulkAssigning ? 'Assigning…' : `Assign${bulkSelected.size > 0 ? ` (${bulkSelected.size})` : ''}`}
+              </button>
               <button onClick={() => setAssignBusId(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Fare Payment Modal ─────────────────────────────────────────────── */}
+      {payModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="font-semibold text-gray-900">Record Payment — {payModal.name}</h2>
+            <p className="text-xs text-gray-500">Outstanding balance: <span className="font-semibold text-red-600">₦{payModal.balance.toLocaleString()}</span></p>
+            <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} placeholder="Amount paid (₦)"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            <input value={payNote} onChange={e => setPayNote(e.target.value)} placeholder="Note (optional)"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+            <div className="flex gap-2">
+              <button onClick={recordPayment} disabled={!payAmount}
+                className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium">Save</button>
+              <button onClick={() => setPayModal(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">Cancel</button>
             </div>
           </div>
         </div>
