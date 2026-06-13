@@ -1,6 +1,5 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { X, MessageCircle, Send } from 'lucide-react';
 
 type Msg = { role: 'bot' | 'user'; text: string };
@@ -271,20 +270,17 @@ export function Chatbot() {
 
       {/* Toggle */}
       <div className="relative">
-        {/* Pulse rings — only when closed */}
         {!open && <>
           <span className="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-30" />
           <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20" style={{ animationDelay: '0.4s' }} />
         </>}
-        <motion.button
+        <button
           onClick={() => setOpen(o => !o)}
-          whileTap={{ scale: 0.9 }}
-          animate={{ rotate: open ? 90 : 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-          className="relative w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center"
+          className="relative w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-transform duration-150"
+          style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.3s cubic-bezier(.34,1.56,.64,1)' }}
         >
           {open ? <X size={22} /> : <MessageCircle size={22} />}
-        </motion.button>
+        </button>
       </div>
     </div>
   );

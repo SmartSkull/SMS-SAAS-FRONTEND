@@ -1,6 +1,5 @@
 'use client';
-import { motion } from 'framer-motion';
-import { Reveal, stagger, fadeUp } from './Reveal';
+import { Reveal } from './Reveal';
 import { FEATURES } from '@/types/landing';
 
 export function FeaturesSection() {
@@ -15,20 +14,20 @@ export function FeaturesSection() {
           <p className="text-gray-500 max-w-lg mx-auto text-[15px] leading-7">No spreadsheets. No app-switching. Smart Campus handles it all.</p>
         </Reveal>
 
-        <motion.div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
-          variants={stagger(.06)} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-60px' }}>
-          {FEATURES.map(({ label, desc, ic, bg, icon }) => (
-            <motion.div key={label} variants={fadeUp}
-              className="group border border-blue-100 hover:border-blue-300 rounded-2xl p-7 flex flex-col bg-white hover:bg-blue-50/50 hover:-translate-y-1.5 transition-all cursor-default shadow-sm hover:shadow-[0_20px_60px_rgba(37,99,235,.15)]">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 shrink-0" style={{ background: bg, color: ic }}>
-                {icon}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {FEATURES.map(({ label, desc, ic, bg, icon }, i) => (
+            <Reveal key={label} delay={i * 0.06}>
+              <div className="group border border-blue-100 hover:border-blue-300 rounded-2xl p-7 flex flex-col bg-white hover:bg-blue-50/50 hover:-translate-y-1.5 transition-all cursor-default shadow-sm hover:shadow-[0_20px_60px_rgba(37,99,235,.15)]">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 shrink-0" style={{ background: bg, color: ic }}>
+                  {icon}
+                </div>
+                <p className="font-bold text-gray-900 text-[15px] mb-2">{label}</p>
+                <p className="text-sm text-gray-500 leading-6">{desc}</p>
+                <div className="mt-5 w-7 h-[3px] rounded-full group-hover:w-12 transition-all duration-300" style={{ background: ic }} />
               </div>
-              <p className="font-bold text-gray-900 text-[15px] mb-2">{label}</p>
-              <p className="text-sm text-gray-500 leading-6">{desc}</p>
-              <div className="mt-5 w-7 h-[3px] rounded-full group-hover:w-12 transition-all duration-300" style={{ background: ic }} />
-            </motion.div>
+            </Reveal>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

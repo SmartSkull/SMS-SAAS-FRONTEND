@@ -1,14 +1,13 @@
 'use client';
-import { motion } from 'framer-motion';
 import { ArrowRight, Bus, CheckCircle, MapPin } from 'lucide-react';
 import Link from 'next/link';
-import { Reveal, slideL, slideR } from './Reveal';
+import { Reveal } from './Reveal';
 
 export function TransportSection() {
   return (
     <section className="py-28 px-6 bg-[#e8f0fe]">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-20">
-        <Reveal variants={slideL} className="flex-1">
+        <Reveal variant="left" className="flex-1">
           <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-4">Live Transport Tracking</p>
           <h2 className="text-[clamp(2rem,4vw,3rem)] font-black leading-tight text-gray-900 mb-5">
             Parents always know<br /><span className="text-blue-600">where the bus is</span>
@@ -21,7 +20,7 @@ export function TransportSection() {
           </Link>
         </Reveal>
 
-        <Reveal variants={slideR} delay={.15} className="flex-1 flex justify-center">
+        <Reveal variant="right" delay={0.15} className="flex-1 flex justify-center">
           <div className="float relative">
             <div className="bg-white border border-blue-100 rounded-3xl p-6 w-72 shadow-[0_24px_60px_rgba(37,99,235,.15)]">
               <div className="flex items-center gap-3 mb-5">

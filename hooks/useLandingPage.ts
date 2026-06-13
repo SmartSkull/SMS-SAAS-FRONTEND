@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { useScroll, useTransform } from 'framer-motion';
 import type { DemoForm } from '@/types/landing';
 
 export function useLandingPage() {
@@ -9,12 +8,10 @@ export function useLandingPage() {
   const [sent, setSent]         = useState(false);
   const [form, setForm]         = useState<DemoForm>({ name: '', school: '', email: '', phone: '' });
   const heroRef                 = useRef<HTMLDivElement>(null);
-  const { scrollYProgress }     = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 8);
-    window.addEventListener('scroll', fn);
+    window.addEventListener('scroll', fn, { passive: true });
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
@@ -27,5 +24,5 @@ export function useLandingPage() {
     setSent(true);
   };
 
-  return { menu, setMenu, scrolled, sent, form, setForm, heroRef, heroY, submit };
+  return { menu, setMenu, scrolled, sent, form, setForm, heroRef, submit };
 }

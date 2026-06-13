@@ -13,7 +13,7 @@ import { ContactSection } from '@/components/landing/ContactSection';
 import { Chatbot } from '@/components/landing/Chatbot';
 
 export default function LandingPage() {
-  const { menu, setMenu, scrolled, sent, form, setForm, heroRef, heroY, submit } = useLandingPage();
+  const { menu, setMenu, scrolled, sent, form, setForm, heroRef, submit } = useLandingPage();
 
   return (
     <div className="bg-[#e8f0fe] text-gray-900 overflow-x-hidden">
@@ -28,7 +28,7 @@ export default function LandingPage() {
       `}</style>
 
       <Navbar scrolled={scrolled} menu={menu} setMenu={setMenu} />
-      <HeroSection heroRef={heroRef} heroY={heroY} />
+      <HeroSection heroRef={heroRef} />
       <TickerBar />
       <StatsSection />
       <FeaturesSection />

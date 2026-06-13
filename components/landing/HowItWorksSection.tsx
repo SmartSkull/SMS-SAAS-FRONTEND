@@ -1,7 +1,6 @@
 'use client';
-import { motion } from 'framer-motion';
 import { GraduationCap, Users, Zap } from 'lucide-react';
-import { Reveal, stagger } from './Reveal';
+import { Reveal } from './Reveal';
 
 const STEPS = [
   { n: '01', t: 'Register your school', d: 'Create your profile — name, logo, brand colors and contact details.', icon: GraduationCap },
@@ -20,10 +19,8 @@ export function HowItWorksSection() {
         <div className="grid md:grid-cols-3 gap-6 relative">
           <div className="hidden md:block absolute top-12 left-[calc(16.66%+2rem)] right-[calc(16.66%+2rem)] h-px bg-gradient-to-r from-transparent via-blue-300/50 to-transparent" />
           {STEPS.map(({ n, t, d, icon: Icon }, i) => (
-            <Reveal key={n} delay={i * .12}>
-              <motion.div whileHover={{ y: -5, boxShadow: '0 16px 48px rgba(0,0,0,.2)' }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="group bg-white/10 backdrop-blur-sm border border-white/15 hover:bg-white/20 rounded-2xl p-8 text-center flex flex-col items-center transition-all">
+            <Reveal key={n} delay={i * 0.12}>
+              <div className="group bg-white/10 backdrop-blur-sm border border-white/15 hover:bg-white/20 rounded-2xl p-8 text-center flex flex-col items-center transition-all hover:-translate-y-1.5 hover:shadow-[0_16px_48px_rgba(0,0,0,.2)]">
                 <div className="relative mb-6">
                   <div className="w-20 h-20 rounded-full bg-white/15 group-hover:bg-white/25 flex items-center justify-center transition-colors">
                     <Icon size={30} className="text-white" />
@@ -34,7 +31,7 @@ export function HowItWorksSection() {
                 </div>
                 <h3 className="font-black text-white text-[16px] mb-3">{t}</h3>
                 <p className="text-sm text-blue-100 leading-6">{d}</p>
-              </motion.div>
+              </div>
             </Reveal>
           ))}
         </div>

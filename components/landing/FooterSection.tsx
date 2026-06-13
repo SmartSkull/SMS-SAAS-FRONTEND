@@ -82,7 +82,7 @@ export function Footer() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-10 text-sm text-blue-200/50">
             <div>
               <p className="text-white font-bold mb-4">Platform</p>
-              {[['Features', '#features'], ['How it works', '#how-it-works'], ['Register', '/school/register']].map(([l, h]) => (
+              {[['Features', '/features'], ['How it works', '/how-it-works'], ['Register', '/school/register']].map(([l, h]) => (
                 <Link key={l} href={h} className="block py-1.5 hover:text-white transition-colors">{l}</Link>
               ))}
             </div>

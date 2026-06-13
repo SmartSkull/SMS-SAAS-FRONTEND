@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = ['/', '/login', '/school', '/school/register', '/about', '/history', '/contact', '/admissions',
-  '/gallery', '/our-staff', '/policy', '/classrooms', '/principal-speech', '/forgot-password', '/reset-password'];
+  '/gallery', '/our-staff', '/policy', '/classrooms', '/principal-speech', '/forgot-password', '/reset-password',
+  '/features', '/how-it-works', '/get-a-demo', '/reach-us'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

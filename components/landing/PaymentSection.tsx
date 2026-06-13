@@ -1,14 +1,13 @@
 'use client';
-import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import { Reveal, slideL, slideR } from './Reveal';
+import { Reveal } from './Reveal';
 
 export function PaymentSection() {
   return (
     <section className="py-28 px-6 bg-blue-600">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row-reverse items-center gap-20">
-        <Reveal variants={slideR} className="flex-1">
+        <Reveal variant="right" className="flex-1">
           <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-4">Online Payments</p>
           <h2 className="text-[clamp(2rem,4vw,3rem)] font-black leading-tight text-white mb-5">
             School fees paid<br /><span className="text-blue-200">in seconds</span>
@@ -21,10 +20,8 @@ export function PaymentSection() {
           </a>
         </Reveal>
 
-        <Reveal variants={slideL} delay={.15} className="flex-1 flex justify-center">
-          <motion.div whileHover={{ y: -6 }} transition={{ type: 'spring', stiffness: 200 }}
-            className="float bg-white rounded-3xl shadow-[0_32px_80px_rgba(0,0,0,.25)] w-72 overflow-hidden">
-
+        <Reveal variant="left" delay={0.15} className="flex-1 flex justify-center">
+          <div className="float bg-white rounded-3xl shadow-[0_32px_80px_rgba(0,0,0,.25)] w-72 overflow-hidden hover:-translate-y-1.5 transition-transform duration-300">
             {/* Receipt header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-6 pt-6 pb-8 relative">
               <div className="flex items-center justify-between mb-4">
@@ -35,7 +32,6 @@ export function PaymentSection() {
               </div>
               <p className="text-white/70 text-xs mb-1">Amount</p>
               <p className="text-4xl font-black text-white tracking-tight">₦45,000</p>
-              {/* wave divider */}
               <svg className="absolute -bottom-px left-0 w-full" viewBox="0 0 288 20" preserveAspectRatio="none">
                 <path d="M0 20 C72 0 216 0 288 20 L288 20 L0 20 Z" fill="white"/>
               </svg>
@@ -51,11 +47,7 @@ export function PaymentSection() {
                   </div>
                 ))}
               </div>
-
-              {/* Dashed divider */}
               <div className="border-t border-dashed border-gray-200 my-4" />
-
-              {/* QR */}
               <div className="flex flex-col items-center gap-2">
                 <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
                   <Image src="/images/qrcode.avif" alt="QR Code" width={84} height={84} className="rounded" />
@@ -64,7 +56,7 @@ export function PaymentSection() {
                 <p className="text-[9px] text-gray-300 font-mono">REF: SC-2026-045000</p>
               </div>
             </div>
-          </motion.div>
+          </div>
         </Reveal>
       </div>
     </section>

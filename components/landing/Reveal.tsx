@@ -1,22 +1,41 @@
 'use client';
-import { useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
 
-export const fadeUp  = { hidden:{opacity:0,y:32}, show:{opacity:1,y:0,transition:{duration:.6,ease:'easeOut' as const}} };
-export const fadeIn  = { hidden:{opacity:0},      show:{opacity:1,transition:{duration:.5}} };
-export const stagger = (d=.08) => ({ hidden:{}, show:{transition:{staggerChildren:d}} });
-export const slideL  = { hidden:{opacity:0,x:-40}, show:{opacity:1,x:0,transition:{duration:.65,ease:'easeOut' as const}} };
-export const slideR  = { hidden:{opacity:0,x:40},  show:{opacity:1,x:0,transition:{duration:.65,ease:'easeOut' as const}} };
+export function Reveal({ children, delay = 0, className = '', variant = 'up' }:
+  { children: React.ReactNode; delay?: number; className?: string; variant?: 'up' | 'left' | 'right' | 'fade' }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
 
-export function Reveal({ children, variants = fadeUp, delay = 0, className = '' }:
-  { children: React.ReactNode; variants?: any; delay?: number; className?: string }) {
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-60px' });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { rootMargin: '-60px' });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const transforms: Record<string, string> = {
+    up:    'translateY(32px)',
+    left:  'translateX(-40px)',
+    right: 'translateX(40px)',
+    fade:  'none',
+  };
+
   return (
-    <motion.div ref={ref} variants={variants} initial="hidden"
-      animate={inView ? 'show' : 'hidden'} transition={{ delay }}
-      className={className} style={{ willChange: 'transform, opacity' }}>
+    <div ref={ref} className={className} style={{
+      opacity:    visible ? 1 : 0,
+      transform:  visible ? 'none' : transforms[variant],
+      transition: `opacity 0.6s ease ${delay}s, transform 0.65s ease ${delay}s`,
+      willChange: 'transform, opacity',
+    }}>
       {children}
-    </motion.div>
+    </div>
   );
 }
+
+// Keep named variant exports so existing imports don't break
+export const slideL = 'left';
+export const slideR = 'right';
+export const fadeUp = 'up';
+export const fadeIn = 'fade';
+export const stagger = () => {};
