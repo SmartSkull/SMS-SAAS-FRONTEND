@@ -5,7 +5,6 @@ import { Building2, MapPin, Phone, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import studentBg from '@/public/student.png';
 
 export default function SchoolSearchPage() {
   const router = useRouter();
@@ -37,9 +36,9 @@ export default function SchoolSearchPage() {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-4 relative w-full overflow-y-auto"
+      className="portal-theme min-h-screen flex items-center justify-center p-4 relative w-full overflow-y-auto"
       style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('${studentBg.src}')`,
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/studentgroup2.jpg')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

@@ -1,16 +1,13 @@
 'use client';
 import { useLogin } from '@/hooks/useLogin';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
-import studentBg from '@/public/student.png';
-import type { Role } from '@/types';
 import clsx from 'clsx';
 import { Eye, EyeOff, GraduationCap, Search, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import type { Role } from '@/types';
 
-type Tab = Role;
-
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+const TABS: { id: Role; label: string; icon: React.ElementType }[] = [
   { id: 'student', label: 'Student', icon: GraduationCap },
   { id: 'staff', label: 'Staff', icon: Users },
   { id: 'admin', label: 'Admin', icon: ShieldCheck },
@@ -58,9 +55,9 @@ export default function LoginPage() {
 
   return (
     <div 
-      className="min-h-screen flex items-center justify-center p-4 relative w-full"
+      className="portal-theme min-h-screen flex items-center justify-center p-4 relative w-full"
       style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('${studentBg.src}')`,
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/studentgroup2.jpg')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',

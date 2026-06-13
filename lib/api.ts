@@ -128,6 +128,9 @@ export const endpoints = {
     schoolFeesVerify: (ref: string) => `/student/school-fees/verify/${ref}`,
     schoolFeesHistory: '/student/school-fees/history',
     onlineClasses: '/student/online-classes',
+    transportBusFee: '/student/transport/bus-fee',
+    transportBusFeeInit: '/student/transport/bus-fee/initialize',
+    transportBusFeeVerify: (ref: string) => `/student/transport/bus-fee/verify/${ref}`,
     attendanceClockIn: '/attendance/student/clock-in',
     attendanceClockOut: '/attendance/student/clock-out',
     attendanceToday: '/attendance/student/today',
@@ -285,6 +288,7 @@ export const endpoints = {
     transportParentLocation: (uid: string) => `/admin/transport/students/${uid}/parent-location`,
     transportAnalytics: '/admin/transport/analytics',
     transportFarePayments: '/admin/transport/fare-payments',
+    transportBusFeePayments: '/admin/transport/bus-fee-payments',
     transportTripLogs: '/admin/transport/trip-logs',
   },
   public: {

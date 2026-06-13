@@ -261,6 +261,8 @@ export default function TransportPage() {
   const [payModal, setPayModal] = useState<{ assignmentId: string; name: string; balance: number } | null>(null);
   const [payAmount, setPayAmount] = useState('');
   const [payNote, setPayNote] = useState('');
+  const [busFeePayments, setBusFeePayments] = useState<any[]>([]);
+  const [busFeePaymentsLoading, setBusFeePaymentsLoading] = useState(false);
 
   // trip logs
   const [tripLogs, setTripLogs] = useState<any[]>([]);
@@ -295,6 +297,11 @@ export default function TransportPage() {
       .then(r => setFareData(r.data ?? []))
       .catch(() => toast.error('Failed to load fare payments'))
       .finally(() => setFareLoading(false));
+    setBusFeePaymentsLoading(true);
+    api.get<any>(endpoints.admin.transportBusFeePayments)
+      .then(r => setBusFeePayments(r.data ?? []))
+      .catch(() => {})
+      .finally(() => setBusFeePaymentsLoading(false));
   }, [tab]);
 
   useEffect(() => {
@@ -898,8 +905,44 @@ export default function TransportPage() {
 
       {/* ── Fare Payments ─────────────────────────────────────────────────── */}
       {tab === 'fare' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Paystack Bus Fee Payments */}
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-700">Paystack Bus Fee Payments</h2>
+              <span className="text-xs text-gray-400">{busFeePayments.filter((p: any) => p.status === 'SUCCESS').length} paid</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>{['Student', 'Bus / Route', 'Amount', 'Status', 'Date'].map(h => <th key={h} className="p-3 text-left font-medium text-gray-600">{h}</th>)}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {busFeePaymentsLoading ? <tr><td colSpan={5}><TransportLoader /></td></tr>
+                    : busFeePayments.length === 0 ? <tr><td colSpan={5} className="p-6 text-center text-gray-400 text-sm">No Paystack bus fee payments yet</td></tr>
+                    : busFeePayments.map((p: any) => (
+                      <tr key={p.id} className="hover:bg-gray-50">
+                        <td className="p-3 font-medium text-gray-900">{p.student.name}</td>
+                        <td className="p-3 text-gray-500 text-xs">{p.bus}{p.route ? ` · ${p.route}` : ''}</td>
+                        <td className="p-3 text-gray-700">₦{Number(p.amount).toLocaleString()}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${p.status === 'SUCCESS' ? 'bg-green-100 text-green-700' : p.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-600'}`}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-gray-400 text-xs">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Manual Fare Payments */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-700">Manual Fare Payments</h2>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[600px]">
                 <thead className="bg-gray-50 border-b border-gray-100">

@@ -120,6 +120,9 @@ export default function StudentTransportPage() {
   const [showComplaint, setShowComplaint] = useState(false);
   const [complaint, setComplaint] = useState('');
   const [complaintSending, setComplaintSending] = useState(false);
+  const [busFee, setBusFee] = useState<{ fare: number; feeConfigured: boolean; status: string; paidAt: string | null; reference: string | null; history: any[] } | null>(null);
+  const [feeLoading, setFeeLoading] = useState(false);
+  const [payingFee, setPayingFee] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const etaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevCoordsRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
@@ -142,6 +145,12 @@ export default function StudentTransportPage() {
         setAbsent(busRes.data.absentToday);
         if (busRes.data.lat && busRes.data.lng) setBusCoords({ lat: busRes.data.lat, lng: busRes.data.lng });
         if (busRes.data.homeLat && busRes.data.homeLng) setHomeCoords({ lat: busRes.data.homeLat, lng: busRes.data.homeLng });
+        // Load bus fee status if bus is assigned
+        setFeeLoading(true);
+        api.get<any>('student/transport/bus-fee')
+          .then(r => setBusFee(r.data ?? null))
+          .catch(() => {})
+          .finally(() => setFeeLoading(false));
       }
       if (capRes?.data) setCapacity(capRes.data);
       if (histRes?.data) setTripHistory(histRes.data ?? []);
@@ -266,6 +275,17 @@ export default function StudentTransportPage() {
       setMessage('Complaint sent to admin.'); setTimeout(() => setMessage(''), 4000);
     } catch { setMessage('Failed to send complaint.'); setTimeout(() => setMessage(''), 3000); }
     finally { setComplaintSending(false); }
+  };
+
+  const payBusFee = async () => {
+    setPayingFee(true);
+    try {
+      const r = await api.post<any>('student/transport/bus-fee/initialize');
+      window.location.href = r.data.authorization_url;
+    } catch (e: any) {
+      setMessage(e?.message || 'Failed to initialize payment');
+      setTimeout(() => setMessage(''), 4000);
+    } finally { setPayingFee(false); }
   };
 
   const shareBusLocation = () => {
@@ -440,6 +460,37 @@ export default function StudentTransportPage() {
         </div>
         {homeMsg && <p className="mt-2 text-xs text-purple-600">{homeMsg}</p>}
       </div>
+
+      {/* ── Bus Fee Payment ── */}
+      {(busFee?.feeConfigured || feeLoading) && (
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Bus Fee</p>
+          {feeLoading ? (
+            <p className="text-sm text-gray-400">Loading fee status…</p>
+          ) : busFee && (
+            <>
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">₦{busFee.fare.toLocaleString()}</p>
+                  {busFee.paidAt && <p className="text-xs text-gray-400 mt-0.5">Paid {new Date(busFee.paidAt).toLocaleDateString()}</p>}
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${busFee.status === 'SUCCESS' ? 'bg-green-100 text-green-700' : busFee.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {busFee.status === 'SUCCESS' ? '✓ Paid' : busFee.status === 'PENDING' ? 'Pending' : 'Not Paid'}
+                </span>
+              </div>
+              {busFee.status !== 'SUCCESS' && (
+                <>
+                  <button onClick={payBusFee} disabled={payingFee}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-60">
+                    💳 {payingFee ? 'Redirecting…' : 'Pay Bus Fee'}
+                  </button>
+                  <p className="text-xs text-gray-400 mt-2">You will be redirected to Paystack to pay securely.</p>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* ── Driver actions ── */}
       <div className="bg-white rounded-2xl shadow-sm p-4">

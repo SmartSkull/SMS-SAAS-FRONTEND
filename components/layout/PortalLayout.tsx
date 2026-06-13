@@ -22,7 +22,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   return (
     <div
-      className="min-h-screen bg-gray-50 flex"
+      className="portal-theme min-h-screen bg-gray-50 flex"
       style={{
         '--brand': primary,
         '--brand-dark': primary,

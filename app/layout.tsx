@@ -2,10 +2,12 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 import PageLoader from '@/components/ui/PageLoader';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Geist, Geist_Mono } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
+const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' });
 
 export const metadata: Metadata = {
   title: 'School Portal',
@@ -15,31 +17,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <head>
-        <script
+      <head />
+      <body className={`${geist.variable} ${geistMono.variable} font-[family-name:var(--font-geist)] h-full antialiased`}>
+        <Script id="brand-colors" strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  const school = JSON.parse(localStorage.getItem('selected_school'));
-                  if (school) {
-                    const primary = school.primaryColor || '#2563eb';
-                    const secondary = school.secondaryColor || '#eff6ff';
-                    const accent = school.accentColor || '#84cc16';
-                    document.documentElement.style.setProperty('--brand', primary);
-                    document.documentElement.style.setProperty('--brand-dark', primary);
-                    document.documentElement.style.setProperty('--brand-light', secondary);
-                    document.documentElement.style.setProperty('--brand-accent', accent);
-                    document.documentElement.style.setProperty('--brand-border', primary + '33');
-                    document.documentElement.style.setProperty('--brand-shadow', primary + '40');
-                  }
-                } catch (e) {}
-              })();
-            `,
+            __html: `(function(){try{var s=JSON.parse(localStorage.getItem('selected_school'));if(s){var p=s.primaryColor||'#2563eb',sec=s.secondaryColor||'#eff6ff',a=s.accentColor||'#84cc16';var r=document.documentElement.style;r.setProperty('--brand',p);r.setProperty('--brand-dark',p);r.setProperty('--brand-light',sec);r.setProperty('--brand-accent',a);r.setProperty('--brand-border',p+'33');r.setProperty('--brand-shadow',p+'40');}}catch(e){}})();`,
           }}
         />
-      </head>
-      <body className={`${inter.className} h-full antialiased`}>
         <ToastProvider>
           <PageLoader />
           {children}

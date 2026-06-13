@@ -301,6 +301,10 @@ function StaffOverviewView() {
   const [buses, setBuses] = useState<BusOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [liveCoords, setLiveCoords] = useState<Record<string, { lat: number; lng: number; updatedAt: Date }>>({});
+  const [connected, setConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const mapsRef = useRef<Record<string, { map: any; marker: any }>>({});
   const toast = useToast();
 
   useEffect(() => {
@@ -310,9 +314,74 @@ function StaffOverviewView() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Subscribe to live GPS for all active buses
+  useEffect(() => {
+    if (buses.length === 0) return;
+    const socket = io(`${BACKEND_WS}/transport`, { transports: ['websocket'] });
+    socketRef.current = socket;
+    socket.on('connect', () => {
+      setConnected(true);
+      buses.forEach(b => socket.emit('student:watch', { busId: b.id }));
+    });
+    socket.on('disconnect', () => setConnected(false));
+    socket.on('bus:location', (data: { busId: string; lat: number; lng: number }) => {
+      setLiveCoords(prev => ({ ...prev, [data.busId]: { lat: data.lat, lng: data.lng, updatedAt: new Date() } }));
+    });
+    socket.on('student:pickedup', (data: { busId: string; studentUniqueId: string; pickedUp: boolean }) => {
+      setBuses(prev => prev.map(b => b.id !== data.busId ? b : {
+        ...b,
+        students: b.students.map(s => s.uniqueId === data.studentUniqueId ? { ...s } : s),
+      }));
+    });
+    return () => { socket.disconnect(); };
+  }, [buses.length]);
+
+  // Update Leaflet markers when coords arrive
+  useEffect(() => {
+    Object.entries(liveCoords).forEach(([busId, { lat, lng }]) => {
+      const inst = mapsRef.current[busId];
+      if (!inst) return;
+      if (inst.marker) {
+        inst.marker.setLatLng([lat, lng]);
+        inst.map.setView([lat, lng], Math.max(inst.map.getZoom(), 15), { animate: true });
+      }
+    });
+  }, [liveCoords]);
+
+  const initMap = (busId: string, el: HTMLDivElement | null, initCoords?: { lat: number; lng: number }) => {
+    if (!el || mapsRef.current[busId]) return;
+    if (!document.getElementById('leaflet-css')) {
+      const l = document.createElement('link'); l.id = 'leaflet-css'; l.rel = 'stylesheet';
+      l.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(l);
+    }
+    if (!document.getElementById('leaflet-z-fix')) {
+      const s = document.createElement('style'); s.id = 'leaflet-z-fix';
+      s.textContent = '.leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1!important}.leaflet-control{z-index:2!important}';
+      document.head.appendChild(s);
+    }
+    import('leaflet').then(L => {
+      if ((el as any)._leaflet_id) return;
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      const busIcon = L.divIcon({ html: `<div style="background:#7c3aed;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:16px">🚌</div>`, className: '', iconSize: [34, 34], iconAnchor: [17, 17] });
+      const live = liveCoords[busId] ?? initCoords;
+      const center: [number, number] = live ? [live.lat, live.lng] : [9.082, 8.6753];
+      const map = L.map(el, { zoomControl: true, attributionControl: false }).setView(center, live ? 15 : 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      const marker = live ? L.marker([live.lat, live.lng], { icon: busIcon }).addTo(map) : null;
+      mapsRef.current[busId] = { map, marker };
+    });
+  };
+
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">Transport Overview</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Transport Overview</h1>
+        <span className="text-xs flex items-center gap-1 text-gray-500">
+          {connected
+            ? <><Wifi size={11} className="text-green-500" />Live GPS</>
+            : <><WifiOff size={11} className="text-red-400" />Connecting…</>}
+        </span>
+      </div>
       {loading ? (
         <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-white rounded-2xl animate-pulse" />)}</div>
       ) : buses.length === 0 ? (
@@ -321,6 +390,7 @@ function StaffOverviewView() {
         <div className="space-y-3">
           {buses.map(bus => {
             const isOpen = expanded[bus.id];
+            const live = liveCoords[bus.id];
             return (
               <div key={bus.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-4 flex items-center gap-3 cursor-pointer" onClick={() => setExpanded(e => ({ ...e, [bus.id]: !isOpen }))}>
@@ -330,11 +400,12 @@ function StaffOverviewView() {
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900 flex items-center gap-2">
                       {bus.plateNumber}
-                      {bus.tripActive && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Live</span>}
+                      {bus.tripActive && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full animate-pulse">● Live</span>}
                       {bus.absentCount > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{bus.absentCount} absent</span>}
                     </div>
                     <div className="text-xs text-gray-500">
                       {bus.route ?? 'No route'} · {bus.driver ?? 'No driver'} · {bus.assigned}/{bus.capacity} students
+                      {live && <span className="text-green-600"> · GPS {live.updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -347,12 +418,22 @@ function StaffOverviewView() {
                   </div>
                 </div>
                 {isOpen && (
-                  <div className="border-t border-gray-100 p-4">
+                  <div className="border-t border-gray-100 p-4 space-y-4">
+                    {/* Live map */}
+                    <div
+                      ref={el => { if (el) initMap(bus.id, el); }}
+                      className="w-full h-48 rounded-xl overflow-hidden bg-gray-100"
+                    >
+                      {!bus.tripActive && !live && (
+                        <div className="h-full flex items-center justify-center text-xs text-gray-400">Trip not active — no live GPS</div>
+                      )}
+                    </div>
+
                     {bus.students.length === 0 ? (
                       <p className="text-sm text-gray-400 text-center py-3">No students assigned</p>
                     ) : (
                       <>
-                        <div className="flex items-center gap-2 mb-3 text-sm font-medium text-gray-700">
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                           <Users size={14} className="text-purple-500" /> Students
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
