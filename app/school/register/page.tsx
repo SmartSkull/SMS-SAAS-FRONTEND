@@ -6,7 +6,6 @@ import { ArrowLeft, Building2, Upload } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse, SchoolProfile } from '@/types';
-import studentBg from '@/public/student.png';
 
 const EMPTY = {
   name: '',
@@ -72,16 +71,9 @@ export default function RegisterSchoolPage() {
   };
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4 relative w-full overflow-y-auto"
-      style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('${studentBg.src}')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#1f1f2e',
-      }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 relative w-full overflow-y-auto bg-gray-950">
+      <img src="/images/studentgroup1.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-40 animate-[kenBurns_12s_ease-in-out_infinite_alternate]" />
+      <div className="absolute inset-0 bg-gray-950/60" />
       <div className="w-full max-w-3xl relative z-10 py-10">
         <Link href="/school" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-white/80 hover:text-white">
           <ArrowLeft size={16} /> Back to school search
