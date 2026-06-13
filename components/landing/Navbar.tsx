@@ -15,9 +15,9 @@ export function Navbar({ scrolled, menu, setMenu }: NavbarProps) {
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-blue-500/95 backdrop-blur-md shadow-[0_2px_20px_rgba(37,99,235,.12)] border-b border-blue-400' : 'bg-transparent'}`}>
       <div className="max-w-7xl mx-auto px-6 h-[68px] flex items-center justify-between">
-        <div className="select-none animate-[fadeSlideL_.5s_ease_both]">
+        <Link href="/" className="select-none animate-[fadeSlideL_.5s_ease_both]">
           <img src="/images/logo.png" alt="Smart Campus" className="h-20 w-auto" />
-        </div>
+        </Link>
 
         <nav className="hidden md:flex items-center gap-8 text-[14px] text-white/80 font-medium animate-[fadeIn_.5s_.2s_ease_both] opacity-0" style={{ animationFillMode: 'forwards' }}>
           {NAV.map(([l, h]) => (

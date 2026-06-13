@@ -76,7 +76,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row justify-between gap-10 mb-10">
           <div>
-            <img src="/images/logo.png" alt="Smart Campus" className="h-8 w-auto" />
+            <img src="/images/logo.png" alt="Smart Campus" className="h-16 w-auto" />
             <p className="text-blue-200/60 text-sm max-w-xs leading-7">Complete school management platform for Nigerian schools.</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-10 text-sm text-blue-200/50">

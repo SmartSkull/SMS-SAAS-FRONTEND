@@ -50,7 +50,7 @@ export function PaymentSection() {
               <div className="border-t border-dashed border-gray-200 my-4" />
               <div className="flex flex-col items-center gap-2">
                 <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-                  <Image src="/images/qrcode.avif" alt="QR Code" width={84} height={84} className="rounded" />
+                  <Image src="/images/qrcode.png" alt="QR Code" width={84} height={84} className="rounded" />
                 </div>
                 <p className="text-[10px] text-gray-400 font-medium tracking-wide">SCAN TO VERIFY PAYMENT</p>
                 <p className="text-[9px] text-gray-300 font-mono">REF: SC-2026-045000</p>
