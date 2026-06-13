@@ -24,7 +24,10 @@ const DETAILS = [
 export default function HowItWorksPage() {
   return (
     <LandingShell>
-      <section className="pt-36 pb-20 px-6 bg-gray-950 text-center">
+      <section className="relative pt-36 pb-20 px-6 text-center overflow-hidden">
+        <img src="/images/studentgroup1.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-40 animate-[kenBurns_12s_ease-in-out_infinite_alternate]" />
+        <div className="absolute inset-0 bg-gray-950/80" />
+        <div className="relative z-10">
         <Reveal>
           <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">Simple setup</p>
           <h1 className="text-[clamp(2.5rem,5vw,4rem)] font-black text-white leading-tight mb-5">
@@ -34,6 +37,7 @@ export default function HowItWorksPage() {
             Three steps from sign-up to a fully operational school management platform.
           </p>
         </Reveal>
+        </div>
       </section>
 
       <HowItWorksSection />
