@@ -2,36 +2,27 @@
 import { useState, useRef, useEffect } from 'react';
 import { RotateCcw, Star } from 'lucide-react';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type Mode = 'menu' | 'alphabets' | 'numbers';
 type DropState = 'idle' | 'correct' | 'wrong';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const NUMBERS  = Array.from({ length: 10 }, (_, i) => String(i));
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5);
 }
-
 function makeRound(items: string[], count = 6) {
   const targets = shuffle(items).slice(0, count);
   return { targets, tiles: shuffle(targets) };
 }
 
-// ─── Confetti burst ───────────────────────────────────────────────────────────
 function Confetti() {
-  const pieces = Array.from({ length: 18 }, (_, i) => i);
   const colors = ['#f59e0b','#10b981','#3b82f6','#ec4899','#8b5cf6','#f97316'];
   return (
     <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-      {pieces.map(i => (
+      {Array.from({ length: 18 }, (_, i) => (
         <span key={i} className="absolute top-0 text-2xl animate-confetti"
-          style={{
-            left: `${(i / pieces.length) * 100}%`,
-            animationDelay: `${(i * 0.07).toFixed(2)}s`,
-            color: colors[i % colors.length],
-          }}>
+          style={{ left: `${(i / 18) * 100}%`, animationDelay: `${(i * 0.07).toFixed(2)}s`, color: colors[i % colors.length] }}>
           {['⭐','🎉','✨','🌟','🎊'][i % 5]}
         </span>
       ))}
@@ -39,54 +30,15 @@ function Confetti() {
   );
 }
 
-// ─── Drop target ─────────────────────────────────────────────────────────────
-function DropTarget({ label, state, onDrop }: {
-  label: string;
-  state: DropState;
-  onDrop: (val: string) => void;
-}) {
-  const [over, setOver] = useState(false);
-
-  const bg = state === 'correct' ? 'bg-green-100 border-green-400 scale-105'
-           : state === 'wrong'   ? 'bg-red-100 border-red-400 animate-shake'
-           : over                ? 'bg-blue-50 border-blue-400 scale-105'
-           : 'bg-white border-gray-300';
-
-  return (
-    <div
-      onDragOver={e => { e.preventDefault(); setOver(true); }}
-      onDragLeave={() => setOver(false)}
-      onDrop={e => { e.preventDefault(); setOver(false); onDrop(e.dataTransfer.getData('text')); }}
-      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-dashed flex items-center justify-center text-2xl sm:text-3xl font-black transition-all duration-200 select-none ${bg}`}
-    >
-      {state === 'correct' ? label : state === 'wrong' ? '✗' : '?'}
-    </div>
-  );
-}
-
-// ─── Draggable tile ───────────────────────────────────────────────────────────
-function Tile({ label, used }: { label: string; used: boolean }) {
-  if (used) return <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl opacity-0" />;
-  return (
-    <div
-      draggable
-      onDragStart={e => e.dataTransfer.setData('text', label)}
-      className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-blue-300 bg-blue-50 flex items-center justify-center text-2xl sm:text-3xl font-black text-blue-700 cursor-grab active:cursor-grabbing hover:scale-110 hover:shadow-lg transition-all duration-150 select-none animate-pop"
-    >
-      {label}
-    </div>
-  );
-}
-
-// ─── Game board ───────────────────────────────────────────────────────────────
 function GameBoard({ items, mode, onBack }: { items: string[]; mode: 'alphabets' | 'numbers'; onBack: () => void }) {
-  const [round, setRound] = useState(() => makeRound(items));
+  const [round, setRound]           = useState(() => makeRound(items));
   const [dropStates, setDropStates] = useState<Record<string, DropState>>({});
-  const [usedTiles, setUsedTiles] = useState<Set<string>>(new Set());
-  const [score, setScore] = useState(0);
+  const [usedTiles, setUsedTiles]   = useState<Set<string>>(new Set());
+  const [selected, setSelected]     = useState<string | null>(null);
+  const [score, setScore]           = useState(0);
   const [totalRounds, setTotalRounds] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const wrongTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const wrongTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const solved = round.targets.every(t => dropStates[t] === 'correct');
 
@@ -99,11 +51,12 @@ function GameBoard({ items, mode, onBack }: { items: string[]; mode: 'alphabets'
     }
   }, [solved]);
 
-  const handleDrop = (target: string, value: string) => {
-    if (dropStates[target] === 'correct') return;
-    if (value === target) {
+  const handlePlace = (target: string) => {
+    if (!selected || dropStates[target] === 'correct') return;
+    if (selected === target) {
       setDropStates(prev => ({ ...prev, [target]: 'correct' }));
-      setUsedTiles(prev => new Set([...prev, value]));
+      setUsedTiles(prev => new Set([...prev, selected]));
+      setSelected(null);
     } else {
       setDropStates(prev => ({ ...prev, [target]: 'wrong' }));
       clearTimeout(wrongTimers.current[target]);
@@ -118,6 +71,7 @@ function GameBoard({ items, mode, onBack }: { items: string[]; mode: 'alphabets'
     setRound(makeRound(items));
     setDropStates({});
     setUsedTiles(new Set());
+    setSelected(null);
   };
 
   const colors = mode === 'alphabets'
@@ -139,27 +93,59 @@ function GameBoard({ items, mode, onBack }: { items: string[]; mode: 'alphabets'
 
       {/* Instruction */}
       <p className="text-base font-semibold text-gray-600 text-center">
-        Drag each {mode === 'alphabets' ? 'letter' : 'number'} to its matching box 👇
+        {selected
+          ? <>Tap the box for <span className="text-blue-600 font-black">"{selected}"</span> 👇</>
+          : <>Tap a {mode === 'alphabets' ? 'letter' : 'number'} to pick it up 👇</>}
       </p>
 
       {/* Drop targets */}
       <div className="flex flex-wrap justify-center gap-3">
-        {round.targets.map((t, i) => (
-          <div key={t} className="flex flex-col items-center gap-1">
-            <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl font-black text-gray-400 ${colors[i % colors.length]}`}>
-              {t}
+        {round.targets.map((t, i) => {
+          const state = dropStates[t] ?? 'idle';
+          const isCorrect = state === 'correct';
+          const isWrong   = state === 'wrong';
+          const isTarget  = selected !== null && !isCorrect;
+          return (
+            <div key={t} className="flex flex-col items-center gap-1">
+              {/* Label card */}
+              <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl font-black text-gray-500 ${colors[i % colors.length]}`}>
+                {t}
+              </div>
+              {/* Drop box */}
+              <button
+                onClick={() => handlePlace(t)}
+                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 border-dashed flex items-center justify-center text-2xl sm:text-3xl font-black transition-all duration-200 select-none
+                  ${isCorrect ? 'bg-green-100 border-green-400 scale-105 text-green-700'
+                  : isWrong   ? 'bg-red-100 border-red-400 animate-shake text-red-400'
+                  : isTarget  ? 'bg-blue-50 border-blue-400 scale-105 cursor-pointer'
+                  : 'bg-white border-gray-300 text-gray-300'}`}
+              >
+                {isCorrect ? t : isWrong ? '✗' : isTarget ? '?' : '·'}
+              </button>
             </div>
-            <DropTarget label={t} state={dropStates[t] ?? 'idle'} onDrop={val => handleDrop(t, val)} />
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Tiles */}
       {!solved && (
         <div className="flex flex-wrap justify-center gap-3 mt-2">
-          {round.tiles.map(t => (
-            <Tile key={t} label={t} used={usedTiles.has(t)} />
-          ))}
+          {round.tiles.map(t => {
+            const isUsed = usedTiles.has(t);
+            const isPicked = selected === t;
+            if (isUsed) return <div key={t} className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl opacity-0" />;
+            return (
+              <button key={t}
+                onClick={() => setSelected(isPicked ? null : t)}
+                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border-2 flex items-center justify-center text-2xl sm:text-3xl font-black transition-all duration-150 select-none animate-pop
+                  ${isPicked
+                    ? 'border-blue-500 bg-blue-600 text-white scale-110 shadow-lg shadow-blue-200'
+                    : 'border-blue-300 bg-blue-50 text-blue-700 hover:scale-110 hover:shadow-md'}`}
+              >
+                {t}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -177,7 +163,6 @@ function GameBoard({ items, mode, onBack }: { items: string[]; mode: 'alphabets'
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function NurseryGamePage() {
   const [mode, setMode] = useState<Mode>('menu');
 
@@ -195,7 +180,7 @@ export default function NurseryGamePage() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-black text-gray-900">🧒 Nursery Learning Game</h1>
-          <p className="text-gray-500 text-sm">Drag and drop to match — let's learn!</p>
+          <p className="text-gray-500 text-sm">Tap to pick, tap to place — let's learn!</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <button onClick={() => setMode('alphabets')}

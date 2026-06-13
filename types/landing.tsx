@@ -15,9 +15,8 @@ export const FEATURES = [
 
 export const STATS = [
   {n:'1,200+',l:'Students enrolled'},
-  {n:'98%',   l:'Fee collection rate'},
+  {n:'95%',   l:'Reduction in paperwork'},
   {n:'24/7',  l:'Portal uptime'},
-  {n:'50ms',  l:'Avg response time'},
 ];
 
 export const FAQS = [

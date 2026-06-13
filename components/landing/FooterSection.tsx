@@ -63,6 +63,14 @@ export function FinalCTA() {
             <Link href="/school" className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl text-[15px] transition-all">
               Access Existing Portal
             </Link>
+            <a
+              href="https://drive.google.com/uc?export=download&id=17d-QLydS0545Pu6cg0WpSgfjmyVTsAQU"
+              target="_blank" rel="noreferrer"
+              className="flex items-center gap-2 px-8 py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-[15px] transition-all shadow-lg"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Android App
+            </a>
           </div>
         </Reveal>
       </div>
@@ -97,6 +105,7 @@ export function Footer() {
               <a href="mailto:admin@florierenparklaneis.com.ng" className="block py-1.5 hover:text-white transition-colors">Email us</a>
               <a href="https://wa.me/2347031882197" className="block py-1.5 hover:text-white transition-colors">WhatsApp</a>
               <a href="tel:+2348000000000" className="block py-1.5 hover:text-white transition-colors">Call us</a>
+              <a href="https://drive.google.com/uc?export=download&id=17d-QLydS0545Pu6cg0WpSgfjmyVTsAQU" target="_blank" rel="noreferrer" className="block py-1.5 hover:text-white transition-colors text-green-400">⬇ Download App</a>
             </div>
           </div>
         </div>
