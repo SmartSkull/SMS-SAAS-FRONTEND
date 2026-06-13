@@ -101,7 +101,7 @@ export function Footer() {
           </div>
         </div>
         <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-blue-200/30">
-          <p>© {new Date().getFullYear()} Smart Campus · Powered by Florieren Parklane IS</p>
+          <p>© {new Date().getFullYear()} Smart Campus.</p>
           <p>All rights reserved</p>
         </div>
       </div>

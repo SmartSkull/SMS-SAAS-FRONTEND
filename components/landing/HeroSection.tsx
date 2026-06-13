@@ -23,17 +23,8 @@ export function HeroSection({ heroRef, heroY }: HeroSectionProps) {
         <div>
           <motion.div variants={stagger(.1)} initial="hidden" animate="show">
 
-            <motion.h1 variants={stagger(.05)} className="text-[clamp(3rem,6vw,5rem)] font-black leading-[1.04] tracking-tight text-white mb-6">
-              {[['The', 'smartest'], ['way', 'to', 'run'], ['your', 'school.']].map((line, li) => (
-                <span key={li} className="block">
-                  {line.map((w, wi) => (
-                    <motion.span key={wi} variants={fadeUp}
-                      className={`inline-block mr-[0.18em] ${(li === 0 && wi === 1) || (li === 1 && wi === 0) ? 'text-blue-200' : ''}`}>
-                      {w}
-                    </motion.span>
-                  ))}
-                </span>
-              ))}
+            <motion.h1 variants={fadeUp} className="text-[clamp(3rem,6vw,5rem)] font-black leading-[1.04] tracking-tight text-white mb-6">
+              The <span className="text-blue-200">smartest</span> way to run your school.
             </motion.h1>
 
             <motion.p variants={fadeUp} className="text-[17px] text-blue-100 leading-8 mb-10 max-w-lg">

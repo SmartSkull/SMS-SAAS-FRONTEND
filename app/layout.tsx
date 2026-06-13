@@ -1,6 +1,6 @@
-import { ToastProvider } from '@/components/ui/Toast';
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 import PageLoader from '@/components/ui/PageLoader';
+import { ToastProvider } from '@/components/ui/Toast';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Script from 'next/script';
@@ -14,12 +14,12 @@ export const metadata: Metadata = {
   description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
   icons: {
     icon: '/images/logo.png',
-    apple: '/images/logo.png',
+    apple: '/images/logo2.png',
   },
   openGraph: {
     title: 'Smart Campus',
     description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
-    images: [{ url: '/images/logo.png' }],
+    images: [{ url: '/images/logo2.png' }],
   },
 };
 

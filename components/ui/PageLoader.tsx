@@ -9,7 +9,8 @@ export default function PageLoader() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const logo = normalizeSchoolLogo(school?.logo);
-  const primary = school?.primaryColor ?? '#3b82f6';
+  const isHome = pathname === '/';
+  const primary = isHome ? '#2563eb' : (school?.primaryColor ?? '#3b82f6');
 
   // Only show on entry/auth/public pages, not in dashboards
   const isDashboard = pathname.startsWith('/admin') || 
@@ -50,31 +51,14 @@ export default function PageLoader() {
       </div>
 
       {progress < 90 && (
-        <div className="fixed inset-0 z-[9998] flex items-center justify-center pointer-events-none" style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative w-14 h-14">
-              {logo ? (
-                <img src={logo} alt="" className="w-14 h-14 rounded-full object-cover animate-pulse" />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-blue-100 animate-pulse" />
-              )}
-              <svg className="absolute inset-0 w-14 h-14 -rotate-90" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="26" fill="none" stroke="#dbeafe" strokeWidth="3" />
-                <circle
-                  cx="28"
-                  cy="28"
-                  r="26"
-                  fill="none"
-                  stroke={primary}
-                  strokeWidth="3"
-                  strokeDasharray="163"
-                  strokeDashoffset={163 - (163 * progress) / 100}
-                  style={{ transition: 'stroke-dashoffset 0.3s ease-out' }}
-                />
-              </svg>
-            </div>
-            <p className="text-xs font-semibold tracking-widest uppercase" style={{ color: primary }}>Loading...</p>
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center pointer-events-none" style={{ background: 'rgba(0,0,0,0.92)' }}>
+          <div className="flex items-end gap-2">
+            {[0,1,2,3].map(i => (
+              <div key={i} className="w-4 rounded-sm bg-blue-400"
+                style={{ height: '16px', animation: `loaderBlock 1s ${i * 0.15}s ease-in-out infinite` }}/>
+            ))}
           </div>
+          <style>{`@keyframes loaderBlock{0%,100%{height:16px;opacity:.4}50%{height:40px;opacity:1}}`}</style>
         </div>
       )}
     </>

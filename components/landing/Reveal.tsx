@@ -14,7 +14,8 @@ export function Reveal({ children, variants = fadeUp, delay = 0, className = '' 
   const inView = useInView(ref, { once: true, margin: '-60px' });
   return (
     <motion.div ref={ref} variants={variants} initial="hidden"
-      animate={inView ? 'show' : 'hidden'} transition={{ delay }} className={className}>
+      animate={inView ? 'show' : 'hidden'} transition={{ delay }}
+      className={className} style={{ willChange: 'transform, opacity' }}>
       {children}
     </motion.div>
   );

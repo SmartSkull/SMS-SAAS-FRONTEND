@@ -19,9 +19,7 @@ export function FeaturesSection() {
           variants={stagger(.06)} initial="hidden" whileInView="show" viewport={{ once: true, margin: '-60px' }}>
           {FEATURES.map(({ label, desc, ic, bg, icon }) => (
             <motion.div key={label} variants={fadeUp}
-              whileHover={{ y: -6, boxShadow: '0 20px 60px rgba(37,99,235,.15)' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="group border border-blue-100 hover:border-blue-300 rounded-2xl p-7 flex flex-col bg-white hover:bg-blue-50/50 transition-all cursor-default shadow-sm">
+              className="group border border-blue-100 hover:border-blue-300 rounded-2xl p-7 flex flex-col bg-white hover:bg-blue-50/50 hover:-translate-y-1.5 transition-all cursor-default shadow-sm hover:shadow-[0_20px_60px_rgba(37,99,235,.15)]">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-5 shrink-0" style={{ background: bg, color: ic }}>
                 {icon}
               </div>
