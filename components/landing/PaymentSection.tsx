@@ -1,6 +1,7 @@
 'use client';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 import { Reveal, slideL, slideR } from './Reveal';
 
 export function PaymentSection() {
@@ -57,13 +58,7 @@ export function PaymentSection() {
               {/* QR */}
               <div className="flex flex-col items-center gap-2">
                 <div className="bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-                  <div className="grid grid-cols-7 gap-[3px]">
-                    {Array.from({length:49}).map((_,i)=>{
-                      const corner = (i<3&&(i%7<3))||(i<3&&(i%7>3))||((i>44)&&(i%7<3))||((i>44)&&(i%7>3));
-                      const dark = corner||i===24||i%8===0||i%11===0||i%13===0;
-                      return <div key={i} className="w-3 h-3 rounded-[2px]" style={{background: dark ? '#1e3a8a' : '#f0f4ff'}}/>;
-                    })}
-                  </div>
+                  <Image src="/images/qrcode.avif" alt="QR Code" width={84} height={84} className="rounded" />
                 </div>
                 <p className="text-[10px] text-gray-400 font-medium tracking-wide">SCAN TO VERIFY PAYMENT</p>
                 <p className="text-[9px] text-gray-300 font-mono">REF: SC-2026-045000</p>

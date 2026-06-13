@@ -10,6 +10,7 @@ import { TransportSection } from '@/components/landing/TransportSection';
 import { PaymentSection } from '@/components/landing/PaymentSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { ContactSection } from '@/components/landing/ContactSection';
+import { Chatbot } from '@/components/landing/Chatbot';
 
 export default function LandingPage() {
   const { menu, setMenu, scrolled, sent, form, setForm, heroRef, heroY, submit } = useLandingPage();
@@ -22,8 +23,8 @@ export default function LandingPage() {
         .ticker-t:hover{animation-play-state:paused}
         @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
         @keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-        .float{animation:float 4s ease-in-out infinite}
-        .float2{animation:float2 5s .9s ease-in-out infinite}
+        .float{animation:float 4s ease-in-out infinite;will-change:transform}
+        .float2{animation:float2 5s .9s ease-in-out infinite;will-change:transform}
       `}</style>
 
       <Navbar scrolled={scrolled} menu={menu} setMenu={setMenu} />
@@ -40,6 +41,7 @@ export default function LandingPage() {
       <ContactSection sent={sent} form={form} setForm={setForm} submit={submit} />
       <FinalCTA />
       <Footer />
+      <Chatbot />
     </div>
   );
 }

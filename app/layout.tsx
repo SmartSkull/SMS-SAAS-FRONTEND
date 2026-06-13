@@ -10,8 +10,17 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' });
 
 export const metadata: Metadata = {
-  title: 'School Portal',
-  description: 'School management portal',
+  title: 'Smart Campus',
+  description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
+  icons: {
+    icon: '/images/logo.png',
+    apple: '/images/logo.png',
+  },
+  openGraph: {
+    title: 'Smart Campus',
+    description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
+    images: [{ url: '/images/logo.png' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
