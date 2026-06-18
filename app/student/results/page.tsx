@@ -266,13 +266,16 @@ export default function StudentResults() {
             .then((r) => ({ ...pair, results: r.data?.results ?? [] }))
         )
       ).then((settled) => {
+        const TERM_ORDER: Record<string, number> = { First: 1, Second: 2, Third: 3 };
         const points = settled
           .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value.results.length > 0)
           .map((r) => {
             const { session: sess, term: t, results } = r.value;
             const avg = Math.round(results.reduce((s: number, x: any) => s + Number(x.totalScore), 0) / results.length);
-            return { label: `${sess.slice(-4)} ${t.charAt(0)}`, avg };
-          });
+            return { label: `${sess.slice(-4)} ${t.charAt(0)}`, avg, session: sess, term: t };
+          })
+          .sort((a, b) => a.session.localeCompare(b.session) || (TERM_ORDER[a.term] ?? 0) - (TERM_ORDER[b.term] ?? 0))
+          .map(({ label, avg }) => ({ label, avg }));
         setTrendData(points);
       });
     }).catch(() => toast.error('Failed to load filters'));
