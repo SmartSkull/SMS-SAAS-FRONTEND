@@ -147,6 +147,7 @@ export const endpoints = {
     comment: '/staff/comment',
     assignments: '/staff/assignments',
     assignment: (id: number) => `/staff/assignments/${id}`,
+    assignmentSubmissions: (id: number) => `/staff/assignments/${id}/submissions`,
     library: '/staff/library',
     libraryItem: (id: number) => `/staff/library/${id}`,
     classes: '/staff/classes',

@@ -5,10 +5,12 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { ApiResponse, Assignment } from '@/types';
-import { Eye, EyeOff, FileText, Paperclip, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Eye, EyeOff, FileText, Paperclip, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const EMPTY = { subject: '', assignment: '', class: '', deadline: '', status: 'PUBLISHED' };
+
+interface Submission { id: string; studentName: string; note?: string; fileUrl?: string; submittedAt: string; }
 
 export default function StaffAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -19,6 +21,10 @@ export default function StaffAssignments() {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [submissions, setSubmissions] = useState<Record<string, Submission[]>>({});
+  const [loadingSubs, setLoadingSubs] = useState<string | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<string | null>(null);
   const toast = useToast();
   const { classes, subjects } = useSchoolData();
 
@@ -31,6 +37,18 @@ export default function StaffAssignments() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const toggleSubmissions = async (id: string) => {
+    if (expandedId === id) { setExpandedId(null); return; }
+    setExpandedId(id);
+    if (submissions[id]) return;
+    setLoadingSubs(id);
+    try {
+      const r = await api.get<ApiResponse<Submission[]>>(endpoints.staff.assignmentSubmissions(+id));
+      setSubmissions(p => ({ ...p, [id]: Array.isArray(r.data) ? r.data : [] }));
+    } catch { toast.error('Failed to load submissions'); }
+    finally { setLoadingSubs(null); }
+  };
 
   const openCreate = () => { setEditing(null); setForm(EMPTY); setFile(null); setShowForm(true); };
   const openEdit = (a: Assignment) => {
@@ -186,42 +204,112 @@ export default function StaffAssignments() {
         ) : (
           <div className="space-y-3">
             {assignments.map((a) => (
-              <div key={a.id} className="flex items-start justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-gray-800">{a.subject ?? a.title}</p>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{a.subject ?? a.course}</span>
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{a.class}</span>
-                    {a.status === 'HIDDEN' ? (
-                      <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                        <EyeOff size={12} /> Hidden
-                      </span>
+              <div key={a.id} className="border border-gray-100 rounded-xl overflow-hidden">
+                <div className="flex items-start justify-between p-4 hover:bg-gray-50">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-gray-800">{a.subject ?? a.title}</p>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{a.subject ?? a.course}</span>
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{a.class}</span>
+                      {a.status === 'HIDDEN' ? (
+                        <span className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                          <EyeOff size={12} /> Hidden
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                          <Eye size={12} /> Visible
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{a.assignment ?? a.description}</p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                      <span>Due: {new Date(a.deadline ?? a.due_date).toLocaleDateString()}</span>
+                      {(a.file || a.file_url) && <span className="flex items-center gap-1"><Paperclip size={12} /> Attachment</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4 shrink-0">
+                    <button onClick={() => toggleSubmissions(String(a.id))}
+                      className="flex items-center gap-1 px-2 py-1.5 text-xs text-purple-600 hover:bg-purple-50 rounded-lg font-medium">
+                      Submissions {expandedId === String(a.id) ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
+                    <button onClick={() => openEdit(a)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                      <Pencil size={15} />
+                    </button>
+                    <button onClick={() => setConfirmId(a.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {expandedId === String(a.id) && (
+                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                    {loadingSubs === String(a.id) ? (
+                      <p className="text-xs text-gray-400">Loading submissions…</p>
+                    ) : (submissions[String(a.id)]?.length ?? 0) === 0 ? (
+                      <p className="text-xs text-gray-400">No submissions yet.</p>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                        <Eye size={12} /> Visible
-                      </span>
+                      <div className="space-y-2">
+                        {submissions[String(a.id)].map(s => (
+                          <div key={s.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
+                            <div>
+                              <p className="text-sm font-medium text-gray-800">{s.studentName}</p>
+                              {s.note && <p className="text-xs text-gray-500 mt-0.5">{s.note}</p>}
+                              <p className="text-xs text-gray-400">{new Date(s.submittedAt).toLocaleString()}</p>
+                            </div>
+                            {s.fileUrl && (
+                              s.fileUrl.toLowerCase().includes('.pdf') ? (
+                                <a href={s.fileUrl} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-1 text-xs bg-red-600 text-white hover:bg-red-700 px-2 py-1 rounded-lg font-medium">
+                                  <FileText size={13} /> View PDF
+                                </a>
+                              ) : (
+                                <a href={s.fileUrl} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-1 text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg font-medium">
+                                  <Paperclip size={13} /> View File
+                                </a>
+                              )
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1 line-clamp-2">{a.assignment ?? a.description}</p>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                    <span>Due: {new Date(a.deadline ?? a.due_date).toLocaleDateString()}</span>
-                    {(a.file || a.file_url) && <span className="flex items-center gap-1"><Paperclip size={12} /> Attachment</span>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4 shrink-0">
-                  <button onClick={() => openEdit(a)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
-                    <Pencil size={15} />
-                  </button>
-                  <button onClick={() => setConfirmId(a.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* PDF Preview Modal */}
+      {pdfPreview && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <p className="text-sm font-semibold text-gray-700">PDF Preview</p>
+              <div className="flex items-center gap-3">
+                <a href={pdfPreview.replace('/image/upload/', '/raw/upload/')} download target="_blank" rel="noreferrer"
+                  className="text-xs text-blue-600 hover:underline font-medium">Download</a>
+                <button onClick={() => setPdfPreview(null)} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
+              </div>
+            </div>
+            <object
+              data={pdfPreview}
+              type="application/pdf"
+              className="flex-1 w-full rounded-b-2xl"
+            >
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500 text-sm gap-3">
+                <p>Your browser cannot display this PDF inline.</p>
+                <a href={pdfPreview} target="_blank" rel="noreferrer"
+                  className="text-blue-600 hover:underline font-medium">Open PDF in new tab</a>
+              </div>
+            </object>
+          </div>
+        </div>
+      )}
+
       {confirmId !== null && <ConfirmModal onConfirm={handleDelete} onCancel={() => setConfirmId(null)} />}
     </div>
   );
 }
+

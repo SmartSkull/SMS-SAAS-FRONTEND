@@ -26,6 +26,7 @@ export function proxy(request: NextRequest) {
   // Role enforcement
   const segment = pathname.split('/')[1]; // 'student' | 'staff' | 'admin'
   if (['student', 'staff', 'admin'].includes(segment) && role !== segment) {
+    if (!role) return NextResponse.redirect(new URL('/login', request.url));
     return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url));
   }
 
