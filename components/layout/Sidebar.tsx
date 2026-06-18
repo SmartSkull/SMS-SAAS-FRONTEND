@@ -137,7 +137,7 @@ export default function Sidebar({ open, onClose }: Props) {
             return (
             <Link key={path} href={path} onClick={onClose}
               className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all',
                 isActive
                   ? 'bg-white/20 text-white'
                   : 'text-white/70 hover:bg-white/10 hover:text-white',
@@ -157,7 +157,7 @@ export default function Sidebar({ open, onClose }: Props) {
               <User size={16} style={{ color: accent }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">
+              <p className="text-white text-sm font-semibold truncate">
                 {user?.firstname} {user?.lastname}
               </p>
               <p className="text-white/50 text-xs capitalize">{role === 'staff' && user?.isDriver ? 'Driver' : role}</p>

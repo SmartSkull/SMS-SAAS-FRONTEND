@@ -100,6 +100,7 @@ export const endpoints = {
     profile: '/student/profile',
     results: '/student/results',
     assignments: '/student/assignments',
+    assignmentSubmit: (id: string | number) => `/student/assignments/${id}/submit`,
     library: '/student/library',
     classTimetable: '/student/timetable/class',
     examTimetable: '/student/timetable/exam',

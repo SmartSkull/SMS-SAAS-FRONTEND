@@ -64,13 +64,15 @@ export function useAssignments() {
   const [items, setItems] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     api.get<ApiResponse<Assignment[]>>(endpoints.student.assignments)
       .then((r) => setItems(r.data))
       .catch(() => toast.error('Failed to load assignments'))
       .finally(() => setLoading(false));
   }, []);
-  return { items, loading };
+  useEffect(() => { load(); }, [load]);
+  return { items, loading, refresh: load };
 }
 
 /* ── Library ───────────────────────────────────────────────────────────── */

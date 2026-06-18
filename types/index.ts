@@ -122,6 +122,7 @@ export interface Assignment {
   lastname?: string;
   status?: 'PUBLISHED' | 'HIDDEN' | string;
   createdAt?: string;
+  submission?: { submittedAt: string; note?: string; fileUrl?: string } | null;
 }
 
 export interface LibraryItem {
