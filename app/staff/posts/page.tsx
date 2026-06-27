@@ -53,7 +53,7 @@ export default function StaffPosts() {
                 {post.image && <img src={post.image} alt={post.title} className="w-full h-48 object-cover" />}
                 <div className="p-5 flex flex-col flex-1">
                   <h2 className="text-base font-semibold text-gray-800 mb-2 line-clamp-2">{post.title}</h2>
-                  <p className="text-gray-600 text-sm leading-relaxed line-clamp-4 flex-1">{post.content}</p>
+                  <p className="text-gray-600 text-sm leading-relaxed line-clamp-4 flex-1 [&_ul]:list-disc [&_ul]:pl-4 [&_b]:font-bold [&_i]:italic [&_u]:underline [&_h3]:font-bold" dangerouslySetInnerHTML={{ __html: post.content }} />
 
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                     <div className="flex items-center gap-1.5 text-sm text-gray-500">

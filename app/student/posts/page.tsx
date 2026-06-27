@@ -129,7 +129,7 @@ export default function StudentPosts() {
                   </div>
 
                   {/* Content */}
-                  <p className="text-gray-900 text-sm leading-relaxed line-clamp-4 flex-1">{p.content}</p>
+                  <p className="text-gray-900 text-sm leading-relaxed line-clamp-4 flex-1 [&_ul]:list-disc [&_ul]:pl-4 [&_b]:font-bold [&_i]:italic [&_u]:underline [&_h3]:font-bold" dangerouslySetInnerHTML={{ __html: p.content }} />
 
                   {/* Actions */}
                   <div className="mt-4 pt-3 border-t border-gray-50 flex items-center gap-4">

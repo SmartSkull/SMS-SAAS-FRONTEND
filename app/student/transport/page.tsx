@@ -28,13 +28,15 @@ function fmt(s: number) {
 }
 function fmtDist(m: number) { return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`; }
 
-function LiveMap({ busCoords, homeCoords, routePolyline }: {
+function LiveMap({ busCoords, homeCoords, routePolyline, eta, connected }: {
   busCoords: { lat: number; lng: number } | null;
   homeCoords: { lat: number; lng: number } | null;
   routePolyline?: [number, number][] | null;
+  eta?: EtaInfo | null;
+  connected?: boolean;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const inst = useRef<{ map: any; busMarker: any } | null>(null);
+  const inst = useRef<{ map: any; busMarker: any; routeLine: any } | null>(null);
 
   useEffect(() => {
     if (!mapRef.current || inst.current) return;
@@ -47,23 +49,61 @@ function LiveMap({ busCoords, homeCoords, routePolyline }: {
     if (!document.getElementById('leaflet-z-fix')) {
       const s = document.createElement('style');
       s.id = 'leaflet-z-fix';
-      s.textContent = '.leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1!important}.leaflet-control{z-index:2!important}';
+      s.textContent = `.leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1!important}.leaflet-control{z-index:2!important}
+        @keyframes bus-pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.5)}50%{box-shadow:0 0 0 12px rgba(124,58,237,0)}}
+        .bus-pulse{animation:bus-pulse 1.5s ease infinite}`;
       document.head.appendChild(s);
     }
     import('leaflet').then(L => {
       if ((mapRef.current as any)?._leaflet_id) return;
       delete (L.Icon.Default.prototype as any)._getIconUrl;
-      const busIcon = L.divIcon({ html: `<div style="background:#7c3aed;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:18px">🚌</div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 18] });
-      const homeIcon = L.divIcon({ html: `<div style="background:#16a34a;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:16px">🏠</div>`, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
+
+      const busIcon = L.divIcon({
+        html: `<div class="bus-pulse" style="background:#7c3aed;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 4px 12px rgba(124,58,237,.5);font-size:22px">🚌</div>`,
+        className: '', iconSize: [44, 44], iconAnchor: [22, 22],
+      });
+      const homeIcon = L.divIcon({
+        html: `<div style="background:#16a34a;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 4px 12px rgba(22,163,74,.4);font-size:18px">🏠</div>`,
+        className: '', iconSize: [36, 36], iconAnchor: [18, 36],
+      });
+
       const center: [number, number] = busCoords ? [busCoords.lat, busCoords.lng] : homeCoords ? [homeCoords.lat, homeCoords.lng] : [9.082, 8.6753];
-      const map = L.map(mapRef.current!, { zoomControl: true, attributionControl: false }).setView(center, 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      const map = L.map(mapRef.current!, { zoomControl: false, attributionControl: false }).setView(center, 16);
+
+      // Carto dark-matter tiles (Bolt/Uber style dark map)
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      // Route polyline — thick glowing purple
+      let routeLine: any = null;
+      if (routePolyline?.length) {
+        // Shadow line
+        L.polyline(routePolyline, { color: '#4c1d95', weight: 8, opacity: 0.4 }).addTo(map);
+        // Main line
+        routeLine = L.polyline(routePolyline, { color: '#a855f7', weight: 4, opacity: 0.9 }).addTo(map);
+      }
+
+      // Draw straight ETA line from bus to home (if no polyline)
+      if (!routePolyline?.length && busCoords && homeCoords) {
+        L.polyline([[busCoords.lat, busCoords.lng], [homeCoords.lat, homeCoords.lng]], {
+          color: '#a855f7', weight: 3, opacity: 0.7, dashArray: '8,6',
+        }).addTo(map);
+      }
+
       const busMarker = busCoords ? L.marker([busCoords.lat, busCoords.lng], { icon: busIcon }).addTo(map) : null;
-      if (homeCoords) L.marker([homeCoords.lat, homeCoords.lng], { icon: homeIcon }).addTo(map).bindTooltip('Your stop');
-      if (routePolyline?.length) L.polyline(routePolyline, { color: '#7c3aed', weight: 3, opacity: 0.5, dashArray: '6,4' }).addTo(map);
-      inst.current = { map, busMarker };
-      if (busCoords && homeCoords) map.fitBounds([[busCoords.lat, busCoords.lng], [homeCoords.lat, homeCoords.lng]], { padding: [40, 40] });
-      else if (routePolyline?.length) map.fitBounds(routePolyline as any, { padding: [30, 30] });
+      if (homeCoords) L.marker([homeCoords.lat, homeCoords.lng], { icon: homeIcon }).addTo(map).bindTooltip('Your stop', { permanent: false, className: 'text-xs' });
+
+      // Fit bounds
+      if (busCoords && homeCoords) {
+        map.fitBounds([[busCoords.lat, busCoords.lng], [homeCoords.lat, homeCoords.lng]], { padding: [50, 50], maxZoom: 16 });
+      } else if (routePolyline?.length) {
+        map.fitBounds(routePolyline as any, { padding: [40, 40], maxZoom: 16 });
+      }
+
+      inst.current = { map, busMarker, routeLine };
     });
     return () => { if (inst.current) { inst.current.map.remove(); inst.current = null; } };
   }, []);
@@ -71,16 +111,54 @@ function LiveMap({ busCoords, homeCoords, routePolyline }: {
   useEffect(() => {
     if (!inst.current || !busCoords) return;
     const { map, busMarker } = inst.current;
-    if (busMarker) busMarker.setLatLng([busCoords.lat, busCoords.lng]);
-    else import('leaflet').then(L => {
-      const icon = L.divIcon({ html: `<div style="background:#7c3aed;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:3px solid white;font-size:18px">🚌</div>`, className: '', iconSize: [36, 36], iconAnchor: [18, 18] });
-      inst.current!.busMarker = L.marker([busCoords.lat, busCoords.lng], { icon }).addTo(inst.current!.map);
-    });
-    if (homeCoords) inst.current.map.fitBounds([[busCoords.lat, busCoords.lng], [homeCoords.lat, homeCoords.lng]], { padding: [40, 40] });
-    else inst.current.map.setView([busCoords.lat, busCoords.lng], Math.max(inst.current.map.getZoom(), 15), { animate: true });
+    if (busMarker) {
+      busMarker.setLatLng([busCoords.lat, busCoords.lng]);
+    } else {
+      import('leaflet').then(L => {
+        const icon = L.divIcon({
+          html: `<div class="bus-pulse" style="background:#7c3aed;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border:3px solid white;box-shadow:0 4px 12px rgba(124,58,237,.5);font-size:22px">🚌</div>`,
+          className: '', iconSize: [44, 44], iconAnchor: [22, 22],
+        });
+        inst.current!.busMarker = L.marker([busCoords.lat, busCoords.lng], { icon }).addTo(inst.current!.map);
+      });
+    }
+    if (homeCoords) {
+      map.fitBounds([[busCoords.lat, busCoords.lng], [homeCoords.lat, homeCoords.lng]], { padding: [50, 50], maxZoom: 16, animate: true, duration: 0.8 });
+    } else {
+      map.panTo([busCoords.lat, busCoords.lng], { animate: true, duration: 0.5 });
+    }
   }, [busCoords]);
 
-  return <div ref={mapRef} className="w-full h-56 rounded-xl overflow-hidden" />;
+  return (
+    <div className="relative w-full rounded-2xl overflow-hidden" style={{ height: 320 }}>
+      <div ref={mapRef} className="w-full h-full" />
+
+      {/* Overlay: connection status */}
+      <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1.5 rounded-full">
+        <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+        {connected ? 'Live' : 'Connecting…'}
+      </div>
+
+      {/* Overlay: ETA pill */}
+      {eta && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-black/70 backdrop-blur-sm text-white px-4 py-2 rounded-full shadow-lg">
+          <Clock size={13} className="text-purple-300" />
+          <span className="text-sm font-bold">{fmt(eta.durationSeconds)}</span>
+          <span className="text-xs text-gray-300">· {fmtDist(eta.distanceMeters)}</span>
+        </div>
+      )}
+
+      {/* No bus signal */}
+      {!busCoords && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10">
+          <div className="text-center text-white">
+            <Bus size={32} className="mx-auto mb-2 opacity-60" />
+            <p className="text-sm font-medium opacity-80">Waiting for GPS signal…</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Route progress ─────────────────────────────────────────────────────────
@@ -421,17 +499,11 @@ export default function StudentTransportPage() {
       )}
 
       {/* ── Live map ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-3">
-        <div className="flex items-center justify-between mb-2 px-1">
-          <span className="text-sm font-medium text-gray-700">Bus Location</span>
-          {busInfo.tripActive && (
-            <span className="text-xs flex items-center gap-1 text-gray-500">
-              {connected ? <><Wifi size={11} className="text-green-500" />Live</> : <><WifiOff size={11} className="text-red-400" />Connecting…</>}
-            </span>
-          )}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <span className="text-sm font-semibold text-gray-700">Live Map</span>
         </div>
-        <LiveMap busCoords={busCoords} homeCoords={homeCoords} routePolyline={busInfo.routePolyline} />
-        {!busCoords && <p className="text-center text-xs text-gray-400 mt-2">{busInfo.tripActive ? 'Waiting for GPS signal…' : 'Trip not started yet'}</p>}
+        <LiveMap busCoords={busCoords} homeCoords={homeCoords} routePolyline={busInfo.routePolyline} eta={eta} connected={connected} />
       </div>
 
       {/* ── Home location ── */}
