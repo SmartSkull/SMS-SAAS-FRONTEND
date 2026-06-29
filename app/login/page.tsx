@@ -144,7 +144,7 @@ export default function LoginPage() {
                     }}
                   />
                   {showSug && suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-50 shadow-2xl" style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-y-auto z-50 shadow-2xl" style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', maxHeight: '220px' }}>
                       {suggestions.map((s) => {
                         const fullName = `${s.firstname} ${s.lastname}`;
                         return (

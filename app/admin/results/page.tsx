@@ -6,8 +6,8 @@ import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-interface ClassItem { id: string; name: string; }
-interface SessionItem { id: string; name: string; isCurrent: boolean; }
+interface ClassItem { id: string; class: string; }
+interface SessionItem { id: string; session: string; current: boolean; }
 interface StudentResult { student_id: string; firstname: string; lastname: string; [key: string]: any; }
 interface ClassResultStat {
   className: string;
@@ -149,8 +149,8 @@ export default function AdminResults() {
           <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500">
             <option value="">All classes</option>
-            {(init?.classes ?? []).filter(c => c.name !== 'none').map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
+            {(init?.classes ?? []).filter(c => c.class !== 'none').map(c => (
+              <option key={c.id} value={c.class}>{c.class}</option>
             ))}
           </select>
         </div>
@@ -159,7 +159,7 @@ export default function AdminResults() {
           <select value={selectedSession} onChange={e => setSelectedSession(e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500">
             {(init?.sessions ?? []).map(s => (
-              <option key={s.id} value={s.name}>{s.name}{s.isCurrent ? ' (current)' : ''}</option>
+              <option key={s.id} value={s.session}>{s.session}{s.current ? ' (current)' : ''}</option>
             ))}
           </select>
         </div>

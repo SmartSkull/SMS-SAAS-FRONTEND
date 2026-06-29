@@ -9,12 +9,17 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 interface SchoolClass {
   id: string; name: string; teacher_name: string | null; student_count: number;
 }
+interface Staff {
+  staff_id: string; firstname: string; lastname: string; staffNo?: string | null;
+}
 
 export default function ClassesPage() {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ open: boolean; cls?: SchoolClass }>({ open: false });
   const [name, setName] = useState('');
+  const [teacher, setTeacher] = useState<string>('');
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [saving, setSaving] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<SchoolClass | null>(null);
   const toast = useToast();
@@ -29,15 +34,27 @@ export default function ClassesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const openModal = async (cls?: SchoolClass) => {
+    setName(cls?.name ?? '');
+    setTeacher(cls?.teacher_name ?? '');
+    setModal({ open: true, cls });
+    if (!cls && staff.length === 0) {
+      try {
+        const r = await api.get<{ success: boolean; data: Staff[] }>(endpoints.admin.staff, { per_page: '50' });
+        setStaff((r.data ?? []).filter(s => s.staffNo));
+      } catch { toast.error('Failed to load teachers'); }
+    }
+  };
+
   const save = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
       if (modal.cls) {
-        await api.put(endpoints.admin.classItem(modal.cls.name), { name });
+        await api.put(endpoints.admin.classItem(modal.cls.name), { name, class_teacher: teacher });
         toast.success('Class updated');
       } else {
-        await api.post(endpoints.admin.classes, { name });
+        await api.post(endpoints.admin.classes, { name, class_teacher: teacher });
         toast.success('Class created');
       }
       setModal({ open: false }); load();
@@ -55,8 +72,7 @@ export default function ClassesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Classes</h1>
-        <button onClick={() => { setName(''); setModal({ open: true }); }}
-          className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-purple-700">
+        <button onClick={() => openModal()} className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-purple-700">
           <Plus size={16} /> Add Class
         </button>
       </div>
@@ -87,7 +103,7 @@ export default function ClassesPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => { setName(c.name); setModal({ open: true, cls: c }); }} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
+                      <button onClick={() => openModal(c)} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
                       <button onClick={() => setConfirmTarget(c)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                     </div>
                   </td>
@@ -106,10 +122,24 @@ export default function ClassesPage() {
               <h2 className="font-semibold text-gray-900">{modal.cls ? 'Edit Class' : 'Add Class'}</h2>
               <button onClick={() => setModal({ open: false })}><X size={20} className="text-gray-400" /></button>
             </div>
-            <div className="p-6">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Class Name</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()}
-                placeholder="e.g. Jss-1" className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500" />
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()}
+                  placeholder="e.g. Jss-1" className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class Teacher</label>
+                <select value={teacher} onChange={(e) => setTeacher(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white">
+                  <option value="">— Select teacher —</option>
+                  {staff.map((s) => (
+                    <option key={s.staff_id} value={s.staffNo ?? ''}>
+                      {s.firstname} {s.lastname} {s.staffNo ? `(${s.staffNo})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex gap-3 p-6 border-t border-gray-100">
               <button onClick={() => setModal({ open: false })} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>

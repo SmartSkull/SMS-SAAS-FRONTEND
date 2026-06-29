@@ -20,6 +20,9 @@ export default function SessionsPage() {
   const [confirmTerm, setConfirmTerm] = useState<number | null>(null);
   const [editTerm, setEditTerm] = useState<Term | null>(null);
   const [editName, setEditName] = useState('');
+  const [termModal, setTermModal] = useState(false);
+  const [termSession, setTermSession] = useState('');
+  const [termName, setTermName] = useState('');
   const toast = useToast();
 
   const load = useCallback(() => {
@@ -39,7 +42,7 @@ export default function SessionsPage() {
     if (!newSession.trim()) return;
     setSaving(true);
     try {
-      await api.post(endpoints.admin.sessions, { name: newSession });
+      await api.post(endpoints.admin.sessions, { session: newSession });
       toast.success('Session created'); setSessionModal(false); setNewSession(''); load();
     } catch (e: unknown) {
       toast.error((e as { message?: string })?.message ?? 'Failed');
@@ -76,6 +79,21 @@ export default function SessionsPage() {
     try { await api.put(`${endpoints.admin.terms}/${editTerm.id}`, { name: editName }); toast.success('Term updated'); setEditTerm(null); load(); }
     catch { toast.error('Failed to update'); }
     finally { setSaving(false); }
+  };
+
+  const createTerm = async () => {
+    if (!termSession || !termName.trim()) return;
+    setSaving(true);
+    try {
+      await api.post(endpoints.admin.terms, { session: termSession, name: termName });
+      toast.success('Term created');
+      setTermModal(false);
+      setTermSession('');
+      setTermName('');
+      load();
+    } catch (e: unknown) {
+      toast.error((e as { message?: string })?.message ?? 'Failed to create term');
+    } finally { setSaving(false); }
   };
 
   return (
@@ -115,7 +133,12 @@ export default function SessionsPage() {
 
       {/* Terms */}
       <div className="bg-white rounded-2xl card shadow-sm p-6">
-        <h2 className="font-semibold text-gray-900 mb-4">Terms</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-gray-900">Terms</h2>
+          <button onClick={() => setTermModal(true)} className="flex items-center gap-2 bg-purple-600 text-white px-3 py-1.5 rounded-xl text-sm font-medium hover:bg-purple-700">
+            <Plus size={14} /> Add Term
+          </button>
+        </div>
         {loading ? (
           <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}</div>
         ) : terms.length === 0 ? (
@@ -195,6 +218,40 @@ export default function SessionsPage() {
               <button onClick={() => setEditTerm(null)} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
               <button onClick={saveTermEdit} disabled={saving} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
                 {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Term Modal */}
+      {termModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Add Term</h2>
+              <button onClick={() => setTermModal(false)}><X size={20} className="text-gray-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
+                <select value={termSession} onChange={(e) => setTermSession(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <option value="">Select session...</option>
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.name}>{s.name} {s.isCurrent ? '(Current)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Term Name</label>
+                <input value={termName} onChange={(e) => setTermName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && createTerm()}
+                  placeholder="e.g. First Term" className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" />
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-gray-100">
+              <button onClick={() => setTermModal(false)} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancel</button>
+              <button onClick={createTerm} disabled={saving} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
+                {saving ? 'Creating...' : 'Create'}
               </button>
             </div>
           </div>
