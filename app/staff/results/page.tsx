@@ -368,7 +368,8 @@ export default function StaffResults() {
 
   // Auto-select session/term/class that has approved results
   useEffect(() => {
-    api.get<any>(endpoints.public.approvedResultsMeta).then(r => {
+    const params = school?.slug ? { school: school.slug } : undefined;
+    api.get<any>(endpoints.public.approvedResultsMeta, params).then(r => {
       const meta = r.data;
       if (!sessionFilter && meta.sessions?.[0]) setSessionFilter(meta.sessions[0]);
       if (!termFilter && meta.terms?.[0]) setTermFilter(meta.terms[0]);

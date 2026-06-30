@@ -248,8 +248,9 @@ export default function StudentResults() {
   const toast = useToast();
 
   useEffect(() => {
+    const params = school?.slug ? { school: school.slug } : undefined;
     Promise.all([
-      api.get<ApiResponse<any[]>>(endpoints.public.sessions),
+      api.get<ApiResponse<any[]>>(endpoints.public.sessions, params),
       api.get<ApiResponse<{ session: string; term: string }>>(endpoints.public.currentPeriod),
     ]).then(([s, p]) => {
       setSessions(s.data);
