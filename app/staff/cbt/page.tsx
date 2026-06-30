@@ -4,13 +4,24 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { CbtQuestion } from '@/types';
-import { BarChart2, HelpCircle, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import Tesseract from 'tesseract.js';
+import mammoth from 'mammoth';
 
 interface CbtResult {
   id: string; score: string; percentage: string; submittedAt: string;
   firstname: string; lastname: string;
   student?: { user?: { uniqueId?: string } };
+}
+
+interface ParsedQuestion {
+  question: string;
+  option1: string;
+  option2: string;
+  option3: string;
+  option4: string;
+  answer: string;
 }
 
 const EMPTY = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A', course: '', class: '', session: '', term: '' };
@@ -28,6 +39,14 @@ export default function StaffCbt() {
   const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '' });
   const toast = useToast();
   const { classes, subjects, sessions, terms } = useSchoolData();
+
+  // OCR / Bulk upload state
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
+  const [parsedQuestions, setParsedQuestions] = useState<ParsedQuestion[]>([]);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
   const loadQuestions = () => {
     setLoading(true);
@@ -95,6 +114,185 @@ export default function StaffCbt() {
   const sf = (k: keyof typeof filter) => (e: React.ChangeEvent<HTMLSelectElement>) =>
     setFilter(p => ({ ...p, [k]: e.target.value }));
 
+  // --- OCR / Document Upload Logic ---
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (!['png', 'jpg', 'jpeg', 'pdf', 'docx', 'doc', 'txt'].includes(ext || '')) {
+      toast.error('Unsupported file type. Use image, PDF, Word, or text files.');
+      return;
+    }
+    setUploadFile(file);
+    setParsedQuestions([]);
+  };
+
+  const processFile = async () => {
+    if (!uploadFile) return;
+    setUploading(true);
+    setUploadProgress('Reading file...');
+    try {
+      const ext = uploadFile.name.split('.').pop()?.toLowerCase();
+      let rawText = '';
+
+      if (ext === 'docx' || ext === 'doc') {
+        setUploadProgress('Extracting text from Word document...');
+        const arrayBuffer = await uploadFile.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        rawText = result.value;
+      } else if (ext === 'txt') {
+        rawText = await uploadFile.text();
+      } else {
+        setUploadProgress('Running OCR on image... This may take a moment.');
+        const dataUrl = await readFileAsDataURL(uploadFile);
+        const result = await Tesseract.recognize(dataUrl, 'eng', {
+          logger: (m) => {
+            if (m.status === 'recognizing text') {
+              setUploadProgress(`OCR: ${Math.round((m.progress || 0) * 100)}%`);
+            }
+          },
+        });
+        rawText = result.data.text;
+      }
+
+      setUploadProgress('Parsing questions...');
+      const questions = parseQuestions(rawText);
+      setParsedQuestions(questions);
+      if (!questions.length) {
+        toast.error('No questions could be detected in the document');
+      } else {
+        toast.success(`Extracted ${questions.length} questions`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to process file');
+    } finally {
+      setUploading(false);
+      setUploadProgress('');
+    }
+  };
+
+  const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const parseQuestions = (text: string): ParsedQuestion[] => {
+    const questions: ParsedQuestion[] = [];
+    let cleaned = text.replace(/\r\n?/g, '\n');
+    cleaned = cleaned.replace(/<[^>]*>/g, ' ');
+
+    const blocks = cleaned.split(/\n{2,}/).filter(Boolean).map(b => b.replace(/\s+/g, ' ').trim());
+
+    for (const block of blocks) {
+      const trimmed = block;
+      if (trimmed.length < 10) continue;
+
+      const questionEnd = trimmed.search(/\s+[A-D][\.\)]\s/);
+      const questionText = questionEnd > -1 ? trimmed.slice(0, questionEnd).trim() : trimmed;
+      const rest = questionEnd > -1 ? trimmed.slice(questionEnd) : '';
+
+      const allOptionMatches = [...rest.matchAll(/\b([A-D])[\.\)]\s*(.+?)(?=\s+[A-D][\.\)]|Answer\s*:|Ans\s*:|Correct\s*:|$)/g)];
+
+      if (allOptionMatches.length < 2) continue;
+
+      const options: Record<string, string> = {};
+      allOptionMatches.forEach(x => { options[x[1]] = x[2].trim(); });
+
+      const answerMatch = rest.match(/Answer\s*:\s*([A-D])|Ans\s*:\s*([A-D])|Correct\s*:\s*([A-D])/i);
+      const answer = answerMatch ? (answerMatch[1] || answerMatch[2] || answerMatch[3]).toUpperCase() : '';
+
+      questions.push({
+        question: questionText,
+        option1: options['A'] || '',
+        option2: options['B'] || '',
+        option3: options['C'] || '',
+        option4: options['D'] || '',
+        answer: answer || 'A',
+      });
+    }
+
+    return questions;
+  };
+
+  const extractOption = (text: string, letter: string): string => {
+    const patterns = [
+      new RegExp(`\\n${letter}[\.\)]\s+(.+?)(?=\\n[A-D][\.\)]|\\n\\d+[\.\)\-]|\\nAnswer:|\\nAns:|\\nCorrect:|\\Z)`, 's'),
+      new RegExp(`\\n${letter}[\.\)]\s+(.+?)(?=\\n|$)`, 's'),
+    ];
+    for (const pat of patterns) {
+      const m = text.match(pat);
+      if (m) return m[1].trim();
+    }
+    return '';
+  };
+
+  const extractAnswer = (text: string): string => {
+    const answerPatterns = [
+      /Answer:\s*([A-D])/i,
+      /Ans:\s*([A-D])/i,
+      /Correct:\s*([A-D])/i,
+      /Correct Answer:\s*([A-D])/i,
+      /\b([A-D])\s*is\s*correct/i,
+      /\*\*?([A-D])\*\*?/,
+    ];
+    for (const pat of answerPatterns) {
+      const m = text.match(pat);
+      if (m) return m[1].toUpperCase();
+    }
+    return '';
+  };
+
+  const updateParsedQuestion = (index: number, field: keyof ParsedQuestion, value: string) => {
+    setParsedQuestions(p => p.map((q, i) => i === index ? { ...q, [field]: value } : q));
+  };
+
+  const removeParsedQuestion = (index: number) => {
+    setParsedQuestions(p => p.filter((_, i) => i !== index));
+  };
+
+  const handleBulkCreate = async () => {
+    if (!parsedQuestions.length) return;
+    if (!form.session || !form.term || !form.course || !form.class) {
+      toast.error('Please fill in Session, Term, Course, and Class before bulk uploading');
+      return;
+    }
+    setBulkSubmitting(true);
+    try {
+      let count = 0;
+      for (const q of parsedQuestions) {
+        try {
+          await api.post(endpoints.staff.cbtQuestions, {
+            question: q.question,
+            optionA: q.option1,
+            optionB: q.option2,
+            optionC: q.option3,
+            optionD: q.option4,
+            answer: q.answer,
+            course: form.course,
+            class: form.class,
+            session: form.session,
+            term: form.term,
+          });
+          count++;
+        } catch { /* skip failed */ }
+      }
+      toast.success(`Successfully imported ${count} questions`);
+      setParsedQuestions([]);
+      setUploadFile(null);
+      loadQuestions();
+    } catch { toast.error('Bulk upload failed'); }
+    finally { setBulkSubmitting(false); }
+  };
+
+  const sfLocal = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLSelectElement>) =>
+    setForm(p => ({ ...p, [k]: e.target.value }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -136,6 +334,142 @@ export default function StaffCbt() {
             <option value="">All Courses</option>
             {subjects.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+        </div>
+      )}
+
+      {/* OCR / Bulk Upload Section */}
+      {tab === 'questions' && (
+        <div className="bg-white rounded-2xl card shadow-sm p-6 border border-dashed border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Upload size={18} className="text-blue-500" /> Upload Questions (OCR / Document)
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Upload an image, PDF, Word document, or text file. Tesseract.js will extract questions (numbered with A/B/C/D options and answers).
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
+              <select value={form.session} onChange={sfLocal('session')} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select session</option>
+                {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
+              <select value={form.term} onChange={sfLocal('term')} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select term</option>
+                {terms.map(t => <option key={t} value={t}>{t} Term</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+              <select value={form.course} onChange={sfLocal('course')} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select course</option>
+                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+              <select value={form.class} onChange={sfLocal('class')} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select class</option>
+                {classes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium cursor-pointer hover:bg-gray-200">
+              <Upload size={16} /> Choose File
+              <input ref={fileInputRef} type="file" accept=".png,.jpg,.jpeg,.pdf,.docx,.doc,.txt" className="hidden" onChange={handleFileChange} />
+            </label>
+            {uploadFile && (
+              <span className="text-sm text-gray-600 flex items-center gap-2">
+                <FileText size={16} /> {uploadFile.name}
+                <button onClick={() => { setUploadFile(null); setParsedQuestions([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-red-500 hover:text-red-700"><X size={16} /></button>
+              </span>
+            )}
+            {uploadFile && !uploading && parsedQuestions.length === 0 && (
+              <button onClick={processFile} className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium">
+                Extract Questions
+              </button>
+            )}
+          </div>
+
+          {uploadProgress && (
+            <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-xl text-sm">
+              {uploadProgress}
+            </div>
+          )}
+
+          {/* Parsed Questions Preview */}
+          {parsedQuestions.length > 0 && (
+            <div className="border rounded-xl overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
+                <h3 className="font-semibold text-gray-800">Extracted Questions ({parsedQuestions.length})</h3>
+                <div className="flex gap-2">
+                  <button onClick={handleBulkCreate} disabled={bulkSubmitting}
+                    className="btn-brand text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">
+                    {bulkSubmitting ? 'Importing…' : 'Import All'}
+                  </button>
+                  <button onClick={() => setParsedQuestions([])} className="border border-gray-200 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50">
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100 text-gray-600 sticky top-0">
+                    <tr>
+                      <th className="p-2 text-left w-10">#</th>
+                      <th className="p-2 text-left min-w-[200px]">Question</th>
+                      <th className="p-2 text-left min-w-[120px]">Option A</th>
+                      <th className="p-2 text-left min-w-[120px]">Option B</th>
+                      <th className="p-2 text-left min-w-[120px]">Option C</th>
+                      <th className="p-2 text-left min-w-[120px]">Option D</th>
+                      <th className="p-2 text-left w-20">Answer</th>
+                      <th className="p-2 text-center w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {parsedQuestions.map((q, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="p-2 text-gray-500">{i + 1}</td>
+                        <td className="p-2">
+                          <textarea value={q.question} onChange={(e) => updateParsedQuestion(i, 'question', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" rows={2} />
+                        </td>
+                        <td className="p-2">
+                          <input value={q.option1} onChange={(e) => updateParsedQuestion(i, 'option1', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                        </td>
+                        <td className="p-2">
+                          <input value={q.option2} onChange={(e) => updateParsedQuestion(i, 'option2', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                        </td>
+                        <td className="p-2">
+                          <input value={q.option3} onChange={(e) => updateParsedQuestion(i, 'option3', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                        </td>
+                        <td className="p-2">
+                          <input value={q.option4} onChange={(e) => updateParsedQuestion(i, 'option4', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                        </td>
+                        <td className="p-2">
+                          <select value={q.answer} onChange={(e) => updateParsedQuestion(i, 'answer', e.target.value)} className={SEL_CLS}>
+                            {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </td>
+                        <td className="p-2 text-center">
+                          <button onClick={() => removeParsedQuestion(i)} className="text-red-500 hover:text-red-700"><Trash2 size={15} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
