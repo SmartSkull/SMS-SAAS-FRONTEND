@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, Check, CheckCircle, Eye, FileBarChart2, Loader2, Search, User, X } from 'lucide-react';
+import { BadgeCheck, Check, CheckCircle, Eye, FileBarChart2, Loader2, Search, User, X, XCircle } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -36,6 +36,8 @@ export default function AdminResults() {
   const [fetching, setFetching] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [approving, setApproving] = useState<Record<string, boolean>>({});
+  const [bulkApproving, setBulkApproving] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<Array<{ id: string; status: 'pending' | 'approved' | 'failed' }>>([]);
   const [viewingStudent, setViewingStudent] = useState<string | null>(null);
   const toast = useToast();
 
@@ -72,22 +74,35 @@ export default function AdminResults() {
     setApproving(p => ({ ...p, [studentId]: true }));
     try {
       await api.put(endpoints.admin.resultApprove(studentId), { session: selectedSession, term: selectedTerm });
-      toast.success('Approved'); fetchResults();
+      toast.success('Approved');
+      fetchResults();
     } catch { toast.error('Failed to approve'); }
     finally { setApproving(p => { const n = { ...p }; delete n[studentId]; return n; }); }
   };
 
   const bulkApprove = async () => {
-    try {
-      await api.post(endpoints.admin.resultsBulkApprove, { student_ids: selected, session: selectedSession, term: selectedTerm });
-      toast.success(`${selected.length} approved`); setSelected([]); fetchResults();
-    } catch { toast.error('Bulk approve failed'); }
+    if (!selected.length) return;
+    setBulkApproving(true);
+    setBulkProgress(selected.map(id => ({ id, status: 'pending' as const })));
+    let approved = 0;
+    for (const id of [...selected]) {
+      try {
+        await api.put(endpoints.admin.resultApprove(id), { session: selectedSession, term: selectedTerm });
+        setBulkProgress(p => p.map(x => x.id === id ? { ...x, status: 'approved' } : x));
+        approved++;
+      } catch {
+        setBulkProgress(p => p.map(x => x.id === id ? { ...x, status: 'failed' } : x));
+      }
+    }
+    setBulkApproving(false);
+    setSelected([]);
+    toast.success(`${approved} of ${selected.length} approved`);
+    fetchResults();
   };
 
   const toggleSelect = (id: string) => setSelected(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const classStats = useMemo<ClassResultStat[]>(() => {
     const grouped = new Map<string, { students: number; totalAverage: number; approved: number; pending: number; subjects: number }>();
-
     students.forEach((student) => {
       const className = student.class || 'Unassigned';
       const current = grouped.get(className) ?? { students: 0, totalAverage: 0, approved: 0, pending: 0, subjects: 0 };
@@ -99,7 +114,6 @@ export default function AdminResults() {
       else current.pending += 1;
       grouped.set(className, current);
     });
-
     return Array.from(grouped.entries())
       .map(([className, stat]) => ({
         className,
@@ -119,11 +133,8 @@ export default function AdminResults() {
     : 0;
   const performanceBands = useMemo(() => {
     const bands = [
-      { name: 'Excellent', value: 0 },
-      { name: 'Good', value: 0 },
-      { name: 'Credit', value: 0 },
-      { name: 'Pass', value: 0 },
-      { name: 'Needs Support', value: 0 },
+      { name: 'Excellent', value: 0 }, { name: 'Good', value: 0 }, { name: 'Credit', value: 0 },
+      { name: 'Pass', value: 0 }, { name: 'Needs Support', value: 0 },
     ];
     students.forEach((student) => {
       const avg = Number(student.average) || 0;
@@ -181,6 +192,43 @@ export default function AdminResults() {
           </button>
         )}
       </div>
+
+      {bulkApproving && bulkProgress.length > 0 && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="p-5 border-b">
+              <h2 className="font-semibold text-gray-900">Approving Results</h2>
+              <p className="text-xs text-gray-500">Please wait while results are being approved...</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {bulkProgress.map(({ id, status }) => {
+                const student = students.find(s => s.student_id === id) || init?.students.find(s => s.student_id === id);
+                const name = student ? `${student.firstname} ${student.lastname}` : id;
+                return (
+                  <div key={id} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                    <span className="text-sm font-medium text-gray-800 truncate">{name}</span>
+                    <span className="ml-3 flex-shrink-0">
+                      {status === 'pending' && <Loader2 size={18} className="animate-spin text-purple-500" />}
+                      {status === 'approved' && <CheckCircle size={18} className="text-green-600" />}
+                      {status === 'failed' && <XCircle size={18} className="text-red-600" />}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="p-4 border-t bg-gray-50 rounded-b-2xl">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(bulkProgress.filter(x => x.status !== 'pending').length / bulkProgress.length) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2 text-right">
+                {bulkProgress.filter(x => x.status === 'approved').length} / {bulkProgress.length} approved
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {students.length > 0 && (
         <div className="space-y-4">
@@ -346,22 +394,17 @@ export default function AdminResults() {
                 </td>
                 <td className="p-3">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setViewingStudent(s.student_id)}
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg"
-                      title="View Result"
-                    >
+                    <button onClick={() => setViewingStudent(s.student_id)}
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg" title="View Result">
                       <Eye size={18} />
                     </button>
-                  {s.approved == 1 || s.approved === true || s.approved === '1' ? (
-                    <span className="text-green-500" title="Verified">
-                      <BadgeCheck size={18} />
-                    </span>
-                  ) : (
-                    <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Verify">
-                      {approving[s.student_id] ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-                    </button>
-                  )}
+                    {s.approved == 1 || s.approved === true || s.approved === '1' ? (
+                      <span className="text-green-500" title="Verified"><BadgeCheck size={18} /></span>
+                    ) : (
+                      <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Verify">
+                        {approving[s.student_id] ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -385,16 +428,32 @@ export default function AdminResults() {
 function StudentResultModal({ studentId, session, term, onClose }: { studentId: string; session: string; term: string; onClose: () => void }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [savingComment, setSavingComment] = useState(false);
+  const [principalComment, setPrincipalComment] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     setLoading(true);
+    setPrincipalComment('');
     api.get<any>(endpoints.admin.resultStudent(studentId), {
       session: session || undefined,
       term: term || undefined,
     })
-      .then(r => setData(r.data))
+      .then(r => {
+        setData(r.data);
+        setPrincipalComment(r.data?.attendance?.principalComment || '');
+      })
       .finally(() => setLoading(false));
   }, [studentId, session, term]);
+
+  const savePrincipalComment = async () => {
+    setSavingComment(true);
+    try {
+      await api.put(endpoints.admin.resultPrincipalComment(studentId), { session, term, principal_comment: principalComment });
+      setData((prev: any) => ({ ...prev, attendance: { ...prev?.attendance, principalComment: principalComment } }));
+    } catch { toast.error('Failed to save comment'); }
+    finally { setSavingComment(false); }
+  };
 
   const results: any[] = data?.results ?? [];
   const termLower = term.toLowerCase();
@@ -466,6 +525,8 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                   <tbody className="divide-y divide-gray-50">
                     {results.map((r: any, i: number) => {
                       const total = Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score);
+                      const cumulative = Number(r.cumulative ?? total);
+                      const average = Number(r.average ?? cumulative);
                       return (
                         <tr key={i} className="hover:bg-gray-50">
                           <td className="px-4 py-2.5 font-bold text-gray-900 min-w-[140px]">{r.course ?? r.subject?.name}</td>
@@ -474,10 +535,10 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                           <td className="px-3 py-2.5 text-center text-gray-600">{Number(r.testScore ?? r.test_score)}</td>
                           <td className="px-3 py-2.5 text-center text-gray-600">{Number(r.examScore ?? r.exam_score)}</td>
                           <td className="px-3 py-2.5 text-center font-semibold text-gray-900">{total}</td>
-                          <td className="px-3 py-2.5 text-center text-purple-700 bg-purple-50">{r.cumulative ?? total}</td>
-                          <td className="px-3 py-2.5 text-center text-amber-700 bg-amber-50">{r.average ?? total}</td>
+                          <td className="px-3 py-2.5 text-center text-purple-700 bg-purple-50">{cumulative}</td>
+                          <td className="px-3 py-2.5 text-center text-amber-700 bg-amber-50">{average}</td>
                           <td className="px-3 py-2.5 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(total)}`}>{r.grade}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(average)}`}>{r.grade}</span>
                           </td>
                           <td className="px-3 py-2.5 text-center text-gray-500 text-xs">{r.remark}</td>
                         </tr>
@@ -529,9 +590,30 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                           <p className="text-xs text-gray-500">{title.split("'")[0]}</p>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-700 italic">
-                        {data.attendance?.[key] ? `"${data.attendance[key]}"` : 'No comment entered yet.'}
-                      </p>
+                      {key === 'principalComment' ? (
+                        <textarea
+                          value={principalComment}
+                          onChange={(e) => setPrincipalComment(e.target.value)}
+                          className="w-full rounded border border-gray-200 p-2 text-sm focus:outline-none focus:border-purple-500"
+                          rows={3}
+                          placeholder="Enter principal's comment"
+                        />
+                      ) : (
+                        <p className="text-sm text-gray-700 italic">
+                          {data.attendance?.[key] ? `"${data.attendance[key]}""` : 'No comment entered yet.'}
+                        </p>
+                      )}
+                      {key === 'principalComment' && (
+                        <div className="mt-2 flex justify-end">
+                          <button
+                            onClick={savePrincipalComment}
+                            disabled={savingComment}
+                            className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-medium hover:bg-purple-700 disabled:opacity-60"
+                          >
+                            {savingComment ? 'Saving…' : 'Save Comment'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
