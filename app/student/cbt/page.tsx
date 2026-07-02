@@ -3,91 +3,22 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { auth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
-import { Monitor, Play, CheckCircle, Clock, ChevronLeft, ChevronRight, Calculator, AlertTriangle, Camera, CameraOff, ShieldAlert, X } from 'lucide-react';
+import { Monitor, Play, CheckCircle, Clock, ChevronLeft, ChevronRight, Calculator, ShieldAlert, X } from 'lucide-react';
 import type { ApiResponse, CbtTest, CbtQuestion } from '@/types';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import clsx from 'clsx';
 
 /* ─── Pre-exam Info Modal ─────────────────────────────────────────────────── */
-type FaceStatus = 'loading' | 'no-camera' | 'scanning' | 'detected' | 'not-found' | 'multiple';
-
 function CbtInfoModal({ test, onConfirm, onClose }: {
   test: CbtTest;
-  onConfirm: (stream: MediaStream) => void;
+  onConfirm: () => void;
   onClose: () => void;
 }) {
   const user = auth.getUser();
   const initials = `${user?.firstname?.[0] ?? ''}${user?.lastname?.[0] ?? ''}`.toUpperCase();
-  const videoRef  = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [faceStatus, setFaceStatus] = useState<FaceStatus>('loading');
-
-  useEffect(() => {
-    let cancelled = false;
-    const init = async () => {
-      try {
-        const faceapi = await import('face-api.js');
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-          faceapi.nets.faceLandmark68TinyNet.loadFromUri('/models'),
-        ]);
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
-        }
-        setFaceStatus('scanning');
-        intervalRef.current = setInterval(async () => {
-          if (!videoRef.current || videoRef.current.readyState < 2) return;
-          const results = await faceapi
-            .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
-            .withFaceLandmarks(true);
-          if (cancelled) return;
-          if (results.length === 1) setFaceStatus('detected');
-          else if (results.length > 1) setFaceStatus('multiple');
-          else setFaceStatus('not-found');
-        }, 1500);
-      } catch {
-        if (!cancelled) setFaceStatus('no-camera');
-      }
-    };
-    init();
-    return () => {
-      cancelled = true;
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      // stream is NOT stopped here — passed to Proctor on confirm
-    };
-  }, []);
-
-  const handleClose = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    onClose();
-  };
-
-  const handleConfirm = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    onConfirm(streamRef.current!);
-  };
-
-  const faceReady = faceStatus === 'detected';
-
-  const statusUI: Record<FaceStatus, { color: string; text: string }> = {
-    loading:   { color: 'text-gray-400',  text: 'Loading camera…' },
-    'no-camera': { color: 'text-red-500', text: 'Camera access denied' },
-    scanning:  { color: 'text-amber-500', text: 'Scanning for face…' },
-    detected:  { color: 'text-green-600', text: '✓ Face detected — ready to start' },
-    'not-found': { color: 'text-red-500', text: 'No face detected — look at the camera' },
-    multiple:  { color: 'text-red-500',   text: 'Multiple faces detected' },
-  };
 
   const rules = [
     'Do not switch tabs or leave this page — the test will auto-submit.',
-    'Keep your face visible to the camera at all times.',
-    'Only one person should be in front of the camera.',
     'A calculator is available inside the exam if needed.',
     'Once started, the timer cannot be paused.',
     'Ensure a stable internet connection before starting.',
@@ -96,7 +27,7 @@ function CbtInfoModal({ test, onConfirm, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
-        <button onClick={handleClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
           <X size={18} />
         </button>
 
@@ -114,41 +45,16 @@ function CbtInfoModal({ test, onConfirm, onClose }: {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-2 gap-3 mb-5">
           {[
             { label: 'Questions', value: String(test.question_count) },
             { label: 'Duration', value: `${test.duration} min` },
-            { label: 'Camera', value: 'Required' },
           ].map(({ label, value }) => (
             <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
               <p className="text-base font-bold text-gray-900">{value}</p>
               <p className="text-xs text-gray-400 mt-0.5">{label}</p>
             </div>
           ))}
-        </div>
-
-        {/* Live camera preview + face status */}
-        <div className="mb-4">
-          <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-900">
-            <video ref={videoRef} muted playsInline className="w-full h-full object-cover" />
-            {faceStatus === 'loading' && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Camera size={24} className="text-gray-400 animate-pulse" />
-              </div>
-            )}
-            {faceStatus === 'no-camera' && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                <CameraOff size={24} className="text-red-400" />
-                <span className="text-xs text-red-300">No camera access</span>
-              </div>
-            )}
-            {faceReady && (
-              <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
-            )}
-          </div>
-          <p className={clsx('text-xs font-medium mt-2 text-center', statusUI[faceStatus].color)}>
-            {statusUI[faceStatus].text}
-          </p>
         </div>
 
         {/* Rules */}
@@ -168,10 +74,9 @@ function CbtInfoModal({ test, onConfirm, onClose }: {
         </div>
 
         <button
-          onClick={handleConfirm}
-          disabled={!faceReady}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl btn-brand text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
-          <Play size={15} /> {faceReady ? 'Start Exam' : 'Waiting for face detection…'}
+          onClick={onConfirm}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl btn-brand text-white font-semibold text-sm transition-opacity">
+          <Play size={15} /> Start Exam
         </button>
       </div>
     </div>
@@ -218,155 +123,6 @@ function Calc() {
   );
 }
 
-/* ─── Proctor ─────────────────────────────────────────────────────────────── */
-const MAX_VIOLATIONS = 5;
-const DETECT_INTERVAL_MS = 4000;
-const AUDIO_THRESHOLD = 20; // 0–100 scale
-
-interface ProctoringProps {
-  stream: MediaStream;
-  onViolation: (reason: string) => void;
-  onAutoSubmit: () => void;
-}
-
-function Proctor({ stream, onViolation, onAutoSubmit }: ProctoringProps) {
-  const videoRef      = useRef<HTMLVideoElement>(null);
-  const streamRef     = useRef<MediaStream | null>(null);
-  const detectRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioRef      = useRef<ReturnType<typeof setInterval> | null>(null);
-  const analyserRef   = useRef<AnalyserNode | null>(null);
-  const violationsRef = useRef(0);
-  const modelsLoaded  = useRef(false);
-  const [camOk, setCamOk] = useState<boolean | null>(null);
-  const [audioLevel, setAudioLevel] = useState(0);
-
-  const flag = useRef((reason: string) => {
-    violationsRef.current += 1;
-    onViolation(reason);
-    if (violationsRef.current >= MAX_VIOLATIONS) {
-      if (detectRef.current) clearInterval(detectRef.current);
-      if (audioRef.current)  clearInterval(audioRef.current);
-      onAutoSubmit();
-    }
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const init = async () => {
-      try {
-        const faceapi = await import('face-api.js');
-        if (!modelsLoaded.current) {
-          await Promise.all([
-            faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-            faceapi.nets.faceLandmark68TinyNet.loadFromUri('/models'),
-          ]);
-          modelsLoaded.current = true;
-        }
-
-        if (cancelled) return;
-        streamRef.current = stream;
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
-        }
-        setCamOk(true);
-
-        // ── Audio level monitor ──
-        const ctx = new AudioContext();
-        const src = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        src.connect(analyser);
-        analyserRef.current = analyser;
-        const buf = new Uint8Array(analyser.frequencyBinCount);
-        audioRef.current = setInterval(() => {
-          analyser.getByteFrequencyData(buf);
-          const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
-          const level = Math.round((avg / 255) * 100);
-          setAudioLevel(level);
-          if (level > AUDIO_THRESHOLD) {
-            flag.current('Loud audio detected — please stay quiet during the exam');
-          }
-        }, 2000);
-
-        // ── Face detection loop ──
-        detectRef.current = setInterval(async () => {
-          if (!videoRef.current || videoRef.current.readyState < 2) return;
-          const results = await faceapi
-            .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
-            .withFaceLandmarks(true);
-
-          if (results.length === 0) {
-            flag.current('No face detected — please stay in front of the camera');
-            return;
-          }
-          if (results.length > 1) {
-            flag.current(`${results.length} faces detected — only you should be present`);
-            return;
-          }
-
-          // Gaze check via nose tip vs face box centre
-          const landmarks = results[0].landmarks;
-          const nose = landmarks.getNose()[3]; // nose tip
-          const box  = results[0].detection.box;
-          const cx   = box.x + box.width / 2;
-          const offsetRatio = Math.abs(nose.x - cx) / box.width;
-          if (offsetRatio > 0.25) {
-            flag.current('Please look at the screen — face turned away detected');
-          }
-        }, DETECT_INTERVAL_MS);
-
-      } catch {
-        if (!cancelled) {
-          setCamOk(false);
-          flag.current('Camera/microphone access denied');
-        }
-      }
-    };
-
-    init();
-    return () => {
-      cancelled = true;
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      if (detectRef.current) clearInterval(detectRef.current);
-      if (audioRef.current)  clearInterval(audioRef.current);
-    };
-  }, []);
-
-  return (
-    <div className="relative w-28 h-20 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-900 shrink-0">
-      <video ref={videoRef} muted playsInline className="w-full h-full object-cover" />
-
-      {camOk === null && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Camera size={16} className="text-gray-400 animate-pulse" />
-        </div>
-      )}
-      {camOk === false && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-          <CameraOff size={16} className="text-red-400" />
-          <span className="text-[9px] text-red-300 text-center px-1">No camera</span>
-        </div>
-      )}
-      {camOk && (
-        <>
-          {/* Recording dot */}
-          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse" title="Recording" />
-          {/* Audio level bar */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
-            <div
-              className={clsx('h-full transition-all duration-300', audioLevel > AUDIO_THRESHOLD ? 'bg-red-500' : 'bg-green-400')}
-              style={{ width: `${audioLevel}%` }}
-            />
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 type View = 'list' | 'test' | 'done';
 
 const STORAGE_KEY = 'cbt_session';
@@ -405,9 +161,7 @@ export default function StudentCBT() {
   const [timeLeft, setTimeLeft]   = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [showCalc, setShowCalc]     = useState(false);
-  const [violation, setViolation]   = useState<string | null>(null);
   const [pendingTest, setPendingTest] = useState<CbtTest | null>(null);
-  const [examStream, setExamStream]   = useState<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const courseRef = useRef('');
   const toast = useToast();
@@ -416,8 +170,7 @@ export default function StudentCBT() {
   useEffect(() => {
     const s = loadSession() as any;
     if (!s) return;
-    if (s.submitted) { clearSession(); return; } // beacon already submitted on reload
-    // Adjust timeLeft for elapsed time since page left
+    if (s.submitted) { clearSession(); return; }
     const elapsed = Math.floor((Date.now() - s.startedAt) / 1000);
     const remaining = Math.max(0, s.timeLeft - elapsed);
     setQuestions(s.questions);
@@ -463,7 +216,6 @@ export default function StudentCBT() {
     timerRef.current = setInterval(() => {
       setTimeLeft((t) => {
         const next = t - 1;
-        // Update startedAt in storage so elapsed calc stays accurate
         const s = loadSession();
         if (s) saveSession({ ...s, timeLeft: next, startedAt: Date.now() });
         if (next <= 0) { clearInterval(timerRef.current!); submitRef.current(); return 0; }
@@ -473,7 +225,7 @@ export default function StudentCBT() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [view]);
 
-  // Auto-submit when tab becomes hidden (new tab / switch away) — but not on reload/close
+  // Auto-submit when tab becomes hidden
   useEffect(() => {
     let unloading = false;
     const onUnload = () => { unloading = true; };
@@ -499,7 +251,6 @@ export default function StudentCBT() {
       const token = auth.getToken();
       const blob = new Blob([JSON.stringify({ course })], { type: 'application/json' });
       navigator.sendBeacon(`/api/student/cbt/submit?token=${token}`, blob);
-      // Mark session as submitted so restore doesn't resume it
       const s = loadSession();
       if (s) saveSession({ ...s, submitted: true } as any);
     };
@@ -536,7 +287,6 @@ export default function StudentCBT() {
 
     setAnswers((prev) => {
       const next = { ...prev, [qId]: opt };
-      // Persist answers to storage
       const s = loadSession();
       if (s) saveSession({ ...s, answers: next });
       return next;
@@ -563,7 +313,7 @@ export default function StudentCBT() {
       <h2 className="text-2xl font-bold text-gray-900">Test Submitted!</h2>
       <p className="text-gray-500 text-lg">Score: <span className="font-bold text-gray-900">{score?.score ?? 'N/A'}</span> / {questions.length}</p>
       <p className="text-gray-400 text-sm">{score?.percentage?.toFixed(1) ?? 0}%</p>
-      <button onClick={() => { clearSession(); fetchTests(); setView('list'); }} className="mt-2 px-6 py-2.5 btn-brand text-white rounded-xl font-semibold text-sm ">
+      <button onClick={() => { clearSession(); fetchTests(); setView('list'); }} className="mt-2 px-6 py-2.5 btn-brand text-white rounded-xl font-semibold text-sm">
         Back to Tests
       </button>
     </div>
@@ -576,14 +326,6 @@ export default function StudentCBT() {
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center py-8 px-4">
-        {/* Violation banner */}
-        {violation && (
-          <div className="w-full max-w-2xl mb-4 flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            <AlertTriangle size={16} className="text-red-500 shrink-0" />
-            <p className="text-sm text-red-700 font-medium">{violation}</p>
-          </div>
-        )}
-
         {/* Header bar */}
         <div className="w-full max-w-2xl mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -605,19 +347,6 @@ export default function StudentCBT() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Live camera feed */}
-            <Proctor
-              stream={examStream!}
-              onViolation={(reason) => {
-                setViolation(`⚠️ Warning: ${reason}`);
-                setTimeout(() => setViolation(null), 6000);
-              }}
-              onAutoSubmit={() => {
-                setViolation('Test auto-submitted due to repeated violations.');
-                submitRef.current();
-              }}
-            />
-
             {/* Calculator */}
             <div className="relative">
               <button onClick={() => setShowCalc((s) => !s)}
@@ -704,7 +433,7 @@ export default function StudentCBT() {
 
           {current < questions.length - 1 ? (
             <button onClick={() => goTo(current + 1)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl btn-brand text-white text-sm font-medium ">
+              className="flex items-center gap-2 px-4 py-2 rounded-xl btn-brand text-white text-sm font-medium">
               Next <ChevronRight size={16} />
             </button>
           ) : (
@@ -768,8 +497,7 @@ export default function StudentCBT() {
       {pendingTest && (
         <CbtInfoModal
           test={pendingTest}
-          onConfirm={(stream) => {
-            setExamStream(stream);
+          onConfirm={() => {
             const t = pendingTest;
             setPendingTest(null);
             startTest(t.course, t.duration ?? 30);
