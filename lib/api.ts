@@ -164,6 +164,7 @@ export const endpoints = {
     cbtTestSchedule: (id: string) => `/staff/cbt/tests/${id}/schedule`,
     cbtQuestions: '/staff/cbt/questions',
     cbtQuestion: (id: string) => `/staff/cbt/questions/${id}`,
+    cbtBulkDeleteQuestions: '/staff/cbt/questions/bulk',
     cbtResults: '/staff/cbt/results',
     cbtExtract: '/staff/cbt/extract-questions',
     cbtBulkCreate: '/staff/cbt/bulk-create',

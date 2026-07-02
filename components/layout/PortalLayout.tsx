@@ -7,6 +7,7 @@ import Sidebar from './Sidebar';
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { school, loading } = useSelectedSchool();
   const primary = school?.primaryColor || '#2563eb';
   const secondary = school?.secondaryColor || '#eff6ff';
@@ -32,8 +33,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         '--brand-shadow': `${primary}40`,
       } as React.CSSProperties}
     >
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col lg:ml-64 min-w-0 overflow-x-hidden">
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
+      />
+      <div className={`flex-1 flex flex-col min-w-0 overflow-x-hidden transition-[margin] duration-300 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>

@@ -8,7 +8,7 @@ import {
   Gamepad2, Newspaper, Mail, Users, School, BookMarked, CreditCard,
   Settings, GraduationCap, X, Bell, ClipboardCheck, CalendarOff,
   Wallet, CalendarDays, BookCopy, UserCheck, ArrowUpCircle, Video,
-  BarChart3, Mic, Zap, Building2, Bus,
+  BarChart3, Mic, Zap, Building2, Bus, ChevronLeft,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -86,9 +86,14 @@ const MENUS = {
   ],
 };
 
-interface Props { open: boolean; onClose: () => void; }
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
 
-export default function Sidebar({ open, onClose }: Props) {
+export default function Sidebar({ open, onClose, collapsed = false, onToggleCollapse }: Props) {
   const { user, role } = useAuth();
   const { school } = useSelectedSchool();
   const pathname = usePathname();
@@ -100,72 +105,115 @@ export default function Sidebar({ open, onClose }: Props) {
 
   return (
     <>
-      {/* Overlay */}
+      {/* Overlay (mobile only) */}
       {open && <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={onClose} />}
 
-      <aside className={clsx(
-        'fixed top-0 left-0 h-full w-64 z-40 flex flex-col transition-transform duration-300',
-        'lg:translate-x-0',
-        open ? 'translate-x-0' : '-translate-x-full',
-      )}
-        style={{ backgroundColor: primary }}>
+      <aside
+        className={clsx(
+          'fixed top-0 left-0 h-full z-40 flex flex-col transition-all duration-300',
+          'lg:translate-x-0',
+          open ? 'translate-x-0' : '-translate-x-full',
+          collapsed ? 'w-16' : 'w-64',
+        )}
+        style={{ backgroundColor: primary }}
+      >
         {/* Logo */}
-        <div className="p-5 border-b border-white/10 flex items-center justify-between">
-          <Link href={role ? `/${role}/dashboard` : '/'} className="flex items-center gap-3">
+        <div className="p-3 border-b border-white/10 flex items-center justify-between min-h-[72px]">
+          <Link
+            href={role ? `/${role}/dashboard` : '/'}
+            className={clsx('flex items-center gap-3 overflow-hidden', collapsed && 'lg:justify-center')}
+          >
             {logo ? (
-              <img src={logo} alt={`${school?.name ?? 'School'} logo`} className="w-10 h-10 rounded-full object-cover" />
+              <img
+                src={logo}
+                alt={`${school?.name ?? 'School'} logo`}
+                className="w-10 h-10 rounded-full object-cover shrink-0"
+              />
             ) : (
-              <div className="flex w-10 h-10 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
+              <div className="flex w-10 h-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
                 {school?.name?.charAt(0) ?? 'S'}
               </div>
             )}
-            <div>
+            <div className={clsx('transition-all duration-300 overflow-hidden', collapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100')}>
               <p className="text-white font-bold text-sm leading-tight truncate max-w-36">{school?.name ?? 'School Portal'}</p>
               <p className="text-xs" style={{ color: accent }}>Portal</p>
             </div>
           </Link>
-          <button onClick={onClose} className="lg:hidden text-white/60 hover:text-white">
+
+          {/* Mobile close button */}
+          <button onClick={onClose} className="lg:hidden text-white/60 hover:text-white shrink-0">
             <X size={20} />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3 px-2">Menu</p>
+        <nav className="flex-1 overflow-y-auto py-4 space-y-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          style={{ padding: collapsed ? '1rem 0.375rem' : '1rem' }}
+        >
+          {!collapsed && (
+            <p className="text-white/40 text-xs font-semibold uppercase tracking-wider mb-3 px-2">Menu</p>
+          )}
           {items.map(({ icon: Icon, label, path }) => {
             const GAME_PATHS = ['/student/book-game', '/student/pronunciation-game', '/student/quiz-game', '/student/nursery-game'];
             const isActive = pathname === path || (path === '/student/games' && GAME_PATHS.includes(pathname));
             return (
-            <Link key={path} href={path} onClick={onClose}
-              className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all',
-                isActive
-                  ? 'bg-white/20 text-white'
-                  : 'text-white/70 hover:bg-white/10 hover:text-white',
-              )}>
-              <Icon size={18} />
-              {label}
-              {isActive && <span className="ml-auto w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />}
-            </Link>
+              <Link
+                key={path}
+                href={path}
+                onClick={onClose}
+                title={collapsed ? label : undefined}
+                className={clsx(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                  collapsed && 'lg:justify-center lg:px-0',
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'text-white/70 hover:bg-white/10 hover:text-white',
+                )}
+              >
+                <Icon size={18} className="shrink-0" />
+                <span className={clsx('transition-all duration-300 overflow-hidden whitespace-nowrap', collapsed ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'opacity-100')}>
+                  {label}
+                </span>
+                {isActive && !collapsed && (
+                  <span className="ml-auto w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accent }} />
+                )}
+              </Link>
             );
           })}
         </nav>
 
         {/* Footer */}
         <div className="p-4 border-t border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+          <div className={clsx('flex items-center gap-3', collapsed && 'lg:justify-center')}>
+            <div className="w-9 h-9 shrink-0 rounded-full bg-white/10 flex items-center justify-center">
               <User size={16} style={{ color: accent }} />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className={clsx('flex-1 min-w-0 transition-all duration-300 overflow-hidden', collapsed ? 'lg:w-0 lg:opacity-0 lg:hidden' : 'opacity-100')}>
               <p className="text-white text-sm font-semibold truncate">
                 {user?.firstname} {user?.lastname}
               </p>
               <p className="text-white/50 text-xs capitalize">{role === 'staff' && user?.isDriver ? 'Driver' : role}</p>
             </div>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
+            {!collapsed && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: accent }} />}
           </div>
         </div>
+
+        {/* Desktop collapse toggle */}
+        <button
+          onClick={onToggleCollapse}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={clsx(
+            'hidden lg:flex absolute -right-4 top-1/2 -translate-y-1/2',
+            'w-8 h-8 rounded-full items-center justify-center',
+            'bg-white shadow-md border border-gray-200',
+            'hover:bg-gray-50 transition-colors duration-150 cursor-pointer z-50',
+          )}
+        >
+          <ChevronLeft
+            size={18}
+            className={clsx('text-gray-600 transition-transform duration-300', collapsed && 'rotate-180')}
+          />
+        </button>
       </aside>
     </>
   );

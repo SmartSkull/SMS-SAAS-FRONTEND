@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { CbtQuestion } from '@/types';
-import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle, Search } from 'lucide-react';
+import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle, Search, CheckSquare, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
 import mammoth from 'mammoth';
@@ -129,6 +129,7 @@ export default function StaffCbt() {
     if (tab === 'questions') loadQuestions();
     else if (tab === 'results') loadResults();
     else loadTests();
+    setSelectedIds(new Set()); // clear selection on tab/filter change
   }, [tab, filter]);
 
   // ── Schedule helpers ──────────────────────────────────────────────────────
@@ -225,6 +226,43 @@ export default function StaffCbt() {
       loadQuestions();
     } catch { toast.error('Failed to update question'); }
     finally { setEditSubmitting(false); }
+  };
+
+  // ── Bulk selection ────────────────────────────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = (ids: string[]) => {
+    if (ids.every(id => selectedIds.has(id))) {
+      // all visible are selected → deselect all
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(ids));
+    }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    if (!ids.length) return;
+    if (!confirm(`Delete ${ids.length} selected question${ids.length !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await api.delete(endpoints.staff.cbtBulkDeleteQuestions, { ids });
+      toast.success(`Deleted ${ids.length} question${ids.length !== 1 ? 's' : ''}`);
+      setSelectedIds(new Set());
+      loadQuestions();
+    } catch {
+      toast.error('Failed to delete questions');
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -381,49 +419,96 @@ export default function StaffCbt() {
   const parseQuestions = (text: string): ParsedQuestion[] => {
     const questions: ParsedQuestion[] = [];
 
-    // Normalise whitespace — collapse all newlines/tabs to single spaces
-    // so the whole text becomes one flat string we can regex across
-    const flat = text
-      .replace(/<[^>]*>/g, ' ')   // strip HTML
-      .replace(/\r\n?|\n|\t/g, ' ')
-      .replace(/\s{2,}/g, ' ')
+    // ── Normalise line endings ─────────────────────────────────────────────
+    const normalized = text
+      .replace(/<[^>]*>/g, ' ')   // strip HTML tags
+      .replace(/\r\n?/g, '\n')    // unify line endings
+      .replace(/\t/g, ' ')
+      .replace(/[ ]{2,}/g, ' ')   // collapse multiple spaces (but keep newlines)
       .trim();
 
-    // Split on question numbers: "1." "2." "10." etc.
-    // Look-ahead keeps the number attached to the next segment
-    const segments = flat.split(/(?=\b\d{1,3}[\.\)]\s)/).map(s => s.trim()).filter(Boolean);
+    // ── Flatten to a single line for inline-format parsing ─────────────────
+    // We operate on a flat string so that questions/options spread over
+    // multiple lines are still matched.
+    const flat = normalized.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ');
+
+    // ── Split into per-question segments on leading number ─────────────────
+    // Handles: "1." "2." "10." "1)" "2)" etc.
+    const segments = flat
+      .split(/(?=\b\d{1,3}[\.\)]\s)/)
+      .map(s => s.trim())
+      .filter(Boolean);
 
     for (const seg of segments) {
-      // Must start with a number
+      // Must start with a question number
       if (!/^\d{1,3}[\.\)]\s/.test(seg)) continue;
 
-      // Strip the leading number + separator
+      // Strip leading number + separator
       const body = seg.replace(/^\d{1,3}[\.\)]\s*/, '').trim();
 
-      // ── Extract answer anywhere in the segment ────────────────────────
-      // Handles: "Answer: C", "Answer :A", "Ans: C", "[Answer: B]"
-      const answerMatch = body.match(/\[?Ans(?:wer)?\s*:?\s*([A-D])\]?/i);
+      // ── Extract answer ─────────────────────────────────────────────────
+      // Handles:
+      //   "Answer: C"          — letter only
+      //   "Answer: C. All humans" — letter + label
+      //   "Ans: C"
+      //   "[Answer: B]"
+      const answerMatch = body.match(/\[?Ans(?:wer)?\s*:?\s*([A-D])(?:\s*[.\-–]\s*.+?)?\]?/i);
       const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
 
-      // Remove answer portion so it doesn't bleed into options
-      const withoutAnswer = body.replace(/\[?Ans(?:wer)?\s*:?\s*[A-D]\]?\.?/gi, '').trim();
+      // Remove answer portion
+      const withoutAnswer = body.replace(/\[?Ans(?:wer)?\s*:?\s*[A-D](?:\s*[.\-–]\s*[^\[\]]+?)?\]?\.?/gi, '').trim();
 
-      // ── Find where options begin (first occurrence of A. or A))  ─────
-      const optStart = withoutAnswer.search(/\bA[\.\)]\s*/);
-      if (optStart === -1) continue;   // no options found — skip
+      // ── Detect option format ───────────────────────────────────────────
+      // Format A: "(A) text (B) text ..."   ← parenthesised
+      // Format B: "A. text B. text ..."     ← dot/period separated
+      // Format C: "A) text B) text ..."     ← closing-paren separated
+      const hasParenFormat  = /\(A\)/i.test(withoutAnswer);
+      const hasDotFormat    = /\bA\.\s/i.test(withoutAnswer);
+      const hasCloseParen   = /\bA\)\s/i.test(withoutAnswer);
 
-      let questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
-      const optionString = withoutAnswer.slice(optStart);
+      let optionString = '';
+      let questionText = '';
+
+      if (hasParenFormat) {
+        // Find where options begin
+        const optStart = withoutAnswer.search(/\(A\)/i);
+        if (optStart === -1) continue;
+        questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
+        optionString = withoutAnswer.slice(optStart);
+      } else if (hasDotFormat) {
+        const optStart = withoutAnswer.search(/\bA[\.\)]\s/i);
+        if (optStart === -1) continue;
+        questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
+        optionString = withoutAnswer.slice(optStart);
+      } else if (hasCloseParen) {
+        const optStart = withoutAnswer.search(/\bA\)\s/i);
+        if (optStart === -1) continue;
+        questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
+        optionString = withoutAnswer.slice(optStart);
+      } else {
+        continue; // can't find options in any known format
+      }
 
       if (!questionText) continue;
 
-      // ── Parse options: A.val B.val C.val D.val ───────────────────────
-      // Value runs until the next option letter or end of string
-      const optRegex = /\b([A-D])[\.\)]\s*(.+?)(?=\s+[A-D][\.\)]|$)/g;
+      // ── Parse individual options ───────────────────────────────────────
       const opts: Record<string, string> = {};
-      let m: RegExpExecArray | null;
-      while ((m = optRegex.exec(optionString)) !== null) {
-        opts[m[1]] = m[2].trim().replace(/[.\s]+$/, '').trim();
+
+      if (hasParenFormat) {
+        // "(A) value (B) value ..."
+        const optRegex = /\(([A-D])\)\s*(.+?)(?=\s*\([A-D]\)|$)/g;
+        let m: RegExpExecArray | null;
+        while ((m = optRegex.exec(optionString)) !== null) {
+          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
+        }
+      } else {
+        // "A. value B. value ..." or "A) value B) value ..."
+        const sep = hasDotFormat ? '\\.' : '\\)';
+        const optRegex = new RegExp(`\\b([A-D])${sep}\\s*(.+?)(?=\\s+[A-D]${sep}|$)`, 'g');
+        let m: RegExpExecArray | null;
+        while ((m = optRegex.exec(optionString)) !== null) {
+          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
+        }
       }
 
       if (Object.keys(opts).length < 2) continue;
@@ -717,7 +802,13 @@ export default function StaffCbt() {
             <Upload size={18} className="text-blue-500" /> Upload Questions (OCR / Document)
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            Upload an image, PDF, Word document, or text file. Tesseract.js will extract questions (numbered with A/B/C/D options and answers).
+            Upload an image, PDF, Word document, or text file. Questions are auto-detected in any of these formats:
+            <span className="block mt-1 font-mono text-xs text-gray-400">
+              1. Question text (A) opt (B) opt (C) opt (D) opt — Answer: A. Label
+            </span>
+            <span className="block font-mono text-xs text-gray-400">
+              1. Question text A. opt B. opt C. opt D. opt Answer: A
+            </span>
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
@@ -894,6 +985,32 @@ export default function StaffCbt() {
                       {filter.course && <span> · {filter.course}</span>}
                       {filter.class && <span> · {filter.class}</span>}
                     </p>
+
+                    {/* Bulk action toolbar */}
+                    <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+                      <button
+                        onClick={() => toggleSelectAll(filtered.map((q: any) => String(q.id)))}
+                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 font-medium"
+                      >
+                        {filtered.every((q: any) => selectedIds.has(String(q.id))) && filtered.length > 0
+                          ? <CheckSquare size={15} className="text-blue-600" />
+                          : <Square size={15} />}
+                        {filtered.every((q: any) => selectedIds.has(String(q.id))) && filtered.length > 0
+                          ? 'Deselect All'
+                          : `Select All${filter.class || filter.course || filter.session || filter.term || filter.search ? ' Filtered' : ''} (${filtered.length})`}
+                      </button>
+                      {selectedIds.size > 0 && (
+                        <button
+                          onClick={() => handleBulkDelete(Array.from(selectedIds))}
+                          disabled={bulkDeleting}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 disabled:opacity-50 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                          {bulkDeleting ? 'Deleting…' : `Delete Selected (${selectedIds.size})`}
+                        </button>
+                      )}
+                    </div>
+
                     {filtered.map((q: any, i: number) => (
                 <div key={q.id}>
                   {/* Inline edit form */}
@@ -927,7 +1044,19 @@ export default function StaffCbt() {
                       </div>
                     </form>
                   ) : (
-                    <div className="flex items-start justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
+                    <div className={clsx(
+                      'flex items-start justify-between p-4 border rounded-xl hover:bg-gray-50 transition-colors',
+                      selectedIds.has(String(q.id)) ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100'
+                    )}>
+                      <button
+                        onClick={() => toggleSelect(String(q.id))}
+                        className="mt-0.5 mr-3 shrink-0 text-gray-400 hover:text-blue-600"
+                        aria-label="Select question"
+                      >
+                        {selectedIds.has(String(q.id))
+                          ? <CheckSquare size={16} className="text-blue-600" />
+                          : <Square size={16} />}
+                      </button>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-800">{i + 1}. {q.question}</p>
                         <div className="grid grid-cols-2 gap-1 mt-2">
