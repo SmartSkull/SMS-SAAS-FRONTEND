@@ -81,7 +81,12 @@ export default function AdminCbtPage() {
 
   const [tests, setTests] = useState<CbtTestSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState({ class: '', course: '', search: '' });
+  const [filter, setFilter] = useState({ class: '', course: '', search: '', teacher: '' });
+
+  // Derive unique teacher names from loaded tests
+  const teacherOptions = Array.from(
+    new Set(tests.flatMap(t => t.uploaders.map(u => u.name)).filter(Boolean))
+  ).sort();
 
   // which test row is expanded to show its questions
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -118,6 +123,7 @@ export default function AdminCbtPage() {
   };
 
   const filtered = tests.filter(t => {
+    if (filter.teacher && !t.uploaders.some(u => u.name === filter.teacher)) return false;
     if (!filter.search) return true;
     const s = filter.search.toLowerCase();
     return (
@@ -159,6 +165,10 @@ export default function AdminCbtPage() {
         <select value={filter.course} onChange={e => setFilter(p => ({ ...p, course: e.target.value }))} className={SEL}>
           <option value="">All Subjects</option>
           {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={filter.teacher} onChange={e => setFilter(p => ({ ...p, teacher: e.target.value }))} className={SEL}>
+          <option value="">All Teachers</option>
+          {teacherOptions.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </div>
 

@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { CbtQuestion } from '@/types';
-import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
+import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
 import mammoth from 'mammoth';
@@ -65,7 +65,7 @@ export default function StaffCbt() {
   const [results, setResults] = useState<CbtResult[]>([]);
   const [tests, setTests] = useState<CbtTest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '' });
+  const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '', search: '' });
   const toast = useToast();
   const { classes, subjects, sessions, terms } = useSchoolData();
 
@@ -550,6 +550,15 @@ export default function StaffCbt() {
 
       {tab === 'questions' && (
         <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-48">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={filter.search}
+              onChange={e => setFilter(p => ({ ...p, search: e.target.value }))}
+              placeholder="Search question text…"
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
           <select value={filter.session} onChange={sf('session')} className={SEL_CLS}>
             <option value="">All Sessions</option>
             {sessions.map(s => <option key={s} value={s}>{s}</option>)}
@@ -563,7 +572,7 @@ export default function StaffCbt() {
             {classes.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select value={filter.course} onChange={sf('course')} className={SEL_CLS}>
-            <option value="">All Courses</option>
+            <option value="">All Subjects</option>
             {subjects.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -864,10 +873,28 @@ export default function StaffCbt() {
           </div>
         ) : tab === 'questions' ? (
           questions.length === 0 ? (
-            <EmptyState icon={HelpCircle} message="No questions found." card={false} />
+            <EmptyState icon={HelpCircle} message="No questions found. Use the filters above to load questions." card={false} />
           ) : (
             <div className="space-y-3">
-              {questions.map((q, i) => (
+              {(() => {
+                const filtered = filter.search
+                  ? questions.filter((q: any) =>
+                      q.question?.toLowerCase().includes(filter.search.toLowerCase()) ||
+                      q.course?.toLowerCase().includes(filter.search.toLowerCase()) ||
+                      (q as any).class?.toLowerCase().includes(filter.search.toLowerCase())
+                    )
+                  : questions;
+                if (filtered.length === 0) return (
+                  <EmptyState icon={HelpCircle} message={`No questions match "${filter.search}".`} card={false} />
+                );
+                return (
+                  <>
+                    <p className="text-xs text-gray-400 px-1">
+                      Showing {filtered.length} of {questions.length} question{questions.length !== 1 ? 's' : ''}
+                      {filter.course && <span> · {filter.course}</span>}
+                      {filter.class && <span> · {filter.class}</span>}
+                    </p>
+                    {filtered.map((q: any, i: number) => (
                 <div key={q.id}>
                   {/* Inline edit form */}
                   {editingId === String(q.id) ? (
@@ -919,6 +946,9 @@ export default function StaffCbt() {
                   )}
                 </div>
               ))}
+                  </>
+                );
+              })()}
             </div>
           )
         ) : tab === 'results' ? (
