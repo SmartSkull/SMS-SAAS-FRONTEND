@@ -24,21 +24,34 @@ interface ParsedQuestion {
   answer: string;
 }
 
-const EMPTY = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A', course: '', class: '', session: '', term: '', duration: '30' };
+const EMPTY_META = { course: '', class: '', session: '', term: '', duration: '30' };
+const EMPTY_Q = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A' };
+const EMPTY = { ...EMPTY_Q, ...EMPTY_META };
 const SEL_CLS = "border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500";
+
+type ManualQ = typeof EMPTY_Q;
 
 export default function StaffCbt() {
   const [tab, setTab] = useState<'questions' | 'results'>('questions');
   const [questions, setQuestions] = useState<CbtQuestion[]>([]);
   const [results, setResults] = useState<CbtResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState(EMPTY);
-  const [submitting, setSubmitting] = useState(false);
   const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '' });
   const toast = useToast();
   const { classes, subjects, sessions, terms } = useSchoolData();
+
+  // ── Edit single question ──────────────────────────────────────────────────
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState(EMPTY);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // ── Manual multi-question entry ───────────────────────────────────────────
+  // step: null = hidden, 'setup' = pick meta+count, 'entry' = fill questions
+  const [manualStep, setManualStep] = useState<null | 'setup' | 'entry'>(null);
+  const [manualMeta, setManualMeta] = useState(EMPTY_META);
+  const [questionCount, setQuestionCount] = useState(10);
+  const [manualQs, setManualQs] = useState<ManualQ[]>([]);
+  const [manualSubmitting, setManualSubmitting] = useState(false);
 
   // OCR / Bulk upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -47,6 +60,7 @@ export default function StaffCbt() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [parsedQuestions, setParsedQuestions] = useState<ParsedQuestion[]>([]);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [ocrMeta, setOcrMeta] = useState(EMPTY_META);
 
   const loadQuestions = () => {
     setLoading(true);
@@ -76,32 +90,23 @@ export default function StaffCbt() {
 
   const openEdit = (q: any) => {
     setEditingId(q.id);
-    setForm({ question: q.question, option_a: q.optionA, option_b: q.optionB, option_c: q.optionC, option_d: q.optionD, answer: q.answer, course: '', class: '', session: '', term: '', duration: '30' });
-    setShowForm(true);
+    setEditForm({ question: q.question, option_a: q.optionA, option_b: q.optionB, option_c: q.optionC, option_d: q.optionD, answer: q.answer, course: '', class: '', session: '', term: '', duration: '30' });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    if (!editingId) return;
+    setEditSubmitting(true);
     try {
-      if (editingId) {
-        await api.put(`${endpoints.staff.cbtQuestions}/${editingId}`, {
-          question: form.question, optionA: form.option_a, optionB: form.option_b,
-          optionC: form.option_c, optionD: form.option_d, answer: form.answer,
-        });
-        toast.success('Question updated');
-      } else {
-        await api.post(endpoints.staff.cbtQuestions, {
-          question: form.question, optionA: form.option_a, optionB: form.option_b,
-          optionC: form.option_c, optionD: form.option_d, answer: form.answer,
-          course: form.course, class: form.class, session: form.session, term: form.term,
-          duration: form.duration,
-        });
-        toast.success('Question added');
-      }
-      setShowForm(false); setEditingId(null); setForm(EMPTY); loadQuestions();
-    } catch { toast.error('Failed to save question'); }
-    finally { setSubmitting(false); }
+      await api.put(`${endpoints.staff.cbtQuestions}/${editingId}`, {
+        question: editForm.question, optionA: editForm.option_a, optionB: editForm.option_b,
+        optionC: editForm.option_c, optionD: editForm.option_d, answer: editForm.answer,
+      });
+      toast.success('Question updated');
+      setEditingId(null);
+      loadQuestions();
+    } catch { toast.error('Failed to update question'); }
+    finally { setEditSubmitting(false); }
   };
 
   const handleDelete = async (id: number) => {
@@ -110,6 +115,57 @@ export default function StaffCbt() {
       await api.delete(`${endpoints.staff.cbtQuestions}/${id}`);
       toast.success('Question deleted'); loadQuestions();
     } catch { toast.error('Failed to delete question'); }
+  };
+
+  // ── Manual entry helpers ──────────────────────────────────────────────────
+  const startManualEntry = () => {
+    setManualMeta(EMPTY_META);
+    setQuestionCount(10);
+    setManualStep('setup');
+  };
+
+  const confirmSetup = () => {
+    if (!manualMeta.session || !manualMeta.term || !manualMeta.course || !manualMeta.class) {
+      toast.error('Please fill in all fields before continuing');
+      return;
+    }
+    setManualQs(Array.from({ length: questionCount }, () => ({ ...EMPTY_Q })));
+    setManualStep('entry');
+  };
+
+  const updateManualQ = (i: number, field: keyof ManualQ, value: string) => {
+    setManualQs(prev => prev.map((q, idx) => idx === i ? { ...q, [field]: value } : q));
+  };
+
+  const addManualQ = () => {
+    setManualQs(prev => [...prev, { ...EMPTY_Q }]);
+  };
+
+  const removeManualQ = (i: number) => {
+    setManualQs(prev => prev.filter((_, idx) => idx !== i));
+  };
+
+  const handleManualSubmit = async () => {
+    if (!manualQs.length) return;
+    setManualSubmitting(true);
+    let count = 0;
+    for (const q of manualQs) {
+      if (!q.question.trim()) continue;
+      try {
+        await api.post(endpoints.staff.cbtQuestions, {
+          question: q.question, optionA: q.option_a, optionB: q.option_b,
+          optionC: q.option_c, optionD: q.option_d, answer: q.answer,
+          course: manualMeta.course, class: manualMeta.class,
+          session: manualMeta.session, term: manualMeta.term,
+          duration: manualMeta.duration,
+        });
+        count++;
+      } catch { /* skip failed */ }
+    }
+    toast.success(`Saved ${count} question${count !== 1 ? 's' : ''}`);
+    setManualStep(null);
+    loadQuestions();
+    setManualSubmitting(false);
   };
 
   const sf = (k: keyof typeof filter) => (e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -259,7 +315,7 @@ export default function StaffCbt() {
 
   const handleBulkCreate = async () => {
     if (!parsedQuestions.length) return;
-    if (!form.session || !form.term || !form.course || !form.class) {
+    if (!ocrMeta.session || !ocrMeta.term || !ocrMeta.course || !ocrMeta.class) {
       toast.error('Please fill in Session, Term, Course, and Class before bulk uploading');
       return;
     }
@@ -275,11 +331,11 @@ export default function StaffCbt() {
             optionC: q.option3,
             optionD: q.option4,
             answer: q.answer,
-            course: form.course,
-            class: form.class,
-            session: form.session,
-            term: form.term,
-            duration: form.duration,
+            course: ocrMeta.course,
+            class: ocrMeta.class,
+            session: ocrMeta.session,
+            term: ocrMeta.term,
+            duration: ocrMeta.duration,
           });
           count++;
         } catch { /* skip failed */ }
@@ -292,17 +348,17 @@ export default function StaffCbt() {
     finally { setBulkSubmitting(false); }
   };
 
-  const sfLocal = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLSelectElement>) =>
-    setForm(p => ({ ...p, [k]: e.target.value }));
+  const sfLocal = (k: keyof typeof ocrMeta) => (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) =>
+    setOcrMeta(p => ({ ...p, [k]: e.target.value }));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">CBT Management</h1>
-        {tab === 'questions' && (
-          <button onClick={() => { setEditingId(null); setForm(EMPTY); setShowForm(true); }}
+        {tab === 'questions' && manualStep === null && (
+          <button onClick={startManualEntry}
             className="flex items-center gap-2 btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium">
-            <Plus size={16} /> Add Question
+            <Plus size={16} /> Add Questions
           </button>
         )}
       </div>
@@ -339,8 +395,128 @@ export default function StaffCbt() {
         </div>
       )}
 
+      {/* ── Manual entry: Setup step ─────────────────────────────────────── */}
+      {tab === 'questions' && manualStep === 'setup' && (
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold text-gray-800">Set Up Questions</h2>
+            <button onClick={() => setManualStep(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
+              <select required value={manualMeta.session} onChange={e => setManualMeta(p => ({ ...p, session: e.target.value }))} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select session</option>
+                {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
+              <select required value={manualMeta.term} onChange={e => setManualMeta(p => ({ ...p, term: e.target.value }))} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select term</option>
+                {terms.map(t => <option key={t} value={t}>{t} Term</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+              <select required value={manualMeta.course} onChange={e => setManualMeta(p => ({ ...p, course: e.target.value }))} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select course</option>
+                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+              <select required value={manualMeta.class} onChange={e => setManualMeta(p => ({ ...p, class: e.target.value }))} className={`w-full ${SEL_CLS}`}>
+                <option value="">Select class</option>
+                {classes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+              <input type="number" min="1" max="300" value={manualMeta.duration}
+                onChange={e => setManualMeta(p => ({ ...p, duration: e.target.value }))}
+                className={`w-full ${SEL_CLS}`} placeholder="30" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Number of Questions</label>
+              <input type="number" min="1" max="200" value={questionCount}
+                onChange={e => setQuestionCount(Math.max(1, parseInt(e.target.value) || 1))}
+                className={`w-full ${SEL_CLS}`} />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={confirmSetup} className="btn-brand text-white px-5 py-2 rounded-xl text-sm font-medium">
+              Continue — Enter {questionCount} Question{questionCount !== 1 ? 's' : ''}
+            </button>
+            <button onClick={() => setManualStep(null)} className="border border-gray-200 px-5 py-2 rounded-xl text-sm font-medium hover:bg-gray-50">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Manual entry: Question entry step ────────────────────────────── */}
+      {tab === 'questions' && manualStep === 'entry' && (
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Enter Questions</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {manualMeta.course} · {manualMeta.class} · {manualMeta.session} · {manualMeta.term} Term · {manualMeta.duration} min
+              </p>
+            </div>
+            <button onClick={() => setManualStep(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+          </div>
+
+          <div className="space-y-6 mt-5">
+            {manualQs.map((q, i) => (
+              <div key={i} className="border border-gray-100 rounded-xl p-4 bg-gray-50/50 relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-gray-700">Question {i + 1}</span>
+                  {manualQs.length > 1 && (
+                    <button onClick={() => removeManualQ(i)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={14} /></button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <textarea rows={2} placeholder="Enter question text…" value={q.question}
+                    onChange={e => updateManualQ(i, 'question', e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
+                      <input key={opt} placeholder={`Option ${opt.split('_')[1].toUpperCase()}`} value={q[opt]}
+                        onChange={e => updateManualQ(i, opt, e.target.value)}
+                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700 shrink-0">Correct Answer:</label>
+                    <select value={q.answer} onChange={e => updateManualQ(i, 'answer', e.target.value)} className={SEL_CLS}>
+                      {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 mt-5 pt-5 border-t border-gray-100">
+            <button onClick={handleManualSubmit} disabled={manualSubmitting}
+              className="btn-brand text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-50">
+              {manualSubmitting ? 'Saving…' : `Save ${manualQs.length} Question${manualQs.length !== 1 ? 's' : ''}`}
+            </button>
+            <button onClick={addManualQ}
+              className="flex items-center gap-1.5 border border-gray-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 text-gray-700">
+              <Plus size={14} /> Add Another
+            </button>
+            <button onClick={() => setManualStep(null)} className="ml-auto border border-gray-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 text-gray-600">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* OCR / Bulk Upload Section */}
-      {tab === 'questions' && (
+      {tab === 'questions' && manualStep === null && (
         <div className="bg-white rounded-2xl card shadow-sm p-6 border border-dashed border-gray-200">
           <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <Upload size={18} className="text-blue-500" /> Upload Questions (OCR / Document)
@@ -352,42 +528,38 @@ export default function StaffCbt() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
-              <select value={form.session} onChange={sfLocal('session')} className={`w-full ${SEL_CLS}`}>
+              <select value={ocrMeta.session} onChange={sfLocal('session')} className={`w-full ${SEL_CLS}`}>
                 <option value="">Select session</option>
                 {sessions.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
-              <select value={form.term} onChange={sfLocal('term')} className={`w-full ${SEL_CLS}`}>
+              <select value={ocrMeta.term} onChange={sfLocal('term')} className={`w-full ${SEL_CLS}`}>
                 <option value="">Select term</option>
                 {terms.map(t => <option key={t} value={t}>{t} Term</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-              <select value={form.course} onChange={sfLocal('course')} className={`w-full ${SEL_CLS}`}>
+              <select value={ocrMeta.course} onChange={sfLocal('course')} className={`w-full ${SEL_CLS}`}>
                 <option value="">Select course</option>
                 {subjects.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-              <select value={form.class} onChange={sfLocal('class')} className={`w-full ${SEL_CLS}`}>
+              <select value={ocrMeta.class} onChange={sfLocal('class')} className={`w-full ${SEL_CLS}`}>
                 <option value="">Select class</option>
                 {classes.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
-              <input 
-                type="number" 
-                min="1" 
-                max="300" 
-                value={form.duration} 
-                onChange={(e) => setForm(p => ({ ...p, duration: e.target.value }))}
-                className={`w-full ${SEL_CLS}`}
-                placeholder="30"
+              <input
+                type="number" min="1" max="300" value={ocrMeta.duration}
+                onChange={e => setOcrMeta(p => ({ ...p, duration: e.target.value }))}
+                className={`w-full ${SEL_CLS}`} placeholder="30"
               />
             </div>
           </div>
@@ -487,87 +659,6 @@ export default function StaffCbt() {
         </div>
       )}
 
-      {showForm && tab === 'questions' && (
-        <div className="bg-white rounded-2xl card shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">{editingId ? 'Edit Question' : 'Add Question'}</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!editingId && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
-                  <select required value={form.session} onChange={(e) => setForm(p => ({ ...p, session: e.target.value }))} className={`w-full ${SEL_CLS}`}>
-                    <option value="">Select session</option>
-                    {sessions.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
-                  <select required value={form.term} onChange={(e) => setForm(p => ({ ...p, term: e.target.value }))} className={`w-full ${SEL_CLS}`}>
-                    <option value="">Select term</option>
-                    {terms.map(t => <option key={t} value={t}>{t} Term</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-                  <select required value={form.course} onChange={(e) => setForm(p => ({ ...p, course: e.target.value }))} className={`w-full ${SEL_CLS}`}>
-                    <option value="">Select course</option>
-                    {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                  <select required value={form.class} onChange={(e) => setForm(p => ({ ...p, class: e.target.value }))} className={`w-full ${SEL_CLS}`}>
-                    <option value="">Select class</option>
-                    {classes.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="sm:col-span-2 lg:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="300" 
-                    required
-                    value={form.duration} 
-                    onChange={(e) => setForm(p => ({ ...p, duration: e.target.value }))}
-                    className={`w-full ${SEL_CLS}`}
-                    placeholder="e.g. 30"
-                  />
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Question</label>
-              <textarea required rows={2} value={form.question} onChange={(e) => setForm(p => ({ ...p, question: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
-                <div key={opt}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1 uppercase">{opt.replace('_', ' ')}</label>
-                  <input required value={form[opt]} onChange={(e) => setForm(p => ({ ...p, [opt]: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-              ))}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answer</label>
-              <select value={form.answer} onChange={(e) => setForm(p => ({ ...p, answer: e.target.value }))} className={SEL_CLS}>
-                {['A', 'B', 'C', 'D'].map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-3">
-              <button type="submit" disabled={submitting} className="btn-brand text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-50">
-                {submitting ? 'Saving…' : 'Save'}
-              </button>
-              <button type="button" onClick={() => setShowForm(false)} className="border border-gray-200 px-5 py-2 rounded-xl text-sm font-medium hover:bg-gray-50">
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
       <div className="bg-white rounded-2xl card shadow-sm p-6">
         {loading ? (
           <div className="space-y-3 skeleton-stagger">
@@ -591,21 +682,53 @@ export default function StaffCbt() {
           ) : (
             <div className="space-y-3">
               {questions.map((q, i) => (
-                <div key={q.id} className="flex items-start justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{i + 1}. {q.question}</p>
-                    <div className="grid grid-cols-2 gap-1 mt-2">
-                      {(['A', 'B', 'C', 'D'] as const).map((letter) => (
-                        <p key={letter} className={`text-xs px-2 py-1 rounded-lg ${
-                          q.answer === letter ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-500'
-                        }`}>{letter}. {(q as any)[`option${letter}`]}</p>
-                      ))}
+                <div key={q.id}>
+                  {/* Inline edit form */}
+                  {editingId === String(q.id) ? (
+                    <form onSubmit={handleEditSubmit} className="border border-blue-200 rounded-xl p-4 bg-blue-50/30 space-y-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-gray-700">Editing Question {i + 1}</span>
+                        <button type="button" onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
+                      </div>
+                      <textarea required rows={2} value={editForm.question}
+                        onChange={e => setEditForm(p => ({ ...p, question: e.target.value }))}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
+                          <input key={opt} required placeholder={`Option ${opt.split('_')[1].toUpperCase()}`}
+                            value={editForm[opt]} onChange={e => setEditForm(p => ({ ...p, [opt]: e.target.value }))}
+                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm font-medium text-gray-700 shrink-0">Correct Answer:</label>
+                        <select value={editForm.answer} onChange={e => setEditForm(p => ({ ...p, answer: e.target.value }))} className={SEL_CLS}>
+                          {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                        <button type="submit" disabled={editSubmitting}
+                          className="ml-auto btn-brand text-white px-4 py-1.5 rounded-xl text-sm font-medium disabled:opacity-50">
+                          {editSubmitting ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="flex items-start justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800">{i + 1}. {q.question}</p>
+                        <div className="grid grid-cols-2 gap-1 mt-2">
+                          {(['A', 'B', 'C', 'D'] as const).map((letter) => (
+                            <p key={letter} className={`text-xs px-2 py-1 rounded-lg ${
+                              q.answer === letter ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-500'
+                            }`}>{letter}. {(q as any)[`option${letter}`]}</p>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-4 shrink-0">
+                        <button onClick={() => openEdit(q)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={15} /></button>
+                        <button onClick={() => handleDelete(q.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-1 ml-4 shrink-0">
-                    <button onClick={() => openEdit(q)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={15} /></button>
-                    <button onClick={() => handleDelete(q.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
