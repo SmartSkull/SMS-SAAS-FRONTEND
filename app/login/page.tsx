@@ -50,8 +50,8 @@ export default function LoginPage() {
   const primary = school.primaryColor || '#1d4ed8';
   const secondary = school.secondaryColor || '#eff6ff';
   const accent = school.accentColor || '#84cc16';
-  const idLabel = tab === 'student' ? 'Student Name or ID' : tab === 'staff' ? 'Staff ID' : 'Admin ID';
-  const idPlaceholder = tab === 'student' ? 'e.g. David Emmanuel' : tab === 'staff' ? 'e.g. STF001' : 'e.g. ADM001';
+  const idLabel = tab === 'student' ? 'Student Name or ID' : tab === 'staff' ? 'Staff Name or ID' : 'Admin ID';
+  const idPlaceholder = tab === 'student' ? 'e.g. David Emmanuel' : tab === 'staff' ? 'e.g. John Smith or STF001' : 'e.g. ADM001';
 
   return (
     <div 
@@ -146,22 +146,26 @@ export default function LoginPage() {
                   {showSug && suggestions.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-y-auto z-50 shadow-2xl" style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', maxHeight: '220px' }}>
                       {suggestions.map((s) => {
-                        const fullName = `${s.firstname} ${s.lastname}`;
+                        const isStaff = tab === 'staff';
+                        const fullName = [s.firstname, s.lastname].filter(Boolean).join(' ');
+                        const id = isStaff ? s.staff_id : s.student_id;
+                        const subtitle = isStaff ? s.role : s.class;
                         return (
                           <button
-                            key={s.student_id}
+                            key={id}
                             type="button"
                             onMouseDown={() => {
-                              setForm((prev) => ({ ...prev, id: fullName }));
+                              // Staff login uses the ID; student login uses the full name
+                              setForm((prev) => ({ ...prev, id: isStaff ? id : fullName }));
                               setShowSug(false);
                             }}
                             className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
                           >
                             <div>
                               <p className="text-gray-900 text-sm font-medium">{fullName}</p>
-                              {s.class && <p className="text-gray-400 text-xs">{s.class}</p>}
+                              {subtitle && <p className="text-gray-400 text-xs">{subtitle}</p>}
                             </div>
-                            <span className="text-gray-400 text-xs font-mono">{s.student_id}</span>
+                            <span className="text-gray-400 text-xs font-mono">{id}</span>
                           </button>
                         );
                       })}

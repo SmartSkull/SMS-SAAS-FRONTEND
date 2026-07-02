@@ -24,7 +24,7 @@ interface ParsedQuestion {
   answer: string;
 }
 
-const EMPTY = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A', course: '', class: '', session: '', term: '' };
+const EMPTY = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A', course: '', class: '', session: '', term: '', duration: '30' };
 const SEL_CLS = "border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500";
 
 export default function StaffCbt() {
@@ -76,7 +76,7 @@ export default function StaffCbt() {
 
   const openEdit = (q: any) => {
     setEditingId(q.id);
-    setForm({ question: q.question, option_a: q.optionA, option_b: q.optionB, option_c: q.optionC, option_d: q.optionD, answer: q.answer, course: '', class: '', session: '', term: '' });
+    setForm({ question: q.question, option_a: q.optionA, option_b: q.optionB, option_c: q.optionC, option_d: q.optionD, answer: q.answer, course: '', class: '', session: '', term: '', duration: '30' });
     setShowForm(true);
   };
 
@@ -95,6 +95,7 @@ export default function StaffCbt() {
           question: form.question, optionA: form.option_a, optionB: form.option_b,
           optionC: form.option_c, optionD: form.option_d, answer: form.answer,
           course: form.course, class: form.class, session: form.session, term: form.term,
+          duration: form.duration,
         });
         toast.success('Question added');
       }
@@ -278,6 +279,7 @@ export default function StaffCbt() {
             class: form.class,
             session: form.session,
             term: form.term,
+            duration: form.duration,
           });
           count++;
         } catch { /* skip failed */ }
@@ -347,7 +349,7 @@ export default function StaffCbt() {
             Upload an image, PDF, Word document, or text file. Tesseract.js will extract questions (numbered with A/B/C/D options and answers).
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
               <select value={form.session} onChange={sfLocal('session')} className={`w-full ${SEL_CLS}`}>
@@ -375,6 +377,18 @@ export default function StaffCbt() {
                 <option value="">Select class</option>
                 {classes.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
+              <input 
+                type="number" 
+                min="1" 
+                max="300" 
+                value={form.duration} 
+                onChange={(e) => setForm(p => ({ ...p, duration: e.target.value }))}
+                className={`w-full ${SEL_CLS}`}
+                placeholder="30"
+              />
             </div>
           </div>
 
@@ -478,7 +492,7 @@ export default function StaffCbt() {
           <h2 className="text-lg font-semibold text-gray-800 mb-4">{editingId ? 'Edit Question' : 'Add Question'}</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!editingId && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
                   <select required value={form.session} onChange={(e) => setForm(p => ({ ...p, session: e.target.value }))} className={`w-full ${SEL_CLS}`}>
@@ -506,6 +520,19 @@ export default function StaffCbt() {
                     <option value="">Select class</option>
                     {classes.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="300" 
+                    required
+                    value={form.duration} 
+                    onChange={(e) => setForm(p => ({ ...p, duration: e.target.value }))}
+                    className={`w-full ${SEL_CLS}`}
+                    placeholder="e.g. 30"
+                  />
                 </div>
               </div>
             )}

@@ -528,6 +528,12 @@ export default function StudentCBT() {
   };
 
   const selectAnswer = (qId: string, opt: string) => {
+    // The DB stores the correct answer as a letter (A/B/C/D), so we must send
+    // the letter that corresponds to the chosen option, not the full option text.
+    const q = questions.find((question) => String(question.id) === qId);
+    const optIndex = q?.options.indexOf(opt) ?? -1;
+    const letter = ['A', 'B', 'C', 'D'][optIndex] ?? opt;
+
     setAnswers((prev) => {
       const next = { ...prev, [qId]: opt };
       // Persist answers to storage
@@ -535,7 +541,7 @@ export default function StudentCBT() {
       if (s) saveSession({ ...s, answers: next });
       return next;
     });
-    api.post(endpoints.student.cbtAnswer, { question_id: qId, answer: opt }).catch(() => {});
+    api.post(endpoints.student.cbtAnswer, { question_id: qId, answer: letter }).catch(() => {});
   };
 
   const goTo = (i: number) => {

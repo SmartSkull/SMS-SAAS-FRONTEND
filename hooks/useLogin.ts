@@ -26,14 +26,20 @@ export function useLogin() {
 
   const handleIdChange = (val: string) => {
     setForm((p) => ({ ...p, id: val }));
-    if (tab !== 'student' || val.length < 2) { setSuggestions([]); setShowSug(false); return; }
+    if ((tab !== 'student' && tab !== 'staff') || val.length < 2) { setSuggestions([]); setShowSug(false); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
         const school = readSelectedSchool();
-        const r = await api.get<ApiResponse<any[]>>('/public/students/search', { q: val, school: school?.slug });
-        setSuggestions(r.data.slice(0, 8));
-        setShowSug(r.data.length > 0);
+        if (tab === 'student') {
+          const r = await api.get<ApiResponse<any[]>>('/public/students/search', { q: val, school: school?.slug });
+          setSuggestions(r.data.slice(0, 8));
+          setShowSug(r.data.length > 0);
+        } else {
+          const r = await api.get<ApiResponse<any[]>>('/public/staff/search', { q: val, school: school?.slug });
+          setSuggestions(r.data.slice(0, 8));
+          setShowSug(r.data.length > 0);
+        }
       } catch { setSuggestions([]); }
     }, 250);
   };
