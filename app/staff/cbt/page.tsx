@@ -380,36 +380,61 @@ export default function StaffCbt() {
 
   const parseQuestions = (text: string): ParsedQuestion[] => {
     const questions: ParsedQuestion[] = [];
-    let cleaned = text.replace(/\r\n?/g, '\n');
-    cleaned = cleaned.replace(/<[^>]*>/g, ' ');
 
-    const blocks = cleaned.split(/\n{2,}/).filter(Boolean).map(b => b.replace(/\s+/g, ' ').trim());
+    // Normalise whitespace — collapse all newlines/tabs to single spaces
+    // so the whole text becomes one flat string we can regex across
+    const flat = text
+      .replace(/<[^>]*>/g, ' ')   // strip HTML
+      .replace(/\r\n?|\n|\t/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
 
-    for (const block of blocks) {
-      const trimmed = block;
-      if (trimmed.length < 10) continue;
+    // Split on question numbers: "1." "2." "10." etc.
+    // Look-ahead keeps the number attached to the next segment
+    const segments = flat.split(/(?=\b\d{1,3}[\.\)]\s)/).map(s => s.trim()).filter(Boolean);
 
-      const questionEnd = trimmed.search(/\s+[A-D][\.\)]\s/);
-      const questionText = questionEnd > -1 ? trimmed.slice(0, questionEnd).trim() : trimmed;
-      const rest = questionEnd > -1 ? trimmed.slice(questionEnd) : '';
+    for (const seg of segments) {
+      // Must start with a number
+      if (!/^\d{1,3}[\.\)]\s/.test(seg)) continue;
 
-      const allOptionMatches = [...rest.matchAll(/\b([A-D])[\.\)]\s*(.+?)(?=\s+[A-D][\.\)]|Answer\s*:|Ans\s*:|Correct\s*:|$)/g)];
+      // Strip the leading number + separator
+      const body = seg.replace(/^\d{1,3}[\.\)]\s*/, '').trim();
 
-      if (allOptionMatches.length < 2) continue;
+      // ── Extract answer anywhere in the segment ────────────────────────
+      // Handles: "Answer: C", "Answer :A", "Ans: C", "[Answer: B]"
+      const answerMatch = body.match(/\[?Ans(?:wer)?\s*:?\s*([A-D])\]?/i);
+      const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
 
-      const options: Record<string, string> = {};
-      allOptionMatches.forEach(x => { options[x[1]] = x[2].trim(); });
+      // Remove answer portion so it doesn't bleed into options
+      const withoutAnswer = body.replace(/\[?Ans(?:wer)?\s*:?\s*[A-D]\]?\.?/gi, '').trim();
 
-      const answerMatch = rest.match(/Answer\s*:\s*([A-D])|Ans\s*:\s*([A-D])|Correct\s*:\s*([A-D])/i);
-      const answer = answerMatch ? (answerMatch[1] || answerMatch[2] || answerMatch[3]).toUpperCase() : '';
+      // ── Find where options begin (first occurrence of A. or A))  ─────
+      const optStart = withoutAnswer.search(/\bA[\.\)]\s*/);
+      if (optStart === -1) continue;   // no options found — skip
+
+      let questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
+      const optionString = withoutAnswer.slice(optStart);
+
+      if (!questionText) continue;
+
+      // ── Parse options: A.val B.val C.val D.val ───────────────────────
+      // Value runs until the next option letter or end of string
+      const optRegex = /\b([A-D])[\.\)]\s*(.+?)(?=\s+[A-D][\.\)]|$)/g;
+      const opts: Record<string, string> = {};
+      let m: RegExpExecArray | null;
+      while ((m = optRegex.exec(optionString)) !== null) {
+        opts[m[1]] = m[2].trim().replace(/[.\s]+$/, '').trim();
+      }
+
+      if (Object.keys(opts).length < 2) continue;
 
       questions.push({
         question: questionText,
-        option1: options['A'] || '',
-        option2: options['B'] || '',
-        option3: options['C'] || '',
-        option4: options['D'] || '',
-        answer: answer || 'A',
+        option1: opts['A'] || '',
+        option2: opts['B'] || '',
+        option3: opts['C'] || '',
+        option4: opts['D'] || '',
+        answer,
       });
     }
 

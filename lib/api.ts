@@ -245,6 +245,7 @@ export const endpoints = {
     attendanceMarkStudentsAbsent: '/attendance/admin/mark-students-absent',
     cbtQuestions: '/admin/cbt/questions',
     cbtQuestion: (id: string) => `/admin/cbt/questions/${id}`,
+    cbtTests: '/admin/cbt/tests',
     schoolFees: '/admin/school-fees',
     schoolFeesConfig: '/admin/school-fees/config',
     schoolFeesConfigItem: (id: number) => `/admin/school-fees/config/${id}`,

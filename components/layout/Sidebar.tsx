@@ -57,6 +57,7 @@ const MENUS = {
     { icon: ArrowUpCircle, label: 'Promotions', path: '/admin/promotions' },
     { icon: Users, label: 'Staff', path: '/admin/staff' },
     { icon: BarChart2, label: 'Results', path: '/admin/results' },
+    { icon: Monitor, label: 'CBT', path: '/admin/cbt' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/admin/attendance' },
     { icon: CalendarOff, label: 'Leave', path: '/admin/leave' },
     { icon: Wallet, label: 'Payroll', path: '/admin/payroll' },
