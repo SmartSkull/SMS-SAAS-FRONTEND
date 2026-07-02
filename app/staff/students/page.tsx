@@ -3,7 +3,7 @@ import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
 import { api, endpoints } from '@/lib/api';
 import type { ApiResponse, Student } from '@/types';
-import { ChevronLeft, ChevronRight, GraduationCap, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GraduationCap, Plus, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface StudentsData {
@@ -11,6 +11,15 @@ interface StudentsData {
   total: number;
   classes?: string[];
 }
+
+const EMPTY_FORM = {
+  firstName: '',
+  lastName: '',
+  email: '',
+  telephone: '',
+  class: '',
+  password: '',
+};
 
 export default function StaffStudents() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -22,6 +31,11 @@ export default function StaffStudents() {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
   const limit = 20;
+
+  // Add student modal state
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
   const load = (p = 1) => {
     setLoading(true);
@@ -46,11 +60,42 @@ export default function StaffStudents() {
 
   const handleSearch = (e: React.FormEvent) => { e.preventDefault(); load(1); setPage(1); };
 
+  const handleRegister = async () => {
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      toast.error('First and last name are required');
+      return;
+    }
+    if (!form.class) {
+      toast.error('Please select a class');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post(endpoints.staff.registerStudent, form);
+      toast.success('Student registered. Awaiting admin verification.');
+      setModal(false);
+      setForm(EMPTY_FORM);
+      load(1);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to register student');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Students</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-800">Students</h1>
+        <button
+          onClick={() => { setForm(EMPTY_FORM); setModal(true); }}
+          className="flex items-center gap-2 btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium"
+        >
+          <Plus size={16} /> Add Student
+        </button>
+      </div>
 
       <div className="bg-white rounded-2xl card shadow-sm p-6">
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -64,7 +109,7 @@ export default function StaffStudents() {
                 className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <button type="submit" className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium ">
+            <button type="submit" className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium">
               Search
             </button>
           </form>
@@ -141,6 +186,101 @@ export default function StaffStudents() {
           </>
         )}
       </div>
+
+      {/* Add Student Modal */}
+      {modal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Register New Student</h2>
+              <button onClick={() => setModal(false)}><X size={20} className="text-gray-400" /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                The student account will be <strong>pending</strong> until an admin verifies it.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">First Name <span className="text-red-500">*</span></label>
+                  <input
+                    value={form.firstName}
+                    onChange={(e) => setForm(p => ({ ...p, firstName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. John"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Last Name <span className="text-red-500">*</span></label>
+                  <input
+                    value={form.lastName}
+                    onChange={(e) => setForm(p => ({ ...p, lastName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. Doe"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                  placeholder="student@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={form.telephone}
+                  onChange={(e) => setForm(p => ({ ...p, telephone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                  placeholder="e.g. 08012345678"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class <span className="text-red-500">*</span></label>
+                <select
+                  value={form.class}
+                  onChange={(e) => setForm(p => ({ ...p, class: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white"
+                >
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Password <span className="text-gray-400">(default: greatkings)</span></label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm(p => ({ ...p, password: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                  placeholder="Leave blank to use default"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-gray-100">
+              <button onClick={() => setModal(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">
+                Cancel
+              </button>
+              <button
+                onClick={handleRegister}
+                disabled={saving}
+                className="flex-1 py-2 btn-brand text-white rounded-xl text-sm font-medium disabled:opacity-60"
+              >
+                {saving ? 'Registering…' : 'Register Student'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

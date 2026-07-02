@@ -4,15 +4,28 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { CbtQuestion } from '@/types';
-import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X } from 'lucide-react';
+import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
 import mammoth from 'mammoth';
+import clsx from 'clsx';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 
 interface CbtResult {
   id: string; score: string; percentage: string; submittedAt: string;
   firstname: string; lastname: string;
   student?: { user?: { uniqueId?: string } };
+}
+
+interface CbtTest {
+  id: string;
+  title: string;
+  class: string;
+  course: string;
+  duration: number;
+  questionCount: number;
+  startTime: string | null;
+  endTime: string | null;
 }
 
 interface ParsedQuestion {
@@ -29,16 +42,37 @@ const EMPTY_Q = { question: '', option_a: '', option_b: '', option_c: '', option
 const EMPTY = { ...EMPTY_Q, ...EMPTY_META };
 const SEL_CLS = "border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500";
 
-type ManualQ = typeof EMPTY_Q;
+type ManualQ = typeof EMPTY_Q & { savedId?: string }; // savedId = DB id once persisted
+
+const DRAFT_KEY = 'cbt_manual_draft';
+
+function saveDraft(meta: typeof EMPTY_META, qs: ManualQ[], step: string) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ meta, qs, step })); } catch {}
+}
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+}
+function loadDraft(): { meta: typeof EMPTY_META; qs: ManualQ[]; step: string } | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
 
 export default function StaffCbt() {
-  const [tab, setTab] = useState<'questions' | 'results'>('questions');
+  const [tab, setTab] = useState<'questions' | 'results' | 'tests'>('questions');
   const [questions, setQuestions] = useState<CbtQuestion[]>([]);
   const [results, setResults] = useState<CbtResult[]>([]);
+  const [tests, setTests] = useState<CbtTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '' });
   const toast = useToast();
   const { classes, subjects, sessions, terms } = useSchoolData();
+
+  // ── Schedule modal ────────────────────────────────────────────────────────
+  const [scheduleModal, setScheduleModal] = useState<{ open: boolean; test?: CbtTest }>({ open: false });
+  const [scheduleForm, setScheduleForm] = useState({ startTime: '', endTime: '' });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
 
   // ── Edit single question ──────────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -83,10 +117,94 @@ export default function StaffCbt() {
       .finally(() => setLoading(false));
   };
 
+  const loadTests = () => {
+    setLoading(true);
+    api.get<any>(endpoints.staff.cbt)
+      .then((r) => setTests(r.data ?? []))
+      .catch(() => toast.error('Failed to load tests'))
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
     if (tab === 'questions') loadQuestions();
-    else loadResults();
+    else if (tab === 'results') loadResults();
+    else loadTests();
   }, [tab, filter]);
+
+  // ── Schedule helpers ──────────────────────────────────────────────────────
+  const openScheduleModal = (test: CbtTest) => {
+    // Convert ISO strings to datetime-local format (YYYY-MM-DDTHH:mm)
+    const toLocal = (iso: string | null) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      // format to YYYY-MM-DDTHH:mm in local time
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    setScheduleForm({ startTime: toLocal(test.startTime), endTime: toLocal(test.endTime) });
+    setScheduleModal({ open: true, test });
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!scheduleModal.test) return;
+    if (!scheduleForm.startTime || !scheduleForm.endTime) {
+      toast.error('Both start and end times are required');
+      return;
+    }
+    if (new Date(scheduleForm.startTime) >= new Date(scheduleForm.endTime)) {
+      toast.error('Start time must be before end time');
+      return;
+    }
+    setScheduleSaving(true);
+    try {
+      await api.put(endpoints.staff.cbtTestSchedule(scheduleModal.test.id), {
+        startTime: new Date(scheduleForm.startTime).toISOString(),
+        endTime: new Date(scheduleForm.endTime).toISOString(),
+      });
+      toast.success('Schedule saved successfully');
+      setScheduleModal({ open: false });
+      loadTests();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to save schedule');
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  const handleClearSchedule = async () => {
+    if (!scheduleModal.test) return;
+    setScheduleSaving(true);
+    try {
+      await api.put(endpoints.staff.cbtTestSchedule(scheduleModal.test.id), {
+        startTime: null,
+        endTime: null,
+      });
+      toast.success('Schedule cleared — students can no longer access this test');
+      setScheduleModal({ open: false });
+      loadTests();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to clear schedule');
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  // ── Restore manual draft on mount ─────────────────────────────────────────
+  useEffect(() => {
+    const draft = loadDraft();
+    if (!draft) return;
+    setManualMeta(draft.meta);
+    setManualQs(draft.qs);
+    if (draft.step === 'entry' || draft.step === 'setup') {
+      setManualStep(draft.step as 'entry' | 'setup');
+    }
+  }, []);
+
+  // ── Persist draft whenever manual state changes ───────────────────────────
+  useEffect(() => {
+    if (manualStep === null) { clearDraft(); return; }
+    saveDraft(manualMeta, manualQs, manualStep);
+  }, [manualStep, manualMeta, manualQs]);
 
   const openEdit = (q: any) => {
     setEditingId(q.id);
@@ -121,7 +239,15 @@ export default function StaffCbt() {
   const startManualEntry = () => {
     setManualMeta(EMPTY_META);
     setQuestionCount(10);
+    setManualQs([]);
     setManualStep('setup');
+  };
+
+  const cancelManual = () => {
+    clearDraft();
+    setManualStep(null);
+    setManualQs([]);
+    setManualMeta(EMPTY_META);
   };
 
   const confirmSetup = () => {
@@ -146,25 +272,38 @@ export default function StaffCbt() {
   };
 
   const handleManualSubmit = async () => {
-    if (!manualQs.length) return;
+    const unsaved = manualQs.filter(q => q.question.trim() && !q.savedId);
+    if (!unsaved.length) {
+      toast.error('All questions are already saved.');
+      return;
+    }
     setManualSubmitting(true);
     let count = 0;
-    for (const q of manualQs) {
-      if (!q.question.trim()) continue;
+    const updatedQs = [...manualQs];
+    for (let i = 0; i < updatedQs.length; i++) {
+      const q = updatedQs[i];
+      if (!q.question.trim() || q.savedId) continue; // skip blank or already saved
       try {
-        await api.post(endpoints.staff.cbtQuestions, {
+        const res = await api.post<any>(endpoints.staff.cbtQuestions, {
           question: q.question, optionA: q.option_a, optionB: q.option_b,
           optionC: q.option_c, optionD: q.option_d, answer: q.answer,
           course: manualMeta.course, class: manualMeta.class,
           session: manualMeta.session, term: manualMeta.term,
           duration: manualMeta.duration,
         });
+        // Mark as saved so re-clicking Save never duplicates it
+        updatedQs[i] = { ...q, savedId: res?.data?.id ?? 'saved' };
         count++;
-      } catch { /* skip failed */ }
+      } catch { /* skip failed individually */ }
     }
+    setManualQs(updatedQs);
     toast.success(`Saved ${count} question${count !== 1 ? 's' : ''}`);
-    setManualStep(null);
-    loadQuestions();
+    const allSaved = updatedQs.filter(q => q.question.trim()).every(q => !!q.savedId);
+    if (allSaved) {
+      clearDraft();
+      setManualStep(null);
+      loadQuestions();
+    }
     setManualSubmitting(false);
   };
 
@@ -364,14 +503,24 @@ export default function StaffCbt() {
       </div>
 
       <div className="flex gap-2">
-        {(['questions', 'results'] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
-              tab === t ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}>
-            {t === 'results' ? <span className="flex items-center gap-1.5"><BarChart2 size={14} /> Results</span> : 'Questions'}
-          </button>
-        ))}
+        <button onClick={() => setTab('questions')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+            tab === 'questions' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}>
+          Questions
+        </button>
+        <button onClick={() => setTab('tests')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+            tab === 'tests' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}>
+          <span className="flex items-center gap-1.5"><Calendar size={14} /> Schedules</span>
+        </button>
+        <button onClick={() => setTab('results')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+            tab === 'results' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}>
+          <span className="flex items-center gap-1.5"><BarChart2 size={14} /> Results</span>
+        </button>
       </div>
 
       {tab === 'questions' && (
@@ -400,7 +549,7 @@ export default function StaffCbt() {
         <div className="bg-white rounded-2xl card shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg font-semibold text-gray-800">Set Up Questions</h2>
-            <button onClick={() => setManualStep(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            <button onClick={cancelManual} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             <div>
@@ -448,7 +597,7 @@ export default function StaffCbt() {
             <button onClick={confirmSetup} className="btn-brand text-white px-5 py-2 rounded-xl text-sm font-medium">
               Continue — Enter {questionCount} Question{questionCount !== 1 ? 's' : ''}
             </button>
-            <button onClick={() => setManualStep(null)} className="border border-gray-200 px-5 py-2 rounded-xl text-sm font-medium hover:bg-gray-50">
+            <button onClick={cancelManual} className="border border-gray-200 px-5 py-2 rounded-xl text-sm font-medium hover:bg-gray-50">
               Cancel
             </button>
           </div>
@@ -465,22 +614,34 @@ export default function StaffCbt() {
                 {manualMeta.course} · {manualMeta.class} · {manualMeta.session} · {manualMeta.term} Term · {manualMeta.duration} min
               </p>
             </div>
-            <button onClick={() => setManualStep(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            <button onClick={cancelManual} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
           </div>
 
           <div className="space-y-6 mt-5">
             {manualQs.map((q, i) => (
-              <div key={i} className="border border-gray-100 rounded-xl p-4 bg-gray-50/50 relative">
+              <div key={i} className={clsx(
+                'border rounded-xl p-4 relative',
+                q.savedId ? 'border-green-200 bg-green-50/30' : 'border-gray-100 bg-gray-50/50'
+              )}>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-700">Question {i + 1}</span>
-                  {manualQs.length > 1 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-700">Question {i + 1}</span>
+                    {q.savedId && (
+                      <span className="flex items-center gap-1 text-xs text-green-600 font-medium bg-green-100 px-2 py-0.5 rounded-full">
+                        ✓ Saved
+                      </span>
+                    )}
+                  </div>
+                  {manualQs.length > 1 && !q.savedId && (
                     <button onClick={() => removeManualQ(i)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={14} /></button>
                   )}
                 </div>
-                <div className="space-y-3">
-                  <textarea rows={2} placeholder="Enter question text…" value={q.question}
-                    onChange={e => updateManualQ(i, 'question', e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                <div className={clsx('space-y-3', q.savedId && 'opacity-60 pointer-events-none')}>
+                  <RichTextEditor
+                    value={q.question}
+                    onChange={val => updateManualQ(i, 'question', val)}
+                    placeholder="Enter question text…"
+                  />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
                       <input key={opt} placeholder={`Option ${opt.split('_')[1].toUpperCase()}`} value={q[opt]}
@@ -502,14 +663,14 @@ export default function StaffCbt() {
           <div className="flex items-center gap-3 mt-5 pt-5 border-t border-gray-100">
             <button onClick={handleManualSubmit} disabled={manualSubmitting}
               className="btn-brand text-white px-5 py-2 rounded-xl text-sm font-medium disabled:opacity-50">
-              {manualSubmitting ? 'Saving…' : `Save ${manualQs.length} Question${manualQs.length !== 1 ? 's' : ''}`}
+              {manualSubmitting ? 'Saving…' : `Save ${manualQs.filter(q => q.question.trim() && !q.savedId).length} Unsaved`}
             </button>
             <button onClick={addManualQ}
               className="flex items-center gap-1.5 border border-gray-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 text-gray-700">
               <Plus size={14} /> Add Another
             </button>
-            <button onClick={() => setManualStep(null)} className="ml-auto border border-gray-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 text-gray-600">
-              Cancel
+            <button onClick={cancelManual} className="ml-auto border border-gray-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 text-gray-600">
+              Close
             </button>
           </div>
         </div>
@@ -659,7 +820,7 @@ export default function StaffCbt() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl card shadow-sm p-6">
+      <div className={`bg-white rounded-2xl card shadow-sm p-6${tab === 'tests' ? ' hidden' : ''}`}>
         {loading ? (
           <div className="space-y-3 skeleton-stagger">
             {[...Array(4)].map((_, i) => (
@@ -690,9 +851,11 @@ export default function StaffCbt() {
                         <span className="text-sm font-semibold text-gray-700">Editing Question {i + 1}</span>
                         <button type="button" onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
                       </div>
-                      <textarea required rows={2} value={editForm.question}
-                        onChange={e => setEditForm(p => ({ ...p, question: e.target.value }))}
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                      <RichTextEditor
+                        value={editForm.question}
+                        onChange={val => setEditForm(p => ({ ...p, question: val }))}
+                        placeholder="Question text…"
+                      />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
                           <input key={opt} required placeholder={`Option ${opt.split('_')[1].toUpperCase()}`}
@@ -733,7 +896,7 @@ export default function StaffCbt() {
               ))}
             </div>
           )
-        ) : (
+        ) : tab === 'results' ? (
           results.length === 0 ? (
             <EmptyState icon={BarChart2} message="No CBT results yet." card={false} />
           ) : (
@@ -760,8 +923,185 @@ export default function StaffCbt() {
               </table>
             </div>
           )
-        )}
+        ) : null}
       </div>
+
+      {/* ── Schedules tab ──────────────────────────────────────────────── */}
+      {tab === 'tests' && (
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-start gap-2">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              Students can <strong>only access</strong> a subject's CBT within its scheduled window.
+              Tests with no schedule set are <strong>blocked</strong> from students.
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl">
+                  <div className="space-y-2 flex-1">
+                    <div className="shimmer h-4 w-48" />
+                    <div className="shimmer h-3 w-64" />
+                  </div>
+                  <div className="shimmer h-8 w-28 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          ) : tests.length === 0 ? (
+            <EmptyState icon={Calendar} message="No tests found. Add questions first to create a test." card={false} />
+          ) : (
+            <div className="space-y-3">
+              {tests.map((test) => {
+                const now = new Date();
+                const start = test.startTime ? new Date(test.startTime) : null;
+                const end = test.endTime ? new Date(test.endTime) : null;
+                const isScheduled = !!(start && end);
+                const isLive = isScheduled && now >= start! && now <= end!;
+                const isUpcoming = isScheduled && now < start!;
+                const isExpired = isScheduled && now > end!;
+
+                return (
+                  <div key={test.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50/50 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-900 text-sm">{test.course}</p>
+                        <span className="text-gray-400 text-xs">·</span>
+                        <p className="text-sm text-gray-500">{test.class}</p>
+                        <span className="text-gray-400 text-xs">·</span>
+                        <p className="text-xs text-gray-400">{test.questionCount} question{test.questionCount !== 1 ? 's' : ''}</p>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                        {!isScheduled && (
+                          <span className="flex items-center gap-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                            <AlertCircle size={11} /> No schedule — blocked
+                          </span>
+                        )}
+                        {isLive && (
+                          <span className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium animate-pulse">
+                            <CheckCircle2 size={11} /> Live now
+                          </span>
+                        )}
+                        {isUpcoming && (
+                          <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                            <Clock size={11} /> Upcoming
+                          </span>
+                        )}
+                        {isExpired && (
+                          <span className="flex items-center gap-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                            <AlertCircle size={11} /> Expired
+                          </span>
+                        )}
+                        {isScheduled && (
+                          <span className="text-xs text-gray-500">
+                            {new Date(test.startTime!).toLocaleString()} → {new Date(test.endTime!).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openScheduleModal(test)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 shrink-0"
+                    >
+                      <Clock size={14} /> {isScheduled ? 'Edit Schedule' : 'Set Schedule'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Schedule Modal ──────────────────────────────────────────────── */}
+      {scheduleModal.open && scheduleModal.test && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="font-semibold text-gray-900">Set CBT Schedule</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {scheduleModal.test.course} · {scheduleModal.test.class}
+                </p>
+              </div>
+              <button onClick={() => setScheduleModal({ open: false })}><X size={20} className="text-gray-400" /></button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">
+                Students can only access this CBT between the start and end times you set.
+                Outside this window the test is <strong>invisible</strong> to students.
+              </p>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Start Date &amp; Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={scheduleForm.startTime}
+                  onChange={(e) => setScheduleForm(p => ({ ...p, startTime: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  End Date &amp; Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={scheduleForm.endTime}
+                  onChange={(e) => setScheduleForm(p => ({ ...p, endTime: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {scheduleForm.startTime && scheduleForm.endTime && new Date(scheduleForm.startTime) < new Date(scheduleForm.endTime) && (
+                <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  <CheckCircle2 size={13} />
+                  Window: {new Date(scheduleForm.endTime).getTime() - new Date(scheduleForm.startTime).getTime() > 0
+                    ? (() => {
+                        const diffMs = new Date(scheduleForm.endTime).getTime() - new Date(scheduleForm.startTime).getTime();
+                        const diffMins = Math.round(diffMs / 60000);
+                        const h = Math.floor(diffMins / 60);
+                        const m = diffMins % 60;
+                        return h > 0 ? `${h}h ${m}m` : `${m}m`;
+                      })()
+                    : '—'
+                  }
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 p-6 border-t border-gray-100">
+              {scheduleModal.test.startTime && (
+                <button
+                  onClick={handleClearSchedule}
+                  disabled={scheduleSaving}
+                  className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+                >
+                  Clear Schedule
+                </button>
+              )}
+              <button
+                onClick={() => setScheduleModal({ open: false })}
+                className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSchedule}
+                disabled={scheduleSaving}
+                className="flex-1 py-2 btn-brand text-white rounded-xl text-sm font-medium disabled:opacity-60"
+              >
+                {scheduleSaving ? 'Saving…' : 'Save Schedule'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

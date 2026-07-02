@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, Edit2, Trash2, CheckCircle, ChevronLeft, ChevronRight, X, GraduationCap } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ChevronLeft, ChevronRight, X, GraduationCap } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -58,15 +58,11 @@ export default function StudentsPage() {
   useEffect(() => { load(); }, [load]);
 
   const save = async () => {
+    if (!modal.student) return;
     setSaving(true);
     try {
-      if (modal.student) {
-        await api.post(`${endpoints.admin.students}/update`, { ...form, student_id: modal.student.student_id });
-        toast.success('Student updated');
-      } else {
-        await api.post(endpoints.admin.students, form);
-        toast.success('Student created');
-      }
+      await api.post(`${endpoints.admin.students}/update`, { ...form, student_id: modal.student.student_id });
+      toast.success('Student updated');
       setModal({ open: false }); load();
     } catch (e: any) { toast.error(e?.message ?? 'Failed to save'); }
     finally { setSaving(false); }
@@ -98,10 +94,6 @@ export default function StudentsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Students <span className="text-gray-400 font-normal text-lg">({meta.total})</span></h1>
-        <button onClick={() => { setForm(EMPTY); setModal({ open: true }); }}
-          className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-purple-700">
-          <Plus size={16} /> Add Student
-        </button>
       </div>
 
       <div className="bg-white rounded-2xl card shadow-sm p-4 flex flex-wrap gap-3">
@@ -189,7 +181,7 @@ export default function StudentsPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl card shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">{modal.student ? 'Edit Student' : 'Add Student'}</h2>
+              <h2 className="font-semibold text-gray-900">Edit Student</h2>
               <button onClick={() => setModal({ open: false })}><X size={20} className="text-gray-400" /></button>
             </div>
             <div className="p-6 space-y-3">
@@ -216,13 +208,7 @@ export default function StudentsPage() {
                   {sessions.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              {!modal.student && (
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
-                  <input type="password" value={form.password} onChange={(e) => setForm(p => ({ ...p, password: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500" />
-                </div>
-              )}
+              {!modal.student && null}
             </div>
             <div className="flex gap-3 p-6 border-t border-gray-100">
               <button onClick={() => setModal({ open: false })} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
