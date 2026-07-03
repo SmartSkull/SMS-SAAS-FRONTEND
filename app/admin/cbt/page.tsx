@@ -5,8 +5,9 @@ import { api, endpoints } from '@/lib/api';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import {
   Monitor, Search, ChevronDown, ChevronUp, User, Clock,
-  Calendar, CheckCircle2, AlertCircle, HelpCircle, BookOpen,
+  Calendar, CheckCircle2, AlertCircle, HelpCircle, BookOpen, Trash2,
 } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useEffect, useState } from 'react';
 
 interface Uploader { name: string; uploadedAt: string; }
@@ -92,6 +93,8 @@ export default function AdminCbtPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, CbtQuestion[]>>({});
   const [questionsLoading, setQuestionsLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<CbtTestSummary | null>(null);
 
   const loadTests = () => {
     setLoading(true);
@@ -120,6 +123,28 @@ export default function AdminCbtPage() {
       setExpandedQuestions(prev => ({ ...prev, [test.id]: qs }));
     } catch { toast.error('Failed to load questions'); }
     finally { setQuestionsLoading(false); }
+  };
+
+  const handleDeleteTest = (e: React.MouseEvent, test: CbtTestSummary) => {
+    e.stopPropagation();
+    setConfirmDelete(test);
+  };
+
+  const confirmDeleteTest = async () => {
+    if (!confirmDelete) return;
+    const test = confirmDelete;
+    setConfirmDelete(null);
+    setDeletingId(test.id);
+    try {
+      await api.delete(endpoints.admin.cbtTest(test.id));
+      toast.success(`Deleted "${test.course}" test and all its questions`);
+      setTests(prev => prev.filter(t => t.id !== test.id));
+      if (expandedId === test.id) setExpandedId(null);
+    } catch {
+      toast.error('Failed to delete test');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const filtered = tests.filter(t => {
@@ -194,7 +219,7 @@ export default function AdminCbtPage() {
         ) : (
           <div className="divide-y divide-gray-100">
             {/* Column headers */}
-            <div className="hidden md:grid grid-cols-[2fr_1.4fr_80px_80px_120px_100px_40px] gap-3 px-5 py-3 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="hidden md:grid grid-cols-[2fr_1.4fr_80px_80px_120px_100px_40px_40px] gap-3 px-5 py-3 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <span>Subject / Class</span>
               <span>Uploaded By</span>
               <span>Questions</span>
@@ -202,17 +227,19 @@ export default function AdminCbtPage() {
               <span>Schedule</span>
               <span>Created</span>
               <span />
+              <span />
             </div>
 
             {filtered.map(test => {
               const isExpanded = expandedId === test.id;
               const qs = expandedQuestions[test.id] ?? [];
+              const isDeleting = deletingId === test.id;
 
               return (
                 <div key={test.id}>
                   {/* Summary row */}
                   <div
-                    className="grid grid-cols-1 md:grid-cols-[2fr_1.4fr_80px_80px_120px_100px_40px] gap-3 items-center px-5 py-4 hover:bg-gray-50/60 cursor-pointer transition-colors"
+                    className="grid grid-cols-1 md:grid-cols-[2fr_1.4fr_80px_80px_120px_100px_40px_40px] gap-3 items-center px-5 py-4 hover:bg-gray-50/60 cursor-pointer transition-colors"
                     onClick={() => toggleExpand(test)}
                   >
                     {/* Subject + class */}
@@ -281,6 +308,20 @@ export default function AdminCbtPage() {
                         ? <ChevronUp size={16} className="text-gray-400" />
                         : <ChevronDown size={16} className="text-gray-400" />}
                     </div>
+
+                    {/* Delete */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={(e) => handleDeleteTest(e, test)}
+                        disabled={isDeleting}
+                        title="Delete all questions for this test"
+                        className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                      >
+                        {isDeleting
+                          ? <span className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin inline-block" />
+                          : <Trash2 size={15} />}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Expanded questions panel */}
@@ -345,7 +386,15 @@ export default function AdminCbtPage() {
             })}
           </div>
         )}
-      </div>
+        </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          message={`Delete all ${confirmDelete.questionCount} question${confirmDelete.questionCount !== 1 ? 's' : ''} for "${confirmDelete.course} – ${confirmDelete.class}"? This cannot be undone.`}
+          onConfirm={confirmDeleteTest}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

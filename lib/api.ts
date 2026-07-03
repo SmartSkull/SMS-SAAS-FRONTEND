@@ -247,6 +247,7 @@ export const endpoints = {
     cbtQuestions: '/admin/cbt/questions',
     cbtQuestion: (id: string) => `/admin/cbt/questions/${id}`,
     cbtTests: '/admin/cbt/tests',
+    cbtTest: (id: string) => `/admin/cbt/tests/${id}`,
     schoolFees: '/admin/school-fees',
     schoolFeesConfig: '/admin/school-fees/config',
     schoolFeesConfigItem: (id: number) => `/admin/school-fees/config/${id}`,
