@@ -6,10 +6,50 @@ import { useSchoolData } from '@/hooks/useSchoolData';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { SchoolProfile } from '@/types';
-import { Eye, FileBarChart2, Loader2, MessageSquare, Plus, Printer, Search, Upload, User, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { Download, Eye, FileBarChart2, FileUp, Loader2, MessageSquare, Plus, Printer, Search, Upload, User, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const UPLOADS_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
+
+// ── CSV helpers ───────────────────────────────────────────────────────────────
+function downloadResultsTemplate(students: any[], className: string, subject: string, session: string, term: string) {
+  const header = ['student_id', 'firstname', 'lastname', 'class', 'test_score (max 40)', 'exam_score (max 60)'];
+  const rows = students.map(s => [
+    s.student_id, s.firstname, s.lastname, className, '', '',
+  ]);
+  const csv = [header, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeName = (s: string) => s.replace(/[^a-z0-9]/gi, '_');
+  a.href = url;
+  a.download = `results_template_${safeName(className)}_${safeName(subject)}_${safeName(session)}_${safeName(term)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseResultsCSV(text: string): { student_id: string; test_score: string; exam_score: string }[] {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  // Parse header to find column indices
+  const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+  const idIdx   = header.findIndex(h => h === 'student_id');
+  const caIdx   = header.findIndex(h => h.startsWith('test_score'));
+  const examIdx = header.findIndex(h => h.startsWith('exam_score'));
+  if (idIdx === -1 || caIdx === -1 || examIdx === -1) return [];
+
+  const results: { student_id: string; test_score: string; exam_score: string }[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    // Simple CSV split — handles quoted fields
+    const cols = lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g) ?? [];
+    const clean = (v: string | undefined) => (v ?? '').replace(/^"|"$/g, '').trim();
+    const student_id = clean(cols[idIdx]);
+    const test_score = clean(cols[caIdx]);
+    const exam_score = clean(cols[examIdx]);
+    if (student_id) results.push({ student_id, test_score, exam_score });
+  }
+  return results;
+}
 
 async function toBase64(url: string): Promise<string> {
   try {
@@ -234,6 +274,7 @@ export default function StaffResults() {
   const [uploadTerm, setUploadTerm]       = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [commentModal, setCommentModal] = useState<{ student_id: string; comment: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [attendanceModal, setAttendanceModal] = useState(false);
   const [attendanceClass, setAttendanceClass] = useState('');
   const [attendanceStudents, setAttendanceStudents] = useState<any[]>([]);
@@ -418,6 +459,66 @@ export default function StaffResults() {
       load();
     } catch (e: any) { toast.error(e?.message ?? 'Failed to upload'); }
     finally { setSubmitting(false); }
+  };
+
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const parsed = parseResultsCSV(text);
+      if (!parsed.length) {
+        toast.error('No valid rows found. Make sure you are using the downloaded template.');
+        return;
+      }
+      let matched = 0;
+      setRows(prev => {
+        const next = { ...prev };
+        parsed.forEach(({ student_id, test_score, exam_score }) => {
+          if (next[student_id] !== undefined) {
+            next[student_id] = { test_score, exam_score };
+            matched++;
+          }
+        });
+        return next;
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      const unmatched = parsed.length - matched;
+      if (matched === 0) toast.error('No student IDs in the file match this class. Download a fresh template.');
+      else if (unmatched > 0) toast.success(`${matched} scores loaded · ${unmatched} ID(s) not in this class (skipped)`);
+      else toast.success(`${matched} scores loaded from file`);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const parsed = parseResultsCSV(text);
+      if (!parsed.length) { toast.error('No valid rows found. Make sure you are using the downloaded template.'); return; }
+      let matched = 0;
+      setRows(prev => {
+        const next = { ...prev };
+        parsed.forEach(({ student_id, test_score, exam_score }) => {
+          if (next[student_id] !== undefined) {
+            next[student_id] = { test_score, exam_score };
+            matched++;
+          }
+        });
+        return next;
+      });
+      // reset file input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      const unmatched = parsed.length - matched;
+      if (matched === 0) toast.error('No student IDs in the file match this class. Download a fresh template.');
+      else if (unmatched > 0) toast.success(`${matched} scores loaded · ${unmatched} ID(s) not found in this class (skipped)`);
+      else toast.success(`${matched} scores loaded from file`);
+    };
+    reader.readAsText(file);
   };
 
   const handleDelete = async () => {
@@ -692,7 +793,42 @@ export default function StaffResults() {
               ) : uploadStudents.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-6">No students found in this class.</p>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-gray-100">
+                <>
+                  {/* Offline CSV workflow */}
+                  <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-amber-800">Poor internet? Work offline</p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Download the template, fill scores in Excel/Sheets, then import the saved file when ready.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => downloadResultsTemplate(uploadStudents, uploadClass, uploadCourse, uploadSession, uploadTerm)}
+                        disabled={!uploadCourse}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                        title={!uploadCourse ? 'Select a subject first' : 'Download CSV template'}
+                      >
+                        <Download size={13} /> Template
+                      </button>
+                      <label
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-amber-300 hover:bg-amber-50 text-amber-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                        title="Import filled CSV file"
+                      >
+                        <FileUp size={13} /> Import CSV
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".csv,text/csv"
+                          className="hidden"
+                          onChange={handleCSVImport}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-gray-100">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -732,6 +868,7 @@ export default function StaffResults() {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
 
               <div className="flex gap-3 pt-2">

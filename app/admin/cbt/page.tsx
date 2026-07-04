@@ -6,6 +6,7 @@ import { useSchoolData } from '@/hooks/useSchoolData';
 import {
   Monitor, Search, ChevronDown, ChevronUp, User, Clock,
   Calendar, CheckCircle2, AlertCircle, HelpCircle, BookOpen, Trash2,
+  Upload, RefreshCw, CheckCircle,
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useEffect, useState } from 'react';
@@ -73,6 +74,74 @@ function ScheduleBadge({ start, end }: { start: string | null; end: string | nul
     <span className="inline-flex items-center gap-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
       <AlertCircle size={10} /> Expired
     </span>
+  );
+}
+
+// ─── Import CBT Results from desktop export ──────────────────────────────────
+// Accepts a .cbt-results.json produced by the desktop "Export for Upload" button
+// and posts it to POST /admin/cbt/results/import.
+function ImportResultsButton({ onImported }: { onImported?: () => void }) {
+  const toast = useToast();
+  const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    setStatus('working');
+    try {
+      const text = await file.text();
+      const payload = JSON.parse(text);
+
+      if (!Array.isArray(payload.results)) {
+        throw new Error('Invalid file: missing "results" array');
+      }
+
+      const res = await api.post<any>(endpoints.admin.cbtResultsImport, {
+        results: payload.results,
+        answers: Array.isArray(payload.answers) ? payload.answers : [],
+      });
+
+      const inserted = res?.data?.resultsInserted ?? res?.resultsInserted ?? '?';
+      const answers  = res?.data?.answersInserted ?? res?.answersInserted ?? '?';
+      toast.success(`Imported ${inserted} result${inserted !== 1 ? 's' : ''} and ${answers} answer${answers !== 1 ? 's' : ''}`);
+      setStatus('done');
+      onImported?.();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Import failed');
+      setStatus('error');
+    } finally {
+      setTimeout(() => setStatus('idle'), 3000);
+    }
+  };
+
+  return (
+    <label
+      title="Upload a .cbt-results.json exported from the desktop CBT app"
+      className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl cursor-pointer transition-all select-none ${
+        status === 'done'    ? 'bg-green-100 text-green-700 border border-green-200' :
+        status === 'error'   ? 'bg-red-100 text-red-600 border border-red-200' :
+        status === 'working' ? 'bg-purple-100 text-purple-500 border border-purple-200 cursor-not-allowed' :
+        'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
+      }`}
+    >
+      {status === 'working' ? <RefreshCw size={13} className="animate-spin" /> :
+       status === 'done'    ? <CheckCircle size={13} /> :
+       status === 'error'   ? <AlertCircle size={13} /> :
+       <Upload size={13} />}
+      {status === 'working' ? 'Importing…' :
+       status === 'done'    ? 'Imported!' :
+       status === 'error'   ? 'Failed' :
+       'Import CBT Results'}
+      <input
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        disabled={status === 'working'}
+        onChange={handleFile}
+      />
+    </label>
   );
 }
 
@@ -170,6 +239,7 @@ export default function AdminCbtPage() {
             All CBT tests uploaded by teachers — {tests.length} test{tests.length !== 1 ? 's' : ''} found
           </p>
         </div>
+        <ImportResultsButton onImported={loadTests} />
       </div>
 
       {/* Filters */}

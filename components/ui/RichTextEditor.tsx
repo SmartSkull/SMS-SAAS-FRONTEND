@@ -62,6 +62,41 @@ const TOOLBAR: (ToolbarBtn | 'divider')[] = [
   },
   'divider',
   {
+    label: <span className="text-[11px] font-bold tracking-wide">AA</span>,
+    title: 'UPPERCASE',
+    action: (e) => {
+      if (!e) return;
+      const { from, to } = e.state.selection;
+      if (from === to) return;
+      const selected = e.state.doc.textBetween(from, to, ' ');
+      e.chain().focus().deleteRange({ from, to }).insertContentAt(from, selected.toUpperCase()).run();
+    },
+  },
+  {
+    label: <span className="text-[11px] font-bold tracking-wide">aa</span>,
+    title: 'lowercase',
+    action: (e) => {
+      if (!e) return;
+      const { from, to } = e.state.selection;
+      if (from === to) return;
+      const selected = e.state.doc.textBetween(from, to, ' ');
+      e.chain().focus().deleteRange({ from, to }).insertContentAt(from, selected.toLowerCase()).run();
+    },
+  },
+  {
+    label: <span className="text-[11px] font-bold tracking-wide">Aa</span>,
+    title: 'Title Case',
+    action: (e) => {
+      if (!e) return;
+      const { from, to } = e.state.selection;
+      if (from === to) return;
+      const selected = e.state.doc.textBetween(from, to, ' ');
+      const titled = selected.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+      e.chain().focus().deleteRange({ from, to }).insertContentAt(from, titled).run();
+    },
+  },
+  'divider',
+  {
     label: <span className="text-xs font-mono font-bold">H1</span>,
     title: 'Heading 1',
     action: (e) => e?.chain().focus().toggleHeading({ level: 1 }).run(),
