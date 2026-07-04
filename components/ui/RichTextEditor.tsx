@@ -13,6 +13,9 @@ interface RichTextEditorProps {
   placeholder?: string;
   minRows?: number;
   className?: string;
+  /** When true, hides bold/italic/underline/strike/H1/H2/lists/align buttons.
+   *  Use for CBT questions/options which are saved as plain text. */
+  plainTextMode?: boolean;
 }
 
 type ToolbarBtn = {
@@ -20,30 +23,35 @@ type ToolbarBtn = {
   title: string;
   action: (editor: ReturnType<typeof useEditor>) => void;
   isActive?: (editor: ReturnType<typeof useEditor>) => boolean;
+  richOnly?: boolean; // hidden when plainTextMode=true
 };
 
 const TOOLBAR: (ToolbarBtn | 'divider')[] = [
   {
     label: <strong>B</strong>,
     title: 'Bold',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleBold().run(),
     isActive: (e) => !!e?.isActive('bold'),
   },
   {
     label: <em>I</em>,
     title: 'Italic',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleItalic().run(),
     isActive: (e) => !!e?.isActive('italic'),
   },
   {
     label: <span className="underline">U</span>,
     title: 'Underline',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleUnderline().run(),
     isActive: (e) => !!e?.isActive('underline'),
   },
   {
     label: <s>S</s>,
     title: 'Strikethrough',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleStrike().run(),
     isActive: (e) => !!e?.isActive('strike'),
   },
@@ -99,12 +107,14 @@ const TOOLBAR: (ToolbarBtn | 'divider')[] = [
   {
     label: <span className="text-xs font-mono font-bold">H1</span>,
     title: 'Heading 1',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleHeading({ level: 1 }).run(),
     isActive: (e) => !!e?.isActive('heading', { level: 1 }),
   },
   {
     label: <span className="text-xs font-mono font-bold">H2</span>,
     title: 'Heading 2',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleHeading({ level: 2 }).run(),
     isActive: (e) => !!e?.isActive('heading', { level: 2 }),
   },
@@ -118,6 +128,7 @@ const TOOLBAR: (ToolbarBtn | 'divider')[] = [
       </svg>
     ),
     title: 'Bullet list',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleBulletList().run(),
     isActive: (e) => !!e?.isActive('bulletList'),
   },
@@ -130,6 +141,7 @@ const TOOLBAR: (ToolbarBtn | 'divider')[] = [
       </svg>
     ),
     title: 'Numbered list',
+    richOnly: true,
     action: (e) => e?.chain().focus().toggleOrderedList().run(),
     isActive: (e) => !!e?.isActive('orderedList'),
   },
@@ -142,6 +154,7 @@ const TOOLBAR: (ToolbarBtn | 'divider')[] = [
       </svg>
     ),
     title: 'Align left',
+    richOnly: true,
     action: (e) => e?.chain().focus().setTextAlign('left').run(),
     isActive: (e) => !!e?.isActive({ textAlign: 'left' }),
   },
@@ -153,6 +166,7 @@ const TOOLBAR: (ToolbarBtn | 'divider')[] = [
       </svg>
     ),
     title: 'Align center',
+    richOnly: true,
     action: (e) => e?.chain().focus().setTextAlign('center').run(),
     isActive: (e) => !!e?.isActive({ textAlign: 'center' }),
   },
@@ -164,12 +178,13 @@ const TOOLBAR: (ToolbarBtn | 'divider')[] = [
       </svg>
     ),
     title: 'Align right',
+    richOnly: true,
     action: (e) => e?.chain().focus().setTextAlign('right').run(),
     isActive: (e) => !!e?.isActive({ textAlign: 'right' }),
   },
 ];
 
-export default function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
+export default function RichTextEditor({ value, onChange, placeholder, className, plainTextMode = false }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,

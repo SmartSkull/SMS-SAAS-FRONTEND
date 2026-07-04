@@ -236,8 +236,8 @@ export default function StaffCbt() {
     setEditSubmitting(true);
     try {
       await api.put(`${endpoints.staff.cbtQuestions}/${editingId}`, {
-        question: stripHtml(editForm.question), optionA: stripHtml(editForm.option_a), optionB: stripHtml(editForm.option_b),
-        optionC: stripHtml(editForm.option_c), optionD: stripHtml(editForm.option_d), answer: editForm.answer,
+        question: editForm.question, optionA: editForm.option_a, optionB: editForm.option_b,
+        optionC: editForm.option_c, optionD: editForm.option_d, answer: editForm.answer,
       });
       toast.success('Question updated');
       setEditingId(null);
@@ -341,8 +341,8 @@ export default function StaffCbt() {
       if (!q.question.trim() || q.savedId) continue; // skip blank or already saved
       try {
         const res = await api.post<any>(endpoints.staff.cbtQuestions, {
-          question: stripHtml(q.question), optionA: stripHtml(q.option_a), optionB: stripHtml(q.option_b),
-          optionC: stripHtml(q.option_c), optionD: stripHtml(q.option_d), answer: q.answer,
+          question: q.question, optionA: q.option_a, optionB: q.option_b,
+          optionC: q.option_c, optionD: q.option_d, answer: q.answer,
           course: manualMeta.course, class: manualMeta.class,
           session: manualMeta.session, term: manualMeta.term,
           duration: manualMeta.duration,
@@ -592,11 +592,11 @@ export default function StaffCbt() {
       for (const q of parsedQuestions) {
         try {
           await api.post(endpoints.staff.cbtQuestions, {
-            question: stripHtml(q.question),
-            optionA: stripHtml(q.option1),
-            optionB: stripHtml(q.option2),
-            optionC: stripHtml(q.option3),
-            optionD: stripHtml(q.option4),
+            question: q.question,
+            optionA: q.option1,
+            optionB: q.option2,
+            optionC: q.option3,
+            optionD: q.option4,
             answer: q.answer,
             course: ocrMeta.course,
             class: ocrMeta.class,
