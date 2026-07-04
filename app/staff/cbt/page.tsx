@@ -763,9 +763,12 @@ export default function StaffCbt() {
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
-                      <input key={opt} placeholder={`Option ${opt.split('_')[1].toUpperCase()}`} value={q[opt]}
-                        onChange={e => updateManualQ(i, opt, e.target.value)}
-                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                      <RichTextEditor
+                        key={opt}
+                        value={q[opt]}
+                        onChange={val => updateManualQ(i, opt, val)}
+                        placeholder={`Option ${opt.split('_')[1].toUpperCase()}`}
+                      />
                     ))}
                   </div>
                   <div className="flex items-center gap-3">
@@ -1027,9 +1030,12 @@ export default function StaffCbt() {
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
-                          <input key={opt} required placeholder={`Option ${opt.split('_')[1].toUpperCase()}`}
-                            value={editForm[opt]} onChange={e => setEditForm(p => ({ ...p, [opt]: e.target.value }))}
-                            className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                          <RichTextEditor
+                            key={opt}
+                            value={editForm[opt]}
+                            onChange={val => setEditForm(p => ({ ...p, [opt]: val }))}
+                            placeholder={`Option ${opt.split('_')[1].toUpperCase()}`}
+                          />
                         ))}
                       </div>
                       <div className="flex items-center gap-3">
