@@ -42,6 +42,24 @@ const EMPTY_Q = { question: '', option_a: '', option_b: '', option_c: '', option
 const EMPTY = { ...EMPTY_Q, ...EMPTY_META };
 const SEL_CLS = "border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500";
 
+// Strip HTML tags and decode common HTML entities to plain text.
+// Used before sending to the API so the DB always stores clean text.
+function stripHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')   // <br> → newline
+    .replace(/<\/p>/gi, '\n')         // closing </p> → newline
+    .replace(/<[^>]+>/g, '')          // remove all remaining tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{2,}/g, '\n')         // collapse multiple newlines
+    .trim();
+}
+
 type ManualQ = typeof EMPTY_Q & { savedId?: string }; // savedId = DB id once persisted
 
 const DRAFT_KEY = 'cbt_manual_draft';
@@ -218,8 +236,8 @@ export default function StaffCbt() {
     setEditSubmitting(true);
     try {
       await api.put(`${endpoints.staff.cbtQuestions}/${editingId}`, {
-        question: editForm.question, optionA: editForm.option_a, optionB: editForm.option_b,
-        optionC: editForm.option_c, optionD: editForm.option_d, answer: editForm.answer,
+        question: stripHtml(editForm.question), optionA: stripHtml(editForm.option_a), optionB: stripHtml(editForm.option_b),
+        optionC: stripHtml(editForm.option_c), optionD: stripHtml(editForm.option_d), answer: editForm.answer,
       });
       toast.success('Question updated');
       setEditingId(null);
@@ -323,8 +341,8 @@ export default function StaffCbt() {
       if (!q.question.trim() || q.savedId) continue; // skip blank or already saved
       try {
         const res = await api.post<any>(endpoints.staff.cbtQuestions, {
-          question: q.question, optionA: q.option_a, optionB: q.option_b,
-          optionC: q.option_c, optionD: q.option_d, answer: q.answer,
+          question: stripHtml(q.question), optionA: stripHtml(q.option_a), optionB: stripHtml(q.option_b),
+          optionC: stripHtml(q.option_c), optionD: stripHtml(q.option_d), answer: q.answer,
           course: manualMeta.course, class: manualMeta.class,
           session: manualMeta.session, term: manualMeta.term,
           duration: manualMeta.duration,
@@ -574,11 +592,11 @@ export default function StaffCbt() {
       for (const q of parsedQuestions) {
         try {
           await api.post(endpoints.staff.cbtQuestions, {
-            question: q.question,
-            optionA: q.option1,
-            optionB: q.option2,
-            optionC: q.option3,
-            optionD: q.option4,
+            question: stripHtml(q.question),
+            optionA: stripHtml(q.option1),
+            optionB: stripHtml(q.option2),
+            optionC: stripHtml(q.option3),
+            optionD: stripHtml(q.option4),
             answer: q.answer,
             course: ocrMeta.course,
             class: ocrMeta.class,
