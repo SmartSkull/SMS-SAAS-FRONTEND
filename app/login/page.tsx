@@ -1,6 +1,7 @@
 'use client';
 import { useLogin } from '@/hooks/useLogin';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
+import { getImageUrl } from '@/lib/api';
 import clsx from 'clsx';
 import { Eye, EyeOff, GraduationCap, Search, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -150,6 +151,7 @@ export default function LoginPage() {
                         const fullName = [s.firstname, s.lastname].filter(Boolean).join(' ');
                         const id = isStaff ? s.staff_id : s.student_id;
                         const subtitle = isStaff ? s.role : s.class;
+                        const imgUrl = getImageUrl(s.image);
                         return (
                           <button
                             key={id}
@@ -159,13 +161,22 @@ export default function LoginPage() {
                               setForm((prev) => ({ ...prev, id: isStaff ? id : fullName }));
                               setShowSug(false);
                             }}
-                            className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
                           >
-                            <div>
-                              <p className="text-gray-900 text-sm font-medium">{fullName}</p>
-                              {subtitle && <p className="text-gray-400 text-xs">{subtitle}</p>}
+                            <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gray-100 border border-gray-200">
+                              {imgUrl ? (
+                                <img src={imgUrl} alt={fullName} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs font-bold">
+                                  {fullName.charAt(0).toUpperCase()}
+                                </div>
+                              )}
                             </div>
-                            <span className="text-gray-400 text-xs font-mono">{id}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-gray-900 text-sm font-medium truncate">{fullName}</p>
+                              {subtitle && <p className="text-gray-400 text-xs truncate">{subtitle}</p>}
+                            </div>
+                            <span className="text-gray-400 text-xs font-mono flex-shrink-0">{id}</span>
                           </button>
                         );
                       })}
