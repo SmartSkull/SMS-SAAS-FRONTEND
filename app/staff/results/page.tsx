@@ -468,37 +468,6 @@ export default function StaffResults() {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       const parsed = parseResultsCSV(text);
-      if (!parsed.length) {
-        toast.error('No valid rows found. Make sure you are using the downloaded template.');
-        return;
-      }
-      let matched = 0;
-      setRows(prev => {
-        const next = { ...prev };
-        parsed.forEach(({ student_id, test_score, exam_score }) => {
-          if (next[student_id] !== undefined) {
-            next[student_id] = { test_score, exam_score };
-            matched++;
-          }
-        });
-        return next;
-      });
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      const unmatched = parsed.length - matched;
-      if (matched === 0) toast.error('No student IDs in the file match this class. Download a fresh template.');
-      else if (unmatched > 0) toast.success(`${matched} scores loaded · ${unmatched} ID(s) not in this class (skipped)`);
-      else toast.success(`${matched} scores loaded from file`);
-    };
-    reader.readAsText(file);
-  };
-
-  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const parsed = parseResultsCSV(text);
       if (!parsed.length) { toast.error('No valid rows found. Make sure you are using the downloaded template.'); return; }
       let matched = 0;
       setRows(prev => {
