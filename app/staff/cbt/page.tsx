@@ -42,6 +42,18 @@ const EMPTY_Q = { question: '', option_a: '', option_b: '', option_c: '', option
 const EMPTY = { ...EMPTY_Q, ...EMPTY_META };
 const SEL_CLS = "border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500";
 
+// Renders a value that may be plain text or HTML from the rich-text editor.
+function HtmlText({ html, className }: { html: string; className?: string }) {
+  // Strip single wrapping <p>…</p> that Tiptap adds so content stays inline.
+  const inlineHtml = (html ?? '').replace(/^<p>([\s\S]*)<\/p>$/, '$1');
+  return (
+    <span
+      className={className}
+      dangerouslySetInnerHTML={{ __html: inlineHtml }}
+    />
+  );
+}
+
 // Strip HTML tags and decode common HTML entities to plain text.
 // Used before sending to the API so the DB always stores clean text.
 function stripHtml(html: string): string {
@@ -1082,12 +1094,16 @@ export default function StaffCbt() {
                           : <Square size={16} />}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800">{i + 1}. {q.question}</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {i + 1}. <HtmlText html={q.question} className="[&_p]:inline [&_p]:m-0" />
+                        </p>
                         <div className="grid grid-cols-2 gap-1 mt-2">
                           {(['A', 'B', 'C', 'D'] as const).map((letter) => (
                             <p key={letter} className={`text-xs px-2 py-1 rounded-lg ${
                               q.answer === letter ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-500'
-                            }`}>{letter}. {(q as any)[`option${letter}`]}</p>
+                            }`}>
+                              {letter}. <HtmlText html={(q as any)[`option${letter}`] ?? ''} className="[&_p]:inline [&_p]:m-0" />
+                            </p>
                           ))}
                         </div>
                       </div>

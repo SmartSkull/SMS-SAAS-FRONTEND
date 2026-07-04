@@ -415,7 +415,7 @@ export default function AdminCbtPage() {
                               <div className="flex items-start justify-between gap-4">
                                 <p className="text-sm font-medium text-gray-800 flex-1 leading-relaxed">
                                   <span className="text-gray-400 font-normal mr-1">{i + 1}.</span>
-                                  <span dangerouslySetInnerHTML={{ __html: q.question }} />
+                                  <span dangerouslySetInnerHTML={{ __html: (q.question ?? '').replace(/^<p>([\s\S]*)<\/p>$/, '$1') }} />
                                 </p>
                                 <div className="flex flex-col items-end shrink-0 gap-1 min-w-fit">
                                   <span className="flex items-center gap-1 text-xs text-gray-600 font-medium">
@@ -432,15 +432,18 @@ export default function AdminCbtPage() {
                               </div>
                               <div className="grid grid-cols-2 gap-1.5 mt-3">
                                 {(['A', 'B', 'C', 'D'] as const).map(letter => {
-                                  const opt = (q as any)[`option${letter}`];
+                                  const opt = (q as any)[`option${letter}`] ?? '';
                                   const isCorrect = q.answer === letter;
+                                  // Strip wrapping <p>…</p> that Tiptap adds so the
+                                  // text stays inline inside the pill.
+                                  const inlineHtml = opt.replace(/^<p>([\s\S]*)<\/p>$/, '$1');
                                   return (
                                     <p key={letter} className={`text-xs px-2.5 py-1.5 rounded-lg ${
                                       isCorrect
                                         ? 'bg-green-100 text-green-700 font-semibold'
                                         : 'bg-gray-100 text-gray-500'
                                     }`}>
-                                      {letter}. {opt}
+                                      {letter}. <span dangerouslySetInnerHTML={{ __html: inlineHtml }} />
                                     </p>
                                   );
                                 })}
