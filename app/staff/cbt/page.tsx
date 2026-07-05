@@ -38,7 +38,7 @@ interface ParsedQuestion {
 }
 
 const EMPTY_META = { course: '', class: '', session: '', term: '', duration: '30' };
-const EMPTY_Q = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A' };
+const EMPTY_Q = { question: '', option_a: '', option_b: '', option_c: '', option_d: '', answer: 'A', sectionLabel: '', sectionOrder: 0 };
 const EMPTY = { ...EMPTY_Q, ...EMPTY_META };
 const SEL_CLS = "border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500";
 
@@ -239,7 +239,7 @@ export default function StaffCbt() {
 
   const openEdit = (q: any) => {
     setEditingId(q.id);
-    setEditForm({ question: q.question, option_a: q.optionA, option_b: q.optionB, option_c: q.optionC, option_d: q.optionD, answer: q.answer, course: '', class: '', session: '', term: '', duration: '30' });
+    setEditForm({ question: q.question, option_a: q.optionA, option_b: q.optionB, option_c: q.optionC, option_d: q.optionD, answer: q.answer, course: '', class: '', session: '', term: '', duration: '30', sectionLabel: q.sectionLabel ?? '', sectionOrder: q.sectionOrder ?? 0 });
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -250,6 +250,8 @@ export default function StaffCbt() {
       await api.put(`${endpoints.staff.cbtQuestions}/${editingId}`, {
         question: editForm.question, optionA: editForm.option_a, optionB: editForm.option_b,
         optionC: editForm.option_c, optionD: editForm.option_d, answer: editForm.answer,
+        sectionLabel: (editForm as any).sectionLabel || null,
+        sectionOrder: (editForm as any).sectionOrder ?? 0,
       });
       toast.success('Question updated');
       setEditingId(null);
@@ -355,6 +357,8 @@ export default function StaffCbt() {
         const res = await api.post<any>(endpoints.staff.cbtQuestions, {
           question: q.question, optionA: q.option_a, optionB: q.option_b,
           optionC: q.option_c, optionD: q.option_d, answer: q.answer,
+          sectionLabel: q.sectionLabel || null,
+          sectionOrder: q.sectionOrder ?? 0,
           course: manualMeta.course, class: manualMeta.class,
           session: manualMeta.session, term: manualMeta.term,
           duration: manualMeta.duration,
@@ -786,6 +790,31 @@ export default function StaffCbt() {
                   )}
                 </div>
                 <div className={clsx('space-y-3', q.savedId && 'opacity-60 pointer-events-none')}>
+                  {/* Section label — optional heading/passage shown above this question group */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      Section / Passage Heading <span className="text-gray-400 font-normal">(optional — leave blank for regular questions)</span>
+                    </label>
+                    <RichTextEditor
+                      value={q.sectionLabel ?? ''}
+                      onChange={val => updateManualQ(i, 'sectionLabel', val)}
+                      placeholder="e.g. Read the passage below and answer questions 1–5…"
+                    />
+                    <p className="text-[11px] text-amber-600 mt-1">
+                      ⚠ If set, this heading is shown above <strong>every question in this section</strong>. Assign the same <strong>Section Order</strong> number to all questions that belong together.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700 shrink-0">Section Order:</label>
+                    <input
+                      type="number" min="0" max="999"
+                      value={q.sectionOrder ?? 0}
+                      onChange={e => updateManualQ(i, 'sectionOrder', String(parseInt(e.target.value) || 0))}
+                      className={`w-24 ${SEL_CLS}`}
+                      title="Questions with the same Section Order are grouped together and shuffled only within their group. Use 0 for ungrouped questions."
+                    />
+                    <span className="text-xs text-gray-400">Questions with the same number stay grouped together</span>
+                  </div>
                   <RichTextEditor
                     value={q.question}
                     onChange={val => updateManualQ(i, 'question', val)}
@@ -1053,6 +1082,25 @@ export default function StaffCbt() {
                         <span className="text-sm font-semibold text-gray-700">Editing Question {i + 1}</span>
                         <button type="button" onClick={() => setEditingId(null)} className="text-gray-400 hover:text-gray-600"><X size={16} /></button>
                       </div>
+                      {/* Section label */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Section / Passage Heading <span className="text-gray-400 font-normal">(optional)</span></label>
+                        <RichTextEditor
+                          value={(editForm as any).sectionLabel ?? ''}
+                          onChange={val => setEditForm(p => ({ ...p, sectionLabel: val } as any))}
+                          placeholder="e.g. Read the passage below and answer questions…"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="text-sm font-medium text-gray-700 shrink-0">Section Order:</label>
+                        <input
+                          type="number" min="0" max="999"
+                          value={(editForm as any).sectionOrder ?? 0}
+                          onChange={e => setEditForm(p => ({ ...p, sectionOrder: parseInt(e.target.value) || 0 } as any))}
+                          className={`w-24 ${SEL_CLS}`}
+                        />
+                        <span className="text-xs text-gray-400">Same number = same group</span>
+                      </div>
                       <RichTextEditor
                         value={editForm.question}
                         onChange={val => setEditForm(p => ({ ...p, question: val }))}
@@ -1081,9 +1129,20 @@ export default function StaffCbt() {
                     </form>
                   ) : (
                     <div className={clsx(
-                      'flex items-start justify-between p-4 border rounded-xl hover:bg-gray-50 transition-colors',
+                      'border rounded-xl hover:bg-gray-50 transition-colors overflow-hidden',
                       selectedIds.has(String(q.id)) ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100'
                     )}>
+                      {/* Section heading badge in list view */}
+                      {q.sectionLabel && (
+                        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
+                          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Section Heading (Order: {q.sectionOrder ?? 0})</p>
+                          <div
+                            className="text-xs text-amber-900 leading-relaxed prose prose-xs max-w-none"
+                            dangerouslySetInnerHTML={{ __html: q.sectionLabel! }}
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between p-4">
                       <button
                         onClick={() => toggleSelect(String(q.id))}
                         className="mt-0.5 mr-3 shrink-0 text-gray-400 hover:text-blue-600"
@@ -1111,6 +1170,7 @@ export default function StaffCbt() {
                         <button onClick={() => openEdit(q)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={15} /></button>
                         <button onClick={() => handleDelete(q.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
                       </div>
+                    </div>
                     </div>
                   )}
                 </div>

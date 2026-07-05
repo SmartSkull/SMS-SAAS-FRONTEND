@@ -398,7 +398,19 @@ export default function StudentCBT() {
         </div>
 
         {/* Question card */}
-        <div className="w-full max-w-2xl bg-white rounded-2xl card border border-gray-100 shadow-sm p-6">
+        <div className="w-full max-w-2xl">
+          {/* Section heading — shown when this question has a passage/instruction */}
+          {q.sectionLabel && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-3">
+              <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">Instructions / Passage</p>
+              <div
+                className="text-sm text-amber-900 leading-relaxed prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: q.sectionLabel! }}
+              />
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl card border border-gray-100 shadow-sm p-6">
           <p className="text-xs text-gray-400 mb-2">Question {current + 1} of {questions.length}</p>
           <p className="font-semibold text-gray-900 mb-5 text-base leading-relaxed">{q.question}</p>
           <div className="space-y-3">
@@ -422,6 +434,7 @@ export default function StudentCBT() {
               );
             })}
           </div>
+        </div>
         </div>
 
         {/* Navigation */}

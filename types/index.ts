@@ -185,6 +185,8 @@ export interface CbtQuestion {
   question: string;
   options: string[];
   answer?: string;
+  sectionLabel?: string | null;
+  sectionOrder?: number;
 }
 
 export interface Payment {

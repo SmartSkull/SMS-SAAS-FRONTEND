@@ -41,6 +41,8 @@ interface CbtQuestion {
   course: string;
   testId: string;
   uploadedBy: string;
+  sectionLabel?: string | null;
+  sectionOrder?: number;
 }
 
 const SEL = 'border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500';
@@ -412,6 +414,16 @@ export default function AdminCbtPage() {
                           </p>
                           {qs.map((q, i) => (
                             <div key={q.id} className="bg-white rounded-xl border border-gray-100 p-4">
+                              {/* Section heading badge */}
+                              {q.sectionLabel && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Section Heading</p>
+                                  <div
+                                    className="text-xs text-amber-900 leading-relaxed prose prose-xs max-w-none"
+                                    dangerouslySetInnerHTML={{ __html: q.sectionLabel }}
+                                  />
+                                </div>
+                              )}
                               <div className="flex items-start justify-between gap-4">
                                 <p className="text-sm font-medium text-gray-800 flex-1 leading-relaxed">
                                   <span className="text-gray-400 font-normal mr-1">{i + 1}.</span>
