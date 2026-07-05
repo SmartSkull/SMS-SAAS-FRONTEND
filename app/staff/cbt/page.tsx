@@ -4,7 +4,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { CbtQuestion } from '@/types';
-import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle, Search, CheckSquare, Square } from 'lucide-react';
+import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle, Search, CheckSquare, Square, Play } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
 import mammoth from 'mammoth';
@@ -116,6 +116,7 @@ export default function StaffCbt() {
   const [questionCount, setQuestionCount] = useState(10);
   const [manualQs, setManualQs] = useState<ManualQ[]>([]);
   const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false); // true when a saved draft exists but hasn't been resumed yet
 
   // OCR / Bulk upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -224,17 +225,15 @@ export default function StaffCbt() {
   useEffect(() => {
     const draft = loadDraft();
     if (!draft) return;
-    setManualMeta(draft.meta);
-    setManualQs(draft.qs);
-    if (draft.step === 'entry' || draft.step === 'setup') {
-      setManualStep(draft.step as 'entry' | 'setup');
-    }
+    // Don't auto-open — just flag that a draft exists so the banner appears.
+    setHasDraft(true);
   }, []);
 
   // ── Persist draft whenever manual state changes ───────────────────────────
   useEffect(() => {
-    if (manualStep === null) { clearDraft(); return; }
+    if (manualStep === null) { clearDraft(); setHasDraft(false); return; }
     saveDraft(manualMeta, manualQs, manualStep);
+    setHasDraft(false); // once resumed, banner is no longer needed
   }, [manualStep, manualMeta, manualQs]);
 
   const openEdit = (q: any) => {
@@ -311,6 +310,20 @@ export default function StaffCbt() {
     setQuestionCount(10);
     setManualQs([]);
     setManualStep('setup');
+  };
+
+  const resumeDraft = () => {
+    const draft = loadDraft();
+    if (!draft) return;
+    setManualMeta(draft.meta);
+    setManualQs(draft.qs);
+    setManualStep(draft.step === 'entry' ? 'entry' : 'setup');
+    setHasDraft(false);
+  };
+
+  const discardDraft = () => {
+    clearDraft();
+    setHasDraft(false);
   };
 
   const cancelManual = () => {
@@ -852,6 +865,43 @@ export default function StaffCbt() {
             </button>
             <button onClick={cancelManual} className="ml-auto border border-gray-200 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 text-gray-600">
               Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Draft resume banner — shown when a saved draft exists after login */}
+      {tab === 'questions' && manualStep === null && hasDraft && (
+        <div className="flex items-center justify-between gap-4 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <FileText size={18} className="text-amber-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-amber-900">You have an unsaved question draft</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                {(() => {
+                  const d = loadDraft();
+                  if (!d) return 'Draft found in local storage.';
+                  const saved = d.qs.filter((q: any) => q.savedId).length;
+                  const total = d.qs.length;
+                  return `${d.meta.course || 'Unknown subject'} · ${d.meta.class || 'Unknown class'} · ${saved} of ${total} question${total !== 1 ? 's' : ''} saved`;
+                })()}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={resumeDraft}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
+            >
+              <Play size={14} /> Continue Draft
+            </button>
+            <button
+              onClick={discardDraft}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-amber-300 text-amber-700 hover:bg-amber-100 text-sm font-medium transition-colors"
+            >
+              <X size={14} /> Discard
             </button>
           </div>
         </div>
