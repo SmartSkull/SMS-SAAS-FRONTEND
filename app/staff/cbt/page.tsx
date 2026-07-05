@@ -307,6 +307,8 @@ export default function StaffCbt() {
 
   // ── Manual entry helpers ──────────────────────────────────────────────────
   const startManualEntry = () => {
+    clearDraft(); // discard any existing draft before starting a new batch
+    setHasDraft(false);
     setManualMeta(EMPTY_META);
     setQuestionCount(10);
     setManualQs([]);
