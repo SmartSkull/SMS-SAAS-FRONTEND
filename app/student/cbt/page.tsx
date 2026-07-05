@@ -399,8 +399,8 @@ export default function StudentCBT() {
 
         {/* Question card */}
         <div className="w-full max-w-2xl">
-          {/* Section heading — shown when this question has a passage/instruction */}
-          {q.sectionLabel && (
+          {/* Section heading — only shown at the START of each new section group */}
+          {q.sectionLabel && (current === 0 || (questions[current - 1]?.sectionOrder ?? -1) !== (q.sectionOrder ?? 0)) && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mb-3">
               <p className="text-xs font-bold text-amber-600 uppercase tracking-wide mb-1">Instructions / Passage</p>
               <div

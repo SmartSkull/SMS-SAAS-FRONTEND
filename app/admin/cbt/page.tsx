@@ -414,8 +414,8 @@ export default function AdminCbtPage() {
                           </p>
                           {qs.map((q, i) => (
                             <div key={q.id} className="bg-white rounded-xl border border-gray-100 p-4">
-                              {/* Section heading badge */}
-                              {q.sectionLabel && (
+                              {/* Section heading badge — only at start of each section group */}
+                              {q.sectionLabel && (i === 0 || (qs[i - 1]?.sectionOrder ?? -1) !== (q.sectionOrder ?? 0)) && (
                                 <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
                                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Section Heading</p>
                                   <div

@@ -1217,8 +1217,8 @@ export default function StaffCbt() {
                       'border rounded-xl hover:bg-gray-50 transition-colors overflow-hidden',
                       selectedIds.has(String(q.id)) ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100'
                     )}>
-                      {/* Section heading badge in list view */}
-                      {q.sectionLabel && (
+                      {/* Section heading badge — only at start of each section group */}
+                      {q.sectionLabel && (i === 0 || (filtered[i - 1]?.sectionOrder ?? -1) !== (q.sectionOrder ?? 0)) && (
                         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2">
                           <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-0.5">Section Heading (Order: {q.sectionOrder ?? 0})</p>
                           <div
