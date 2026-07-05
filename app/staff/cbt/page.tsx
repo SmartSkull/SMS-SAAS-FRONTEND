@@ -229,11 +229,12 @@ export default function StaffCbt() {
     setHasDraft(true);
   }, []);
 
-  // ── Persist draft whenever manual state changes ───────────────────────────
+  // ── Persist draft whenever manual state changes (skip on first mount) ──────
+  const persistMounted = useRef(false);
   useEffect(() => {
+    if (!persistMounted.current) { persistMounted.current = true; return; } // skip initial mount
     if (manualStep === null) { clearDraft(); setHasDraft(false); return; }
     saveDraft(manualMeta, manualQs, manualStep);
-    setHasDraft(false); // once resumed, banner is no longer needed
   }, [manualStep, manualMeta, manualQs]);
 
   const openEdit = (q: any) => {
