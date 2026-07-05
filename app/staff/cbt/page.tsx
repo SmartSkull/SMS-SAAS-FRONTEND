@@ -233,9 +233,18 @@ export default function StaffCbt() {
   const persistMounted = useRef(false);
   useEffect(() => {
     if (!persistMounted.current) { persistMounted.current = true; return; } // skip initial mount
-    if (manualStep === null) { clearDraft(); setHasDraft(false); return; }
+    if (manualStep === null) {
+      // Only wipe the saved draft if there isn't a separate pending one waiting
+      // (hasDraft=true means user hasn't resumed yet — don't touch it)
+      if (!hasDraft) clearDraft();
+      return;
+    }
+    // Only overwrite the stored draft once the user has actual content
+    // (hasDraft=true + manualQs empty = new batch just started, keep old draft safe)
+    const hasContent = manualQs.some(q => q.question.trim());
+    if (hasDraft && !hasContent) return; // protect old draft until new batch has content
     saveDraft(manualMeta, manualQs, manualStep);
-  }, [manualStep, manualMeta, manualQs]);
+  }, [manualStep, manualMeta, manualQs, hasDraft]);
 
   const openEdit = (q: any) => {
     setEditingId(q.id);
@@ -307,8 +316,6 @@ export default function StaffCbt() {
 
   // ── Manual entry helpers ──────────────────────────────────────────────────
   const startManualEntry = () => {
-    clearDraft(); // discard any existing draft before starting a new batch
-    setHasDraft(false);
     setManualMeta(EMPTY_META);
     setQuestionCount(10);
     setManualQs([]);
@@ -330,7 +337,20 @@ export default function StaffCbt() {
   };
 
   const cancelManual = () => {
+    // If a saved draft exists in storage (user started a new batch without resuming),
+    // don't wipe it — just close the form and let the banner reappear.
+    const existingDraft = loadDraft();
+    const hasNewContent = manualQs.some(q => q.question.trim());
+    if (existingDraft && !hasNewContent) {
+      // New batch had no content typed — safe to abandon without touching the draft
+      setManualStep(null);
+      setManualQs([]);
+      setManualMeta(EMPTY_META);
+      setHasDraft(true); // bring the banner back
+      return;
+    }
     clearDraft();
+    setHasDraft(false);
     setManualStep(null);
     setManualQs([]);
     setManualMeta(EMPTY_META);
