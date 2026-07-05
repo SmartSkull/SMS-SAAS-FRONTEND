@@ -385,27 +385,39 @@ export default function StaffCbt() {
     }
     setManualSubmitting(true);
     let count = 0;
+    let failCount = 0;
     const updatedQs = [...manualQs];
     for (let i = 0; i < updatedQs.length; i++) {
       const q = updatedQs[i];
       if (!q.question.trim() || q.savedId) continue; // skip blank or already saved
       try {
         const res = await api.post<any>(endpoints.staff.cbtQuestions, {
-          question: q.question, optionA: q.option_a, optionB: q.option_b,
-          optionC: q.option_c, optionD: q.option_d, answer: q.answer,
+          question: q.question,
+          optionA: q.option_a || '',
+          optionB: q.option_b || '',
+          optionC: q.option_c || null,
+          optionD: q.option_d || null,
+          answer: q.answer || 'A',
           sectionLabel: q.sectionLabel || null,
-          sectionOrder: q.sectionOrder ?? 0,
+          sectionOrder: parseInt(String(q.sectionOrder ?? 0), 10) || 0, // always send integer
           course: manualMeta.course, class: manualMeta.class,
           session: manualMeta.session, term: manualMeta.term,
           duration: manualMeta.duration,
         });
-        // Mark as saved so re-clicking Save never duplicates it
         updatedQs[i] = { ...q, savedId: res?.data?.id ?? 'saved' };
         count++;
-      } catch { /* skip failed individually */ }
+      } catch (e: any) {
+        failCount++;
+        console.error(`Question ${i + 1} failed:`, e?.message ?? e);
+      }
     }
     setManualQs(updatedQs);
-    toast.success(`Saved ${count} question${count !== 1 ? 's' : ''}`);
+    if (failCount > 0) {
+      toast.error(`${failCount} question${failCount !== 1 ? 's' : ''} failed to save — check your entries`);
+    }
+    if (count > 0) {
+      toast.success(`Saved ${count} question${count !== 1 ? 's' : ''}`);
+    }
     const allSaved = updatedQs.filter(q => q.question.trim()).every(q => !!q.savedId);
     if (allSaved) {
       clearDraft();
