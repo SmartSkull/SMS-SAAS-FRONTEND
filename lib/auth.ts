@@ -18,7 +18,7 @@ export const auth = {
   },
 
   setSession(token: string, refreshToken: string, user: User, role: Role) {
-    const opts = { expires: 1, sameSite: 'lax' as const };
+    const opts = { expires: 7, sameSite: 'lax' as const }; // 7 days — matches refresh token lifespan
     Cookies.set(KEYS.TOKEN, token, opts);
     Cookies.set(KEYS.REFRESH, refreshToken, opts);
     Cookies.set(KEYS.USER, JSON.stringify(user), opts);

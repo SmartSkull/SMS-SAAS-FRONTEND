@@ -67,6 +67,41 @@ client.interceptors.response.use(
   },
 );
 
+// ── Proactive silent refresh ─────────────────────────────────────────────────
+// Fires on page focus and every 30 min. If the access token expires within
+// 30 minutes, silently exchange the refresh token for a new one so long
+// typing/entry sessions never hit a surprise 401.
+async function silentRefreshIfNeeded() {
+  if (typeof window === 'undefined') return;
+  const token = auth.getToken();
+  const refreshToken = auth.getRefreshToken();
+  if (!token || !refreshToken) return;
+
+  try {
+    // Decode the JWT payload (base64) to read exp — no library needed
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expiresIn = (payload.exp ?? 0) * 1000 - Date.now(); // ms until expiry
+    if (expiresIn > 30 * 60 * 1000) return; // more than 30 min left — nothing to do
+  } catch { return; } // malformed token — let the 401 interceptor handle it
+
+  try {
+    const { data } = await axios.post(`/api/auth/refresh`, { refresh_token: refreshToken });
+    auth.setSession(
+      data.data.token,
+      data.data.refresh_token,
+      auth.getUser()!,
+      auth.getRole()!,
+    );
+  } catch { /* will be caught by 401 interceptor on next request */ }
+}
+
+if (typeof window !== 'undefined') {
+  // Refresh on tab focus (covers coming back after a long break)
+  window.addEventListener('focus', silentRefreshIfNeeded);
+  // Also check every 15 minutes while the tab is open
+  setInterval(silentRefreshIfNeeded, 15 * 60 * 1000);
+}
+
 export const api = {
   get: <T>(url: string, params?: Record<string, unknown>) =>
     client.get<T>(url, { params }).then((r) => r.data),
