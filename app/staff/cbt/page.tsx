@@ -587,7 +587,7 @@ export default function StaffCbt() {
     // Split only when: (start or whitespace) + number + separator + (space or letter)
     // Requires ". " or ") " OR ".Letter" (no space) — but NOT plain numbers like "10 "
     const segments = flat
-      .split(/(?:^|(?<=\s))(?=\d{1,3}(?:\.[ A-Za-z"'"'«]|\) ))/)
+      .split(/(?:^|(?<=\s))(?=\d{1,3}(?:\.[ A-Za-z"'"'«_(]|\) ))/)
       .map(s => s.trim())
       .filter(Boolean);
 
@@ -615,12 +615,12 @@ export default function StaffCbt() {
       const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
 
       // ── Extract answer ─────────────────────────────────────────────────
-      const answerMatch =
-        body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])\s*\.?\s*$/i) ??
-        body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])/i);
+      // Handles: "Answer: B" / "Answer: B." / "Answer: (d) text" / "Answer :B."
+      const answerMatch = body.match(/Ans(?:wer)?\s*:?\s*\(?([A-Da-d])\)?/i);
       const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
+      // Strip everything from "Answer" onward (covers "Answer: (d) sun rise and sunset")
       const withoutAnswer = body
-        .replace(/\s*Ans(?:wer)?\s*:?\s*[A-Da-d]\s*\.?\s*$/gi, '')
+        .replace(/\s*Ans(?:wer)?\s*:?\s*\(?[A-Da-d]\)?.*/gi, '')
         .trim();
 
       // ── Detect option format ───────────────────────────────────────────
