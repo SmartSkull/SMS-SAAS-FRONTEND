@@ -203,6 +203,7 @@ export const endpoints = {
     cbtResults: '/staff/cbt/results',
     cbtExtract: '/staff/cbt/extract-questions',
     cbtBulkCreate: '/staff/cbt/bulk-create',
+    cbtUploadImage: '/staff/cbt/upload-image',
     messages: '/staff/messages',
     messagesUpload: '/staff/messages/upload',
     messagesUnread: '/staff/messages/unread/count',

@@ -3,8 +3,11 @@ import React from 'react';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
-import { api, endpoints } from '@/lib/api';
+import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { CbtQuestion } from '@/types';
+
+// Resolve the image upload URL relative to the current origin (through the Next.js proxy)
+const CBT_IMAGE_UPLOAD_URL = '/api' + (endpoints.staff.cbtUploadImage);
 import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle, Search, CheckSquare, Square, Play } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
@@ -925,6 +928,7 @@ export default function StaffCbt() {
                       value={q.sectionLabel ?? ''}
                       onChange={val => updateManualQ(i, 'sectionLabel', val)}
                       placeholder="e.g. Read the passage below and answer questions 1–5…"
+                      imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                     />
                     <p className="text-[11px] text-amber-600 mt-1">
                       ⚠ If set, this heading is shown above <strong>every question in this section</strong>. Assign the same <strong>Section Order</strong> number to all questions that belong together.
@@ -945,6 +949,7 @@ export default function StaffCbt() {
                     value={q.question}
                     onChange={val => updateManualQ(i, 'question', val)}
                     placeholder="Enter question text…"
+                    imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
@@ -953,6 +958,7 @@ export default function StaffCbt() {
                         value={q[opt]}
                         onChange={val => updateManualQ(i, opt, val)}
                         placeholder={`Option ${opt.split('_')[1].toUpperCase()}`}
+                        imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                       />
                     ))}
                   </div>
@@ -1153,6 +1159,7 @@ export default function StaffCbt() {
                                 value={q.question}
                                 onChange={val => updateParsedQuestion(i, 'question', val)}
                                 placeholder="Question text"
+                                imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                               />
                             </td>
                             <td className="p-2">
@@ -1160,6 +1167,7 @@ export default function StaffCbt() {
                                 value={q.option1}
                                 onChange={val => updateParsedQuestion(i, 'option1', val)}
                                 placeholder="Option A"
+                                imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                               />
                             </td>
                             <td className="p-2">
@@ -1167,6 +1175,7 @@ export default function StaffCbt() {
                                 value={q.option2}
                                 onChange={val => updateParsedQuestion(i, 'option2', val)}
                                 placeholder="Option B"
+                                imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                               />
                             </td>
                             <td className="p-2">
@@ -1174,6 +1183,7 @@ export default function StaffCbt() {
                                 value={q.option3}
                                 onChange={val => updateParsedQuestion(i, 'option3', val)}
                                 placeholder="Option C"
+                                imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                               />
                             </td>
                             <td className="p-2">
@@ -1181,6 +1191,7 @@ export default function StaffCbt() {
                                 value={q.option4}
                                 onChange={val => updateParsedQuestion(i, 'option4', val)}
                                 placeholder="Option D"
+                                imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                               />
                             </td>
                             <td className="p-2">
@@ -1302,6 +1313,7 @@ export default function StaffCbt() {
                           value={(editForm as any).sectionLabel ?? ''}
                           onChange={val => setEditForm(p => ({ ...p, sectionLabel: val } as any))}
                           placeholder="e.g. Read the passage below and answer questions…"
+                          imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                         />
                       </div>
                       <div className="flex items-center gap-3">
@@ -1318,6 +1330,7 @@ export default function StaffCbt() {
                         value={editForm.question}
                         onChange={val => setEditForm(p => ({ ...p, question: val }))}
                         placeholder="Question text…"
+                        imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                       />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {(['option_a', 'option_b', 'option_c', 'option_d'] as const).map((opt) => (
@@ -1326,6 +1339,7 @@ export default function StaffCbt() {
                             value={editForm[opt]}
                             onChange={val => setEditForm(p => ({ ...p, [opt]: val }))}
                             placeholder={`Option ${opt.split('_')[1].toUpperCase()}`}
+                            imageUploadUrl={CBT_IMAGE_UPLOAD_URL}
                           />
                         ))}
                       </div>

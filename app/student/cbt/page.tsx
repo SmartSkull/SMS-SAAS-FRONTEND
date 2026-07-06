@@ -412,7 +412,10 @@ export default function StudentCBT() {
 
           <div className="bg-white rounded-2xl card border border-gray-100 shadow-sm p-6">
           <p className="text-xs text-gray-400 mb-2">Question {current + 1} of {questions.length}</p>
-          <p className="font-semibold text-gray-900 mb-5 text-base leading-relaxed">{q.question}</p>
+          <div
+            className="font-semibold text-gray-900 mb-5 text-base leading-relaxed prose prose-sm max-w-none [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2"
+            dangerouslySetInnerHTML={{ __html: q.question ?? '' }}
+          />
           <div className="space-y-3">
             {q.options.map((opt, j) => {
               const letter = ['A', 'B', 'C', 'D'][j];
@@ -429,7 +432,10 @@ export default function StudentCBT() {
                     'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
                     selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'
                   )}>{letter}</span>
-                  {opt}
+                  <span
+                    className="flex-1 prose prose-sm max-w-none [&_p]:inline [&_p]:m-0 [&_img]:max-w-xs [&_img]:rounded-lg [&_img]:my-1"
+                    dangerouslySetInnerHTML={{ __html: opt ?? '' }}
+                  />
                 </button>
               );
             })}
