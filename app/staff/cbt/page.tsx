@@ -458,8 +458,20 @@ export default function StaffCbt() {
       if (ext === 'docx' || ext === 'doc') {
         setUploadProgress('Extracting text from Word document...');
         const arrayBuffer = await uploadFile.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        rawText = result.value;
+        // Use convertToHtml to preserve more character info, then strip tags
+        const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
+        rawText = htmlResult.value
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/p>/gi, '\n')
+          .replace(/<\/li>/gi, '\n')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+          .replace(/&#\d+;/g, c => {
+            const code = parseInt(c.replace(/&#(\d+);/, '$1'), 10);
+            return code < 128 ? String.fromCharCode(code) : c;
+          });
       } else if (ext === 'txt') {
         rawText = await uploadFile.text();
       } else {
@@ -509,10 +521,24 @@ export default function StaffCbt() {
       .replace(/<[^>]*>/g, ' ')
       .replace(/\r\n?/g, '\n')
       .replace(/\t/g, ' ')
-      // Normalise Unicode lookalikes: fullwidth parens/letters → ASCII
+      // Fullwidth Unicode → ASCII (e.g. Ａ → A)
       .replace(/\uFF08/g, '(').replace(/\uFF09/g, ')')
-      .replace(/[\uFF21-\uFF24]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-      .replace(/[\uFF41-\uFF44]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[\uFF21-\uFF3A]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[\uFF41-\uFF5A]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[\uFF10-\uFF19]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      // Smart quotes / curly apostrophes → straight
+      .replace(/[\u2018\u2019\u02BC]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      // Em/en dashes → hyphen
+      .replace(/[\u2013\u2014]/g, '-')
+      // Common symbol font remappings (Wingdings, Symbol, APOS-style)
+      // Parentheses lookalikes
+      .replace(/[\u2768\u276A\u27EC\u2772\u2774\uFD3E]/g, '(')
+      .replace(/[\u2769\u276B\u27ED\u2773\u2775\uFD3F]/g, ')')
+      // Bullet/period lookalikes that appear as option separators
+      .replace(/[\u2022\u2023\u25E6\u2043\u204C\u204D]/g, '.')
+      // Non-breaking and other space variants → regular space
+      .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
       .replace(/[ ]{2,}/g, ' ')
       .trim();
 
@@ -544,8 +570,10 @@ export default function StaffCbt() {
     const flat = annotated.replace(/[ ]{2,}/g, ' ').trim();
 
     // ── Split on question numbers ──────────────────────────────────────────
+    // Split only when: (start or whitespace) + number + separator + (space or letter)
+    // Requires ". " or ") " OR ".Letter" (no space) — but NOT plain numbers like "10 "
     const segments = flat
-      .split(/(?=\b\d{1,3}[.)\s])/)
+      .split(/(?:^|(?<=\s))(?=\d{1,3}(?:\.[ A-Za-z«]|\) ))/)
       .map(s => s.trim())
       .filter(Boolean);
 
@@ -559,8 +587,7 @@ export default function StaffCbt() {
         currentSectionLabel = sectionMatch[2].trim();
       }
       const cleanSeg = seg.replace(/«SECTION:\d+:[^»]+»/g, '').trim();
-      if (!/^\d{1,3}[.)\s]/.test(cleanSeg)) continue;
-
+      if (!/^\d{1,3}[.)]/.test(cleanSeg)) continue;
       const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
 
       // ── Extract answer ─────────────────────────────────────────────────
