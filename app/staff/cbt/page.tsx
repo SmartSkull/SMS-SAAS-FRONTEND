@@ -506,10 +506,10 @@ export default function StaffCbt() {
 
     // ── Normalise line endings ─────────────────────────────────────────────
     const normalized = text
-      .replace(/<[^>]*>/g, ' ')   // strip HTML tags
-      .replace(/\r\n?/g, '\n')    // unify line endings
+      .replace(/<[^>]*>/g, ' ')      // strip HTML tags
+      .replace(/\r\n?/g, '\n')       // unify line endings
       .replace(/\t/g, ' ')
-      .replace(/[ ]{2,}/g, ' ')   // collapse multiple spaces (but keep newlines)
+      .replace(/[ ]{2,}/g, '\u00A0') // preserve double-space option separators as NBSP
       .trim();
 
     // ── Detect section headings from the line-based text BEFORE flattening ─
@@ -533,7 +533,7 @@ export default function StaffCbt() {
       // Must be at least 10 chars to be a meaningful heading
       if (line.length < 10) continue;
       // Must not look like a question body (contains option markers later)
-      if (/\([Aa]\)|\b[Aa]\.\s|\b[Aa]\)\s/.test(line)) continue;
+      if (/\([Aa]\)|\b[Aa]\.[ \t\u00A0]|\b[Aa]\)[ \t\u00A0]/.test(line)) continue;
       sectionOrderCounter++;
       sectionMarkers.push({ lineIdx: li, label: line, order: sectionOrderCounter });
     }
@@ -549,7 +549,7 @@ export default function StaffCbt() {
         annotated += lines[li] + ' ';
       }
     }
-    const flat = annotated.replace(/\s{2,}/g, ' ').trim();
+    const flat = annotated.replace(/[ ]{2,}/g, ' ').trim();
 
     // ── Split into per-question segments on leading number ─────────────────
     const segments = flat
@@ -578,14 +578,15 @@ export default function StaffCbt() {
       const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
 
       // ── Extract answer ─────────────────────────────────────────────────
-      const answerMatch = body.match(/\[?Ans(?:wer)?\s*:?\s*([A-Da-d])(?:\s*[.\-–]\s*.+?)?\]?/i);
+      const answerMatch = body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])\s*\.?\s*$/i)
+        ?? body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])/i);
       const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
-      const withoutAnswer = body.replace(/\[?Ans(?:wer)?\s*:?\s*[A-Da-d](?:\s*[.\-–]\s*[^\[\]]+?)?\]?\.?/gi, '').trim();
+      const withoutAnswer = body.replace(/\s*Ans(?:wer)?\s*:?\s*[A-Da-d]\s*\.?\s*$/gi, '').trim();
 
       // ── Detect option format ───────────────────────────────────────────
       const hasParenFormat = /\([Aa]\)/.test(withoutAnswer);
-      const hasDotFormat   = /\b[Aa]\.\s/.test(withoutAnswer);
-      const hasCloseParen  = /\b[Aa]\)\s/.test(withoutAnswer);
+      const hasDotFormat   = /\b[Aa]\.[ \t\u00A0]/.test(withoutAnswer);
+      const hasCloseParen  = /\b[Aa]\)[ \t\u00A0]/.test(withoutAnswer);
 
       let optionString = '';
       let questionText = '';
@@ -596,12 +597,12 @@ export default function StaffCbt() {
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
       } else if (hasDotFormat) {
-        const optStart = withoutAnswer.search(/\b[Aa][.)]\s/);
+        const optStart = withoutAnswer.search(/\b[Aa]\.[ \t\u00A0]/);
         if (optStart === -1) continue;
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
       } else if (hasCloseParen) {
-        const optStart = withoutAnswer.search(/\b[Aa]\)\s/);
+        const optStart = withoutAnswer.search(/\b[Aa]\)[ \t\u00A0]/);
         if (optStart === -1) continue;
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
@@ -617,13 +618,14 @@ export default function StaffCbt() {
         const optRegex = /\(([A-Da-d])\)\s*(.+?)(?=\s*\([A-Da-d]\)|$)/g;
         let m: RegExpExecArray | null;
         while ((m = optRegex.exec(optionString)) !== null)
-          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
+          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s\u00A0]+$/, '').trim();
       } else {
         const sep = hasDotFormat ? '\\.' : '\\)';
-        const optRegex = new RegExp(`\\b([A-Da-d])${sep}\\s*(.+?)(?=\\s+[A-Da-d]${sep}|$)`, 'g');
+        // \u00A0 (preserved double-space) is the primary separator; single space also works
+        const optRegex = new RegExp(`\\b([A-Da-d])${sep}[ \\t\\u00A0]*(.+?)(?=[\\u00A0 ]\\s*[A-Da-d]${sep}[ \\t\\u00A0]|$)`, 'g');
         let m: RegExpExecArray | null;
         while ((m = optRegex.exec(optionString)) !== null)
-          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
+          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s\u00A0]+$/, '').trim();
       }
 
       if (Object.keys(opts).length < 2) continue;
