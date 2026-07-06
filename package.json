@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@tiptap/extension-image": "3.27.1",
     "@tiptap/extension-subscript": "^3.27.1",
     "@tiptap/extension-superscript": "^3.27.1",
     "@tiptap/extension-text-align": "^3.27.1",
