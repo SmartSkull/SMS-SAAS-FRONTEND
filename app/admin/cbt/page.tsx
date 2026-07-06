@@ -334,7 +334,9 @@ export default function AdminCbtPage() {
                       ) : (
                         <>
                           {test.uploaders.slice(0, 2).map((u, i) => (
-                            <span key={i} className="flex items-center gap-1 text-xs text-gray-700">
+                            <span key={i} className={`flex items-center gap-1 text-xs ${
+                              u.name === 'Unknown' ? 'text-gray-400 italic' : 'text-gray-700'
+                            }`}>
                               <User size={11} className="text-gray-400 shrink-0" />
                               {u.name}
                             </span>
