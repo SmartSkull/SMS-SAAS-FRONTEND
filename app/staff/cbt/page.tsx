@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -35,6 +36,8 @@ interface ParsedQuestion {
   option3: string;
   option4: string;
   answer: string;
+  sectionLabel: string;
+  sectionOrder: number;
 }
 
 const EMPTY_META = { course: '', class: '', session: '', term: '', duration: '30' };
@@ -509,56 +512,91 @@ export default function StaffCbt() {
       .replace(/[ ]{2,}/g, ' ')   // collapse multiple spaces (but keep newlines)
       .trim();
 
-    // ── Flatten to a single line for inline-format parsing ─────────────────
-    // We operate on a flat string so that questions/options spread over
-    // multiple lines are still matched.
-    const flat = normalized.replace(/\n/g, ' ').replace(/\s{2,}/g, ' ');
+    // ── Detect section headings from the line-based text BEFORE flattening ─
+    // A section heading is any line that:
+    //   • does NOT start with a question number (1. / 1))
+    //   • does NOT start with an option letter (A. / A) / (A))
+    //   • is not blank
+    //   • appears between question blocks
+    // We scan the normalised (multi-line) text to build a map of
+    // { lineIndex → sectionLabel } so we can assign them to questions.
+    const lines = normalized.split('\n');
+    // sectionAtLine[i] = { label, order } means line i starts a new section
+    const sectionMarkers: { lineIdx: number; label: string; order: number }[] = [];
+    let sectionOrderCounter = 0;
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li].trim();
+      if (!line) continue;
+      if (/^\d{1,3}[.)]/i.test(line)) continue;          // question number
+      if (/^\(?[A-D][.)]/i.test(line)) continue;          // option letter
+      if (/^Ans(wer)?\s*:/i.test(line)) continue;         // answer line
+      // Must be at least 10 chars to be a meaningful heading
+      if (line.length < 10) continue;
+      // Must not look like a question body (contains option markers later)
+      if (/\(A\)|\bA\.\s|\bA\)\s/i.test(line)) continue;
+      sectionOrderCounter++;
+      sectionMarkers.push({ lineIdx: li, label: line, order: sectionOrderCounter });
+    }
+
+    // Build a flat string but annotate where each section starts by
+    // inserting a sentinel: «SECTION:order:label»
+    let annotated = '';
+    for (let li = 0; li < lines.length; li++) {
+      const marker = sectionMarkers.find(m => m.lineIdx === li);
+      if (marker) {
+        annotated += ` «SECTION:${marker.order}:${marker.label}» `;
+      } else {
+        annotated += lines[li] + ' ';
+      }
+    }
+    const flat = annotated.replace(/\s{2,}/g, ' ').trim();
 
     // ── Split into per-question segments on leading number ─────────────────
-    // Handles: "1." "2." "10." "1)" "2)" etc.
     const segments = flat
-      .split(/(?=\b\d{1,3}[\.\)]\s)/)
+      .split(/(?=\b\d{1,3}[.)\s])/)
       .map(s => s.trim())
       .filter(Boolean);
 
+    // Track current section across segments
+    let currentSectionLabel = '';
+    let currentSectionOrder = 0;
+
     for (const seg of segments) {
+      // Extract any section sentinel(s) embedded in this segment
+      const sectionMatch = seg.match(/«SECTION:(\d+):([^»]+)»/);
+      if (sectionMatch) {
+        currentSectionOrder = parseInt(sectionMatch[1], 10);
+        currentSectionLabel = sectionMatch[2].trim();
+      }
+      // Strip sentinels from the segment before parsing
+      const cleanSeg = seg.replace(/«SECTION:\d+:[^»]+»/g, '').trim();
+
       // Must start with a question number
-      if (!/^\d{1,3}[\.\)]\s/.test(seg)) continue;
+      if (!/^\d{1,3}[.)\s]/.test(cleanSeg)) continue;
 
       // Strip leading number + separator
-      const body = seg.replace(/^\d{1,3}[\.\)]\s*/, '').trim();
+      const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
 
       // ── Extract answer ─────────────────────────────────────────────────
-      // Handles:
-      //   "Answer: C"          — letter only
-      //   "Answer: C. All humans" — letter + label
-      //   "Ans: C"
-      //   "[Answer: B]"
       const answerMatch = body.match(/\[?Ans(?:wer)?\s*:?\s*([A-D])(?:\s*[.\-–]\s*.+?)?\]?/i);
       const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
-
-      // Remove answer portion
       const withoutAnswer = body.replace(/\[?Ans(?:wer)?\s*:?\s*[A-D](?:\s*[.\-–]\s*[^\[\]]+?)?\]?\.?/gi, '').trim();
 
       // ── Detect option format ───────────────────────────────────────────
-      // Format A: "(A) text (B) text ..."   ← parenthesised
-      // Format B: "A. text B. text ..."     ← dot/period separated
-      // Format C: "A) text B) text ..."     ← closing-paren separated
-      const hasParenFormat  = /\(A\)/i.test(withoutAnswer);
-      const hasDotFormat    = /\bA\.\s/i.test(withoutAnswer);
-      const hasCloseParen   = /\bA\)\s/i.test(withoutAnswer);
+      const hasParenFormat = /\(A\)/i.test(withoutAnswer);
+      const hasDotFormat   = /\bA\.\s/i.test(withoutAnswer);
+      const hasCloseParen  = /\bA\)\s/i.test(withoutAnswer);
 
       let optionString = '';
       let questionText = '';
 
       if (hasParenFormat) {
-        // Find where options begin
         const optStart = withoutAnswer.search(/\(A\)/i);
         if (optStart === -1) continue;
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
       } else if (hasDotFormat) {
-        const optStart = withoutAnswer.search(/\bA[\.\)]\s/i);
+        const optStart = withoutAnswer.search(/\bA[\.)]\s/i);
         if (optStart === -1) continue;
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
@@ -568,29 +606,24 @@ export default function StaffCbt() {
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
       } else {
-        continue; // can't find options in any known format
+        continue;
       }
 
       if (!questionText) continue;
 
       // ── Parse individual options ───────────────────────────────────────
       const opts: Record<string, string> = {};
-
       if (hasParenFormat) {
-        // "(A) value (B) value ..."
         const optRegex = /\(([A-D])\)\s*(.+?)(?=\s*\([A-D]\)|$)/g;
         let m: RegExpExecArray | null;
-        while ((m = optRegex.exec(optionString)) !== null) {
+        while ((m = optRegex.exec(optionString)) !== null)
           opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
-        }
       } else {
-        // "A. value B. value ..." or "A) value B) value ..."
         const sep = hasDotFormat ? '\\.' : '\\)';
         const optRegex = new RegExp(`\\b([A-D])${sep}\\s*(.+?)(?=\\s+[A-D]${sep}|$)`, 'g');
         let m: RegExpExecArray | null;
-        while ((m = optRegex.exec(optionString)) !== null) {
+        while ((m = optRegex.exec(optionString)) !== null)
           opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
-        }
       }
 
       if (Object.keys(opts).length < 2) continue;
@@ -602,6 +635,8 @@ export default function StaffCbt() {
         option3: opts['C'] || '',
         option4: opts['D'] || '',
         answer,
+        sectionLabel: currentSectionLabel,
+        sectionOrder: currentSectionOrder,
       });
     }
 
@@ -636,7 +671,7 @@ export default function StaffCbt() {
     return '';
   };
 
-  const updateParsedQuestion = (index: number, field: keyof ParsedQuestion, value: string) => {
+  const updateParsedQuestion = (index: number, field: keyof ParsedQuestion, value: string | number) => {
     setParsedQuestions(p => p.map((q, i) => i === index ? { ...q, [field]: value } : q));
   };
 
@@ -662,6 +697,8 @@ export default function StaffCbt() {
             optionC: q.option3,
             optionD: q.option4,
             answer: q.answer,
+            sectionLabel: q.sectionLabel || null,
+            sectionOrder: q.sectionOrder || 0,
             course: ocrMeta.course,
             class: ocrMeta.class,
             session: ocrMeta.session,
@@ -951,10 +988,13 @@ export default function StaffCbt() {
           <p className="text-sm text-gray-500 mb-4">
             Upload an image, PDF, Word document, or text file. Questions are auto-detected in any of these formats:
             <span className="block mt-1 font-mono text-xs text-gray-400">
-              1. Question text (A) opt (B) opt (C) opt (D) opt — Answer: A. Label
+              1. Question text (A) opt (B) opt (C) opt (D) opt — Answer: A
             </span>
             <span className="block font-mono text-xs text-gray-400">
               1. Question text A. opt B. opt C. opt D. opt Answer: A
+            </span>
+            <span className="block mt-1 text-xs text-gray-400">
+              Any non-numbered line between questions (e.g. <em>"Section A: Read the passage…"</em>) is automatically detected as a section heading and assigned to the questions that follow. You can edit or clear section headings in the preview table before importing.
             </span>
           </p>
 
@@ -1036,54 +1076,86 @@ export default function StaffCbt() {
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-100 text-gray-600 sticky top-0">
                     <tr>
                       <th className="p-2 text-left w-10">#</th>
-                      <th className="p-2 text-left min-w-[200px]">Question</th>
-                      <th className="p-2 text-left min-w-[120px]">Option A</th>
-                      <th className="p-2 text-left min-w-[120px]">Option B</th>
-                      <th className="p-2 text-left min-w-[120px]">Option C</th>
-                      <th className="p-2 text-left min-w-[120px]">Option D</th>
-                      <th className="p-2 text-left w-20">Answer</th>
+                      <th className="p-2 text-left min-w-[180px]">Question</th>
+                      <th className="p-2 text-left min-w-[100px]">Option A</th>
+                      <th className="p-2 text-left min-w-[100px]">Option B</th>
+                      <th className="p-2 text-left min-w-[100px]">Option C</th>
+                      <th className="p-2 text-left min-w-[100px]">Option D</th>
+                      <th className="p-2 text-left w-16">Answer</th>
+                      <th className="p-2 text-left min-w-[180px]">Section Heading</th>
+                      <th className="p-2 text-left w-20">Section Order</th>
                       <th className="p-2 text-center w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {parsedQuestions.map((q, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="p-2 text-gray-500">{i + 1}</td>
-                        <td className="p-2">
-                          <textarea value={q.question} onChange={(e) => updateParsedQuestion(i, 'question', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" rows={2} />
-                        </td>
-                        <td className="p-2">
-                          <input value={q.option1} onChange={(e) => updateParsedQuestion(i, 'option1', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
-                        </td>
-                        <td className="p-2">
-                          <input value={q.option2} onChange={(e) => updateParsedQuestion(i, 'option2', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
-                        </td>
-                        <td className="p-2">
-                          <input value={q.option3} onChange={(e) => updateParsedQuestion(i, 'option3', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
-                        </td>
-                        <td className="p-2">
-                          <input value={q.option4} onChange={(e) => updateParsedQuestion(i, 'option4', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
-                        </td>
-                        <td className="p-2">
-                          <select value={q.answer} onChange={(e) => updateParsedQuestion(i, 'answer', e.target.value)} className={SEL_CLS}>
-                            {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>{o}</option>)}
-                          </select>
-                        </td>
-                        <td className="p-2 text-center">
-                          <button onClick={() => removeParsedQuestion(i)} className="text-red-500 hover:text-red-700"><Trash2 size={15} /></button>
-                        </td>
-                      </tr>
-                    ))}
+                    {parsedQuestions.map((q, i) => {
+                      const isNewSection = q.sectionLabel && (i === 0 || parsedQuestions[i - 1].sectionOrder !== q.sectionOrder);
+                      return (
+                        <React.Fragment key={i}>
+                          {isNewSection && (
+                            <tr key={`section-${i}`} className="bg-amber-50">
+                              <td colSpan={10} className="px-3 py-2">
+                                <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wide mr-2">Section {q.sectionOrder}:</span>
+                                <span className="text-xs text-amber-800">{q.sectionLabel}</span>
+                              </td>
+                            </tr>
+                          )}
+                          <tr key={i} className="hover:bg-gray-50">
+                            <td className="p-2 text-gray-500">{i + 1}</td>
+                            <td className="p-2">
+                              <textarea value={q.question} onChange={(e) => updateParsedQuestion(i, 'question', e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" rows={2} />
+                            </td>
+                            <td className="p-2">
+                              <input value={q.option1} onChange={(e) => updateParsedQuestion(i, 'option1', e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                            </td>
+                            <td className="p-2">
+                              <input value={q.option2} onChange={(e) => updateParsedQuestion(i, 'option2', e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                            </td>
+                            <td className="p-2">
+                              <input value={q.option3} onChange={(e) => updateParsedQuestion(i, 'option3', e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                            </td>
+                            <td className="p-2">
+                              <input value={q.option4} onChange={(e) => updateParsedQuestion(i, 'option4', e.target.value)}
+                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                            </td>
+                            <td className="p-2">
+                              <select value={q.answer} onChange={(e) => updateParsedQuestion(i, 'answer', e.target.value)} className={SEL_CLS}>
+                                {['A', 'B', 'C', 'D'].map(o => <option key={o} value={o}>{o}</option>)}
+                              </select>
+                            </td>
+                            <td className="p-2">
+                              <textarea
+                                value={q.sectionLabel}
+                                onChange={(e) => updateParsedQuestion(i, 'sectionLabel', e.target.value)}
+                                placeholder="Section heading (optional)"
+                                className="w-full border border-gray-200 rounded-lg p-2 text-sm"
+                                rows={2}
+                              />
+                            </td>
+                            <td className="p-2">
+                              <input
+                                type="number" min="0" max="999"
+                                value={q.sectionOrder}
+                                onChange={(e) => updateParsedQuestion(i, 'sectionOrder', parseInt(e.target.value) || 0)}
+                                className="w-full border border-gray-200 rounded-lg p-2 text-sm"
+                              />
+                            </td>
+                            <td className="p-2 text-center">
+                              <button onClick={() => removeParsedQuestion(i)} className="text-red-500 hover:text-red-700"><Trash2 size={15} /></button>
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
