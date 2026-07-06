@@ -204,6 +204,7 @@ export const endpoints = {
     cbtExtract: '/staff/cbt/extract-questions',
     cbtBulkCreate: '/staff/cbt/bulk-create',
     cbtUploadImage: '/staff/cbt/upload-image',
+    changePassword: '/staff/profile/change-password',
     messages: '/staff/messages',
     messagesUpload: '/staff/messages/upload',
     messagesUnread: '/staff/messages/unread/count',
