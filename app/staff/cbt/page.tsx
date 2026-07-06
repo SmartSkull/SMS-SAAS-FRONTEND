@@ -580,6 +580,8 @@ export default function StaffCbt() {
     let currentSectionLabel = '';
     let currentSectionOrder = 0;
 
+    const skipLog: string[] = [];
+
     for (const seg of segments) {
       const sectionMatch = seg.match(/«SECTION:(\d+):([^»]+)»/);
       if (sectionMatch) {
@@ -588,10 +590,10 @@ export default function StaffCbt() {
       }
       const cleanSeg = seg.replace(/«SECTION:\d+:[^»]+»/g, '').trim();
       if (!/^\d{1,3}[.)]/.test(cleanSeg)) continue;
+      const qNum = cleanSeg.match(/^(\d{1,3})/)?.[1] ?? '?';
       const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
 
       // ── Extract answer ─────────────────────────────────────────────────
-      // Handles: "Answer: B" / "Answer :B." / "Answer: B." / "Ans: b"
       const answerMatch =
         body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])\s*\.?\s*$/i) ??
         body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])/i);
@@ -601,28 +603,28 @@ export default function StaffCbt() {
         .trim();
 
       // ── Detect option format ───────────────────────────────────────────
-      // Priority: (A) > A. > A) > A-
-      // Each detection uses a literal space after the separator to avoid
-      // false-matching abbreviations like "A." at end of a sentence.
       type FmtKey = 'paren' | 'dot' | 'close' | 'dash';
       const fmtTests: [FmtKey, RegExp][] = [
         ['paren', /\([Aa]\)/],
-        ['dot',   /\b[Aa]\. /],
-        ['close', /\b[Aa]\) /],
-        ['dash',  /\b[Aa]- /],
+        ['dot',   /(?<![A-Za-z])[Aa]\. /],
+        ['close', /(?<![A-Za-z])[Aa]\) /],
+        ['dash',  /(?<![A-Za-z])[Aa]- /],
       ];
       let fmt: FmtKey | null = null;
       for (const [key, re] of fmtTests) {
         if (re.test(withoutAnswer)) { fmt = key; break; }
       }
-      if (!fmt) continue;
+      if (!fmt) {
+        skipLog.push(`Q${qNum}: no option format detected — "${withoutAnswer.slice(0, 80)}"`);
+        continue;
+      }
 
       // ── Find where options start ───────────────────────────────────────
       const optStartRe: Record<FmtKey, RegExp> = {
         paren: /\([Aa]\)/,
-        dot:   /\b[Aa]\. /,
-        close: /\b[Aa]\) /,
-        dash:  /\b[Aa]- /,
+        dot:   /(?<![A-Za-z])[Aa]\. /,
+        close: /(?<![A-Za-z])[Aa]\) /,
+        dash:  /(?<![A-Za-z])[Aa]- /,
       };
       const optStart = withoutAnswer.search(optStartRe[fmt]);
       if (optStart === -1) continue;
@@ -642,13 +644,16 @@ export default function StaffCbt() {
         // A. text B. text  OR  A) text B) text  OR  A- text B- text
         const sepChar = fmt === 'dot' ? '\\.' : fmt === 'close' ? '\\)' : '-';
         // Lookahead: " X<sep> " where X is next option letter
-        const re = new RegExp(`\\b([A-Da-d])${sepChar} (.+?)(?= [A-Da-d]${sepChar} |$)`, 'g');
+        const re = new RegExp(`(?<![A-Za-z])([A-Da-d])${sepChar} (.+?)(?= [A-Da-d]${sepChar} |$)`, 'g');
         let m: RegExpExecArray | null;
         while ((m = re.exec(optionString)) !== null)
           opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
       }
 
-      if (Object.keys(opts).length < 2) continue;
+      if (Object.keys(opts).length < 2) {
+        skipLog.push(`Q${qNum}: only ${Object.keys(opts).length} option(s) parsed — fmt=${fmt} — "${optionString.slice(0, 80)}"`);
+        continue;
+      }
 
       questions.push({
         question: questionText,
@@ -662,6 +667,8 @@ export default function StaffCbt() {
       });
     }
 
+    if (skipLog.length) console.warn('[parseQuestions] Skipped segments:\n' + skipLog.join('\n'));
+    console.log('[parseQuestions] segments:', segments.length, '| parsed:', questions.length);
     return questions;
   };
 
