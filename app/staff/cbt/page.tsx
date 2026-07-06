@@ -504,128 +504,121 @@ export default function StaffCbt() {
   const parseQuestions = (text: string): ParsedQuestion[] => {
     const questions: ParsedQuestion[] = [];
 
-    // ── Normalise line endings ─────────────────────────────────────────────
+    // ── Normalise ─────────────────────────────────────────────────────────
     const normalized = text
-      .replace(/<[^>]*>/g, ' ')      // strip HTML tags
-      .replace(/\r\n?/g, '\n')       // unify line endings
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\r\n?/g, '\n')
       .replace(/\t/g, ' ')
-      .replace(/[ ]{2,}/g, '\u00A0') // preserve double-space option separators as NBSP
+      // Normalise Unicode lookalikes: fullwidth parens/letters → ASCII
+      .replace(/\uFF08/g, '(').replace(/\uFF09/g, ')')
+      .replace(/[\uFF21-\uFF24]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[\uFF41-\uFF44]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[ ]{2,}/g, ' ')
       .trim();
 
-    // ── Detect section headings from the line-based text BEFORE flattening ─
-    // A section heading is any line that:
-    //   • does NOT start with a question number (1. / 1))
-    //   • does NOT start with an option letter (A. / A) / (A))
-    //   • is not blank
-    //   • appears between question blocks
-    // We scan the normalised (multi-line) text to build a map of
-    // { lineIndex → sectionLabel } so we can assign them to questions.
+    // ── Detect section headings before flattening ─────────────────────────
     const lines = normalized.split('\n');
-    // sectionAtLine[i] = { label, order } means line i starts a new section
     const sectionMarkers: { lineIdx: number; label: string; order: number }[] = [];
     let sectionOrderCounter = 0;
+    // Regex that matches any known option-start pattern
+    const OPT_A = /\([Aa]\)|\b[Aa][.)\-] /;
     for (let li = 0; li < lines.length; li++) {
       const line = lines[li].trim();
       if (!line) continue;
-      if (/^\d{1,3}[.)]/i.test(line)) continue;          // question number
-      if (/^\(?[A-D][.)]/i.test(line)) continue;          // option letter
-      if (/^Ans(wer)?\s*:/i.test(line)) continue;         // answer line
-      // Must be at least 10 chars to be a meaningful heading
+      if (/^\d{1,3}[.)]/.test(line)) continue;
+      if (/^\(?[A-Da-d][.)\-]/.test(line)) continue;
+      if (/^Ans(?:wer)?\s*:/i.test(line)) continue;
       if (line.length < 10) continue;
-      // Must not look like a question body (contains option markers later)
-      if (/\([Aa]\)|\b[Aa]\.[ \t\u00A0]|\b[Aa]\)[ \t\u00A0]/.test(line)) continue;
+      if (OPT_A.test(line)) continue;
       sectionOrderCounter++;
       sectionMarkers.push({ lineIdx: li, label: line, order: sectionOrderCounter });
     }
 
-    // Build a flat string but annotate where each section starts by
-    // inserting a sentinel: «SECTION:order:label»
+    // Build annotated flat string with «SECTION:n:label» sentinels
     let annotated = '';
     for (let li = 0; li < lines.length; li++) {
       const marker = sectionMarkers.find(m => m.lineIdx === li);
-      if (marker) {
-        annotated += ` «SECTION:${marker.order}:${marker.label}» `;
-      } else {
-        annotated += lines[li] + ' ';
-      }
+      if (marker) annotated += ` «SECTION:${marker.order}:${marker.label}» `;
+      else annotated += lines[li] + ' ';
     }
     const flat = annotated.replace(/[ ]{2,}/g, ' ').trim();
 
-    // ── Split into per-question segments on leading number ─────────────────
+    // ── Split on question numbers ──────────────────────────────────────────
     const segments = flat
       .split(/(?=\b\d{1,3}[.)\s])/)
       .map(s => s.trim())
       .filter(Boolean);
 
-    // Track current section across segments
     let currentSectionLabel = '';
     let currentSectionOrder = 0;
 
     for (const seg of segments) {
-      // Extract any section sentinel(s) embedded in this segment
       const sectionMatch = seg.match(/«SECTION:(\d+):([^»]+)»/);
       if (sectionMatch) {
         currentSectionOrder = parseInt(sectionMatch[1], 10);
         currentSectionLabel = sectionMatch[2].trim();
       }
-      // Strip sentinels from the segment before parsing
       const cleanSeg = seg.replace(/«SECTION:\d+:[^»]+»/g, '').trim();
-
-      // Must start with a question number
       if (!/^\d{1,3}[.)\s]/.test(cleanSeg)) continue;
 
-      // Strip leading number + separator
       const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
 
       // ── Extract answer ─────────────────────────────────────────────────
-      const answerMatch = body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])\s*\.?\s*$/i)
-        ?? body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])/i);
+      // Handles: "Answer: B" / "Answer :B." / "Answer: B." / "Ans: b"
+      const answerMatch =
+        body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])\s*\.?\s*$/i) ??
+        body.match(/Ans(?:wer)?\s*:?\s*([A-Da-d])/i);
       const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
-      const withoutAnswer = body.replace(/\s*Ans(?:wer)?\s*:?\s*[A-Da-d]\s*\.?\s*$/gi, '').trim();
+      const withoutAnswer = body
+        .replace(/\s*Ans(?:wer)?\s*:?\s*[A-Da-d]\s*\.?\s*$/gi, '')
+        .trim();
 
       // ── Detect option format ───────────────────────────────────────────
-      const hasParenFormat = /\([Aa]\)/.test(withoutAnswer);
-      const hasDotFormat   = /\b[Aa]\.[ \t\u00A0]/.test(withoutAnswer);
-      const hasCloseParen  = /\b[Aa]\)[ \t\u00A0]/.test(withoutAnswer);
-
-      let optionString = '';
-      let questionText = '';
-
-      if (hasParenFormat) {
-        const optStart = withoutAnswer.search(/\([Aa]\)/);
-        if (optStart === -1) continue;
-        questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
-        optionString = withoutAnswer.slice(optStart);
-      } else if (hasDotFormat) {
-        const optStart = withoutAnswer.search(/\b[Aa]\.[ \t\u00A0]/);
-        if (optStart === -1) continue;
-        questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
-        optionString = withoutAnswer.slice(optStart);
-      } else if (hasCloseParen) {
-        const optStart = withoutAnswer.search(/\b[Aa]\)[ \t\u00A0]/);
-        if (optStart === -1) continue;
-        questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
-        optionString = withoutAnswer.slice(optStart);
-      } else {
-        continue;
+      // Priority: (A) > A. > A) > A-
+      // Each detection uses a literal space after the separator to avoid
+      // false-matching abbreviations like "A." at end of a sentence.
+      type FmtKey = 'paren' | 'dot' | 'close' | 'dash';
+      const fmtTests: [FmtKey, RegExp][] = [
+        ['paren', /\([Aa]\)/],
+        ['dot',   /\b[Aa]\. /],
+        ['close', /\b[Aa]\) /],
+        ['dash',  /\b[Aa]- /],
+      ];
+      let fmt: FmtKey | null = null;
+      for (const [key, re] of fmtTests) {
+        if (re.test(withoutAnswer)) { fmt = key; break; }
       }
+      if (!fmt) continue;
 
+      // ── Find where options start ───────────────────────────────────────
+      const optStartRe: Record<FmtKey, RegExp> = {
+        paren: /\([Aa]\)/,
+        dot:   /\b[Aa]\. /,
+        close: /\b[Aa]\) /,
+        dash:  /\b[Aa]- /,
+      };
+      const optStart = withoutAnswer.search(optStartRe[fmt]);
+      if (optStart === -1) continue;
+      const questionText = withoutAnswer.slice(0, optStart).replace(/[:\-\u2013]\s*$/, '').trim();
       if (!questionText) continue;
+      const optionString = withoutAnswer.slice(optStart);
 
-      // ── Parse individual options ───────────────────────────────────────
+      // ── Parse options ──────────────────────────────────────────────────
       const opts: Record<string, string> = {};
-      if (hasParenFormat) {
-        const optRegex = /\(([A-Da-d])\)\s*(.+?)(?=\s*\([A-Da-d]\)|$)/g;
+      if (fmt === 'paren') {
+        // (A) text (B) text ...
+        const re = /\(([A-Da-d])\)\s*(.+?)(?=\s*\([A-Da-d]\)|$)/g;
         let m: RegExpExecArray | null;
-        while ((m = optRegex.exec(optionString)) !== null)
-          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s\u00A0]+$/, '').trim();
+        while ((m = re.exec(optionString)) !== null)
+          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
       } else {
-        const sep = hasDotFormat ? '\\.' : '\\)';
-        // \u00A0 (preserved double-space) is the primary separator; single space also works
-        const optRegex = new RegExp(`\\b([A-Da-d])${sep}[ \\t\\u00A0]*(.+?)(?=[\\u00A0 ]\\s*[A-Da-d]${sep}[ \\t\\u00A0]|$)`, 'g');
+        // A. text B. text  OR  A) text B) text  OR  A- text B- text
+        const sepChar = fmt === 'dot' ? '\\.' : fmt === 'close' ? '\\)' : '-';
+        // Lookahead: " X<sep> " where X is next option letter
+        const re = new RegExp(`\\b([A-Da-d])${sepChar} (.+?)(?= [A-Da-d]${sepChar} |$)`, 'g');
         let m: RegExpExecArray | null;
-        while ((m = optRegex.exec(optionString)) !== null)
-          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s\u00A0]+$/, '').trim();
+        while ((m = re.exec(optionString)) !== null)
+          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
       }
 
       if (Object.keys(opts).length < 2) continue;
