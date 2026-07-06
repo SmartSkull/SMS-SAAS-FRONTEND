@@ -43,7 +43,13 @@ export default function StaffPage() {
     setSaving(true);
     try {
       if (modal.member) {
-        await api.put(endpoints.admin.staffMember(modal.member.staff_id), form);
+        await api.put(endpoints.admin.staffMember(modal.member.staff_id), {
+          firstName: form.firstname,
+          lastName: form.lastname,
+          email: form.email,
+          telephone: form.telephone,
+          role: form.role,
+        });
         toast.success('Staff updated');
       } else {
         await api.post(endpoints.admin.staff, form);
