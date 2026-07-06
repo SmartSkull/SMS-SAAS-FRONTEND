@@ -1130,24 +1130,39 @@ export default function StaffCbt() {
                           <tr key={i} className="hover:bg-gray-50">
                             <td className="p-2 text-gray-500">{i + 1}</td>
                             <td className="p-2">
-                              <textarea value={q.question} onChange={(e) => updateParsedQuestion(i, 'question', e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" rows={2} />
+                              <RichTextEditor
+                                value={q.question}
+                                onChange={val => updateParsedQuestion(i, 'question', val)}
+                                placeholder="Question text"
+                              />
                             </td>
                             <td className="p-2">
-                              <input value={q.option1} onChange={(e) => updateParsedQuestion(i, 'option1', e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                              <RichTextEditor
+                                value={q.option1}
+                                onChange={val => updateParsedQuestion(i, 'option1', val)}
+                                placeholder="Option A"
+                              />
                             </td>
                             <td className="p-2">
-                              <input value={q.option2} onChange={(e) => updateParsedQuestion(i, 'option2', e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                              <RichTextEditor
+                                value={q.option2}
+                                onChange={val => updateParsedQuestion(i, 'option2', val)}
+                                placeholder="Option B"
+                              />
                             </td>
                             <td className="p-2">
-                              <input value={q.option3} onChange={(e) => updateParsedQuestion(i, 'option3', e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                              <RichTextEditor
+                                value={q.option3}
+                                onChange={val => updateParsedQuestion(i, 'option3', val)}
+                                placeholder="Option C"
+                              />
                             </td>
                             <td className="p-2">
-                              <input value={q.option4} onChange={(e) => updateParsedQuestion(i, 'option4', e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg p-2 text-sm" />
+                              <RichTextEditor
+                                value={q.option4}
+                                onChange={val => updateParsedQuestion(i, 'option4', val)}
+                                placeholder="Option D"
+                              />
                             </td>
                             <td className="p-2">
                               <select value={q.answer} onChange={(e) => updateParsedQuestion(i, 'answer', e.target.value)} className={SEL_CLS}>
