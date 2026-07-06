@@ -533,7 +533,7 @@ export default function StaffCbt() {
       // Must be at least 10 chars to be a meaningful heading
       if (line.length < 10) continue;
       // Must not look like a question body (contains option markers later)
-      if (/\(A\)|\bA\.\s|\bA\)\s/i.test(line)) continue;
+      if (/\([Aa]\)|\b[Aa]\.\s|\b[Aa]\)\s/.test(line)) continue;
       sectionOrderCounter++;
       sectionMarkers.push({ lineIdx: li, label: line, order: sectionOrderCounter });
     }
@@ -578,30 +578,30 @@ export default function StaffCbt() {
       const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
 
       // ── Extract answer ─────────────────────────────────────────────────
-      const answerMatch = body.match(/\[?Ans(?:wer)?\s*:?\s*([A-D])(?:\s*[.\-–]\s*.+?)?\]?/i);
+      const answerMatch = body.match(/\[?Ans(?:wer)?\s*:?\s*([A-Da-d])(?:\s*[.\-–]\s*.+?)?\]?/i);
       const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
-      const withoutAnswer = body.replace(/\[?Ans(?:wer)?\s*:?\s*[A-D](?:\s*[.\-–]\s*[^\[\]]+?)?\]?\.?/gi, '').trim();
+      const withoutAnswer = body.replace(/\[?Ans(?:wer)?\s*:?\s*[A-Da-d](?:\s*[.\-–]\s*[^\[\]]+?)?\]?\.?/gi, '').trim();
 
       // ── Detect option format ───────────────────────────────────────────
-      const hasParenFormat = /\(A\)/i.test(withoutAnswer);
-      const hasDotFormat   = /\bA\.\s/i.test(withoutAnswer);
-      const hasCloseParen  = /\bA\)\s/i.test(withoutAnswer);
+      const hasParenFormat = /\([Aa]\)/.test(withoutAnswer);
+      const hasDotFormat   = /\b[Aa]\.\s/.test(withoutAnswer);
+      const hasCloseParen  = /\b[Aa]\)\s/.test(withoutAnswer);
 
       let optionString = '';
       let questionText = '';
 
       if (hasParenFormat) {
-        const optStart = withoutAnswer.search(/\(A\)/i);
+        const optStart = withoutAnswer.search(/\([Aa]\)/);
         if (optStart === -1) continue;
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
       } else if (hasDotFormat) {
-        const optStart = withoutAnswer.search(/\bA[\.)]\s/i);
+        const optStart = withoutAnswer.search(/\b[Aa][.)]\s/);
         if (optStart === -1) continue;
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
       } else if (hasCloseParen) {
-        const optStart = withoutAnswer.search(/\bA\)\s/i);
+        const optStart = withoutAnswer.search(/\b[Aa]\)\s/);
         if (optStart === -1) continue;
         questionText = withoutAnswer.slice(0, optStart).replace(/[:\-–]\s*$/, '').trim();
         optionString = withoutAnswer.slice(optStart);
@@ -614,13 +614,13 @@ export default function StaffCbt() {
       // ── Parse individual options ───────────────────────────────────────
       const opts: Record<string, string> = {};
       if (hasParenFormat) {
-        const optRegex = /\(([A-D])\)\s*(.+?)(?=\s*\([A-D]\)|$)/g;
+        const optRegex = /\(([A-Da-d])\)\s*(.+?)(?=\s*\([A-Da-d]\)|$)/g;
         let m: RegExpExecArray | null;
         while ((m = optRegex.exec(optionString)) !== null)
           opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
       } else {
         const sep = hasDotFormat ? '\\.' : '\\)';
-        const optRegex = new RegExp(`\\b([A-D])${sep}\\s*(.+?)(?=\\s+[A-D]${sep}|$)`, 'g');
+        const optRegex = new RegExp(`\\b([A-Da-d])${sep}\\s*(.+?)(?=\\s+[A-Da-d]${sep}|$)`, 'g');
         let m: RegExpExecArray | null;
         while ((m = optRegex.exec(optionString)) !== null)
           opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
