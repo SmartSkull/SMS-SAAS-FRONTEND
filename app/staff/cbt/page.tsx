@@ -737,33 +737,24 @@ export default function StaffCbt() {
     }
     setBulkSubmitting(true);
     try {
-      let count = 0;
-      for (const q of parsedQuestions) {
-        try {
-          await api.post(endpoints.staff.cbtQuestions, {
-            question: q.question,
-            optionA: q.option1,
-            optionB: q.option2,
-            optionC: q.option3,
-            optionD: q.option4,
-            answer: q.answer,
-            sectionLabel: q.sectionLabel || null,
-            sectionOrder: q.sectionOrder || 0,
-            course: ocrMeta.course,
-            class: ocrMeta.class,
-            session: ocrMeta.session,
-            term: ocrMeta.term,
-            duration: ocrMeta.duration,
-          });
-          count++;
-        } catch { /* skip failed */ }
-      }
+      const res = await api.post<any>(endpoints.staff.cbtBulkCreate, {
+        data: parsedQuestions,
+        course: ocrMeta.course,
+        class: ocrMeta.class,
+        session: ocrMeta.session,
+        term: ocrMeta.term,
+        duration: ocrMeta.duration,
+      });
+      const count = res?.data?.count ?? parsedQuestions.length;
       toast.success(`Successfully imported ${count} questions`);
       setParsedQuestions([]);
       setUploadFile(null);
       loadQuestions();
-    } catch { toast.error('Bulk upload failed'); }
-    finally { setBulkSubmitting(false); }
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Bulk upload failed');
+    } finally {
+      setBulkSubmitting(false);
+    }
   };
 
   const sfLocal = (k: keyof typeof ocrMeta) => (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) =>
