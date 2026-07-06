@@ -573,7 +573,7 @@ export default function StaffCbt() {
     // Split only when: (start or whitespace) + number + separator + (space or letter)
     // Requires ". " or ") " OR ".Letter" (no space) — but NOT plain numbers like "10 "
     const segments = flat
-      .split(/(?:^|(?<=\s))(?=\d{1,3}(?:\.[ A-Za-z«]|\) ))/)
+      .split(/(?:^|(?<=\s))(?=\d{1,3}(?:\.[ A-Za-z"'"'«]|\) ))/)
       .map(s => s.trim())
       .filter(Boolean);
 
