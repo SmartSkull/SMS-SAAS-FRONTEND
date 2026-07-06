@@ -569,6 +569,20 @@ export default function StaffCbt() {
     }
     const flat = annotated.replace(/[ ]{2,}/g, ' ').trim();
 
+    // ── Pre-process cloze/gap-fill format ─────────────────────────────────
+    // Converts: "The _1(A. x B. y C. z D. w) Answer: C told the _2(...) Answer: D"
+    // Into individual segments: "1. ___ (A. x B. y C. z D. w) Answer: C"
+    // Pattern: _N( options ) Answer: X  (N = 1-3 digit number)
+    const clozeRe = /_(\d{1,3})\(([^)]+)\)\s*Answer\s*:?\s*([A-Da-d])/gi;
+    const clozeMatches: { num: string; opts: string; ans: string }[] = [];
+    let clozeFlat = flat;
+    if (clozeRe.test(flat)) {
+      clozeRe.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = clozeRe.exec(flat)) !== null)
+        clozeMatches.push({ num: m[1], opts: m[2].trim(), ans: m[3].toUpperCase() });
+    }
+
     // ── Split on question numbers ──────────────────────────────────────────
     // Split only when: (start or whitespace) + number + separator + (space or letter)
     // Requires ". " or ") " OR ".Letter" (no space) — but NOT plain numbers like "10 "
@@ -576,6 +590,13 @@ export default function StaffCbt() {
       .split(/(?:^|(?<=\s))(?=\d{1,3}(?:\.[ A-Za-z"'"'«]|\) ))/)
       .map(s => s.trim())
       .filter(Boolean);
+
+    // Inject cloze questions as synthetic segments (avoid duplicates with normal segments)
+    const normalNums = new Set(segments.map(s => s.match(/^(\d{1,3})/)?.[1]).filter(Boolean));
+    for (const c of clozeMatches) {
+      if (!normalNums.has(c.num))
+        segments.push(`${c.num}. ___ ${c.opts} Answer: ${c.ans}`);
+    }
 
     let currentSectionLabel = '';
     let currentSectionOrder = 0;
@@ -642,9 +663,9 @@ export default function StaffCbt() {
           opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
       } else {
         // A. text B. text  OR  A) text B) text  OR  A- text B- text
+        // Also handles no-space after separator: "C.foreman" → C = foreman
         const sepChar = fmt === 'dot' ? '\\.' : fmt === 'close' ? '\\)' : '-';
-        // Lookahead: " X<sep> " where X is next option letter
-        const re = new RegExp(`(?<![A-Za-z])([A-Da-d])${sepChar} (.+?)(?= [A-Da-d]${sepChar} |$)`, 'g');
+        const re = new RegExp(`(?<![A-Za-z])([A-Da-d])${sepChar}\\s*(.+?)(?=\\s+[A-Da-d]${sepChar}\\s|$)`, 'g');
         let m: RegExpExecArray | null;
         while ((m = re.exec(optionString)) !== null)
           opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
