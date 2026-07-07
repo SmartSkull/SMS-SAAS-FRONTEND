@@ -774,24 +774,32 @@ export default function StaffCbt() {
   return (
     <div className="space-y-6">
       <style jsx global>{`
+        @page { size: A4; margin: 10mm; }
         @media print {
-          body { background: white !important; }
+          html, body { background: white !important; }
           .no-print { display: none !important; }
           .print-sheet {
             box-shadow: none !important;
             border: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
+            padding: 6mm !important;
+            margin: 0 auto !important;
             -webkit-print-color-adjust: exact;
             color-adjust: exact;
             background: white !important;
+            width: 190mm; /* fit A4 inner width */
+            max-width: 190mm;
           }
-          .print-sheet .bubble { border: 1px solid #444 !important; }
+          .print-sheet .bubble { border: 2px solid #222 !important; width: 14px !important; height: 14px !important; }
+          .roll-box { border: 2px solid #222 !important; }
           .avoid-break { page-break-inside: avoid; }
-          html, body { background: white !important; }
         }
-        .roll-box { width: 28px; height: 20px; border: 1px solid #222; display: inline-block; margin-right: 4px }
-        .bubble { width: 18px; height: 18px; border-radius: 50%; border: 1px solid #666; display: inline-block; margin-right: 6px }
+        /* non-print / screen fallback and consistent layout */
+        .print-sheet { max-width: 1100px; margin: 0 auto; }
+        .roll-box { width: 26px; height: 22px; border: 2px solid #222; display: inline-block; margin-right: 6px }
+        .bubble { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #222; display: inline-block; margin-right: 8px; background: #fff }
+        .omr-container .option-group { min-width: 150px; display: flex; gap: 10px; align-items: center; justify-content: space-between }
+        .omr-container .text-xs { font-weight: 600; color: #111 }
+        .print-sheet .text-gray-600 { color: #333 !important }
       `}</style>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">CBT Management</h1>
