@@ -84,7 +84,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="p-8">
             <h1 className="text-gray-900 text-3xl font-bold mb-2">
               Welcome back <span className="animate-wave">👋</span>
