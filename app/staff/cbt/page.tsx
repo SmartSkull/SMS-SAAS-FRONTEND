@@ -800,8 +800,14 @@ export default function StaffCbt() {
         .omr-container .option-group { min-width: 150px; display: flex; gap: 10px; align-items: center; justify-content: space-between }
         .omr-container .text-xs { font-weight: 600; color: #111 }
         .print-sheet .text-gray-600 { color: #333 !important }
+        /* Theory / essay print helpers */
+        .print-theory .rotate-90, .print-theory .-rotate-90 { color: #999; font-weight: 600 }
+        @media print {
+          .print-theory .rotate-90, .print-theory .-rotate-90 { color: #666 !important }
+          .print-theory .border-dashed { border-style: dashed !important }
+        }
       `}</style>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between no-print">
         <h1 className="text-2xl font-bold text-gray-800">CBT Management</h1>
         {tab === 'questions' && manualStep === null && (
           <button onClick={startManualEntry}
@@ -811,7 +817,7 @@ export default function StaffCbt() {
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 no-print">
         <button onClick={() => setTab('questions')}
           className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
             tab === 'questions' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
@@ -1584,23 +1590,7 @@ export default function StaffCbt() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[260px]">
-                {omrForm.studentImage ? (
-                  <img
-                    src={getImageUrl(omrForm.studentImage) ?? '/student.png'}
-                    alt="Student preview"
-                    width={128}
-                    height={128}
-                    className="w-32 h-32 rounded-2xl object-cover border border-gray-200 bg-white shadow-sm"
-                  />
-                ) : (
-                  <div className="w-32 h-32 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 shadow-sm">
-                    <UserCircle2 size={72} />
-                  </div>
-                )}
-                <p className="mt-3 text-sm font-medium text-gray-700">Student photo slot</p>
-                <p className="text-xs text-gray-500 text-center">The uploaded student image will appear here when available.</p>
-              </div>
+              {/* student preview removed from here — moved into printable sheet */}
             </div>
           </div>
 
@@ -1621,21 +1611,42 @@ export default function StaffCbt() {
 
             <div className="grid grid-cols-12 gap-4 mb-4 avoid-break">
               <div className="col-span-7 border border-gray-300 p-3">
-                <div className="mb-2 text-sm font-semibold">ROLL NO.</div>
-                <div className="flex items-center">
-                  {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
-                  ))}
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm font-semibold">TEST ID</div>
-                    <div className="flex items-center mt-2">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
-                        ))}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="mb-2 text-sm font-semibold">ROLL NO.</div>
+                    <div className="flex items-center">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
+                      ))}
                     </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm font-semibold">TEST ID</div>
+                        <div className="flex items-center mt-2">
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="w-32 flex-shrink-0">
+                    {omrForm.studentImage ? (
+                      <img
+                        src={getImageUrl(omrForm.studentImage) ?? '/student.png'}
+                        alt="Student preview"
+                        width={128}
+                        height={128}
+                        className="w-32 h-32 rounded-2xl object-cover border border-gray-200 bg-white shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-32 h-32 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 shadow-sm">
+                        <UserCircle2 size={72} />
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500 text-center mt-2">Photo</div>
                   </div>
                 </div>
               </div>
@@ -1665,31 +1676,56 @@ export default function StaffCbt() {
             </div>
 
             <div className="avoid-break omr-container">
-              <div className="grid grid-cols-5 gap-4 text-sm">
-                {Array.from({ length: 5 }).map((_, col) => (
-                  <div key={col} className="space-y-2">
-                    {Array.from({ length: 10 }).map((_, row) => {
-                      const qnum = col * 10 + row + 1;
-                      return (
-                        <div key={qnum} className="flex items-center justify-between w-full">
-                          <div className="w-8 font-semibold text-gray-800">{qnum}</div>
-                          <div className="flex items-center gap-3 min-w-[180px] justify-between">
-                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">A</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">B</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">C</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">D</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                          </div>
-                        </div>
-                      );
-                    })}
+              {(() => {
+                const TOTAL_QUESTIONS = 50;
+                const ROWS = 15; // user requested 15 rows per column
+                const COLS = Math.ceil(TOTAL_QUESTIONS / ROWS);
+                return (
+                  <div className="grid gap-4 text-sm" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
+                    {Array.from({ length: COLS }).map((_, col) => (
+                      <div key={col} className="space-y-2">
+                        {Array.from({ length: ROWS }).map((_, row) => {
+                          const qnum = col * ROWS + row + 1;
+                          if (qnum > TOTAL_QUESTIONS) return null;
+                          return (
+                            <div key={qnum} className="flex items-center justify-between w-full">
+                              <div className="w-8 font-semibold text-gray-800">{qnum}</div>
+                              <div className="flex items-center gap-3 min-w-[140px] justify-between">
+                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">A</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
+                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">B</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
+                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">C</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
+                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">D</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
 
-            <div className="mt-6 avoid-break border-t pt-4">
+            <div className="mt-6 avoid-break border-t pt-4 print-theory">
               <div className="text-sm font-semibold mb-2">Theory / Essay Section</div>
-              <div className="h-40 rounded-xl border border-dashed border-gray-300 bg-white" />
+              <div className="relative">
+                {/* Margin guides (do not write) */}
+                <div className="absolute inset-y-0 left-0 w-[18mm] pointer-events-none flex items-center justify-center">
+                  <div className="rotate-90 text-xs text-gray-400">Do not write here</div>
+                </div>
+                <div className="absolute inset-y-0 right-0 w-[18mm] pointer-events-none flex items-center justify-center">
+                  <div className="-rotate-90 text-xs text-gray-400">Do not write here</div>
+                </div>
+
+                {/* Ruled lines area */}
+                <div className="pl-[18mm] pr-[18mm]">
+                  <div className="rounded-xl border border-dashed border-gray-300 bg-white">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <div key={i} className="h-6 border-b border-gray-200 last:border-b-0" />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
