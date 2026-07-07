@@ -774,23 +774,26 @@ export default function StaffCbt() {
   return (
     <div className="space-y-6">
       <style jsx global>{`
-        @page { size: A4; margin: 10mm; }
+        @page { size: A4 portrait; margin: 10mm; }
         @media print {
-          html, body { background: white !important; }
+          html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print { display: none !important; }
           .print-sheet {
             box-shadow: none !important;
             border: none !important;
-            padding: 6mm !important;
+            padding: 8mm !important;
             margin: 0 auto !important;
             -webkit-print-color-adjust: exact;
             color-adjust: exact;
             background: white !important;
-            width: 190mm; /* fit A4 inner width */
-            max-width: 190mm;
+            width: 100% !important;
+            max-width: 170mm !important;
+            box-sizing: border-box !important;
           }
-          .print-sheet .bubble { border: 2px solid #222 !important; width: 14px !important; height: 14px !important; }
-          .roll-box { border: 2px solid #222 !important; }
+          .print-sheet * { box-sizing: border-box !important; }
+          .print-sheet .bubble { border: 2px solid #222 !important; width: 13px !important; height: 13px !important; margin-right: 4px !important; }
+          .roll-box { border: 2px solid #222 !important; width: 20px !important; height: 20px !important; margin-right: 4px !important; }
+          .print-sheet .grid-cols-12 > * { min-width: 0 !important; }
           .avoid-break { page-break-inside: avoid; }
         }
         /* non-print / screen fallback and consistent layout */
