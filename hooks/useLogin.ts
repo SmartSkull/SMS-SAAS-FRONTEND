@@ -1,11 +1,11 @@
 'use client';
-import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { api, endpoints } from '@/lib/api';
-import { auth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { readSelectedSchool } from '@/hooks/useSelectedSchool';
-import type { Role, ApiResponse } from '@/types';
+import { api, endpoints } from '@/lib/api';
+import { auth } from '@/lib/auth';
+import type { ApiResponse, Role } from '@/types';
+import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
 
 export function useLogin() {
   const router = useRouter();
@@ -13,6 +13,7 @@ export function useLogin() {
   const [tab, setTab]         = useState<Role>('student');
   const [loading, setLoading] = useState(false);
   const [form, setForm]       = useState({ id: '', password: '' });
+  const [loginId, setLoginId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSug, setShowSug]         = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -26,6 +27,7 @@ export function useLogin() {
 
   const handleIdChange = (val: string) => {
     setForm((p) => ({ ...p, id: val }));
+    setLoginId(null);
     if ((tab !== 'student' && tab !== 'staff') || val.length < 2) { setSuggestions([]); setShowSug(false); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -49,9 +51,9 @@ export function useLogin() {
     setLoading(true);
     try {
       const body = tab === 'student'
-        ? { name: form.id, password: form.password, school_slug: readSelectedSchool()?.slug }
+        ? { name: loginId || form.id, password: form.password, school_slug: readSelectedSchool()?.slug }
         : tab === 'staff'
-        ? { staff_id: form.id, password: form.password, school_slug: readSelectedSchool()?.slug }
+        ? { staff_id: loginId || form.id, password: form.password, school_slug: readSelectedSchool()?.slug }
         : { admin_id: form.id, password: form.password, school_slug: readSelectedSchool()?.slug };
 
       const ep = tab === 'student' ? endpoints.auth.studentLogin
@@ -71,5 +73,5 @@ export function useLogin() {
     }
   };
 
-  return { tab, switchTab, loading, form, setForm, suggestions, showSug, setShowSug, handleIdChange, handleSubmit };
+  return { tab, switchTab, loading, form, setForm, loginId, setLoginId, suggestions, showSug, setShowSug, handleIdChange, handleSubmit };
 }

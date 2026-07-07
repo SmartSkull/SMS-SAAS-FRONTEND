@@ -2,11 +2,11 @@
 import { useLogin } from '@/hooks/useLogin';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { getImageUrl } from '@/lib/api';
+import type { Role } from '@/types';
 import clsx from 'clsx';
 import { Eye, EyeOff, GraduationCap, Search, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import type { Role } from '@/types';
 
 const TABS: { id: Role; label: string; icon: React.ElementType }[] = [
   { id: 'student', label: 'Student', icon: GraduationCap },
@@ -15,7 +15,7 @@ const TABS: { id: Role; label: string; icon: React.ElementType }[] = [
 ];
 
 export default function LoginPage() {
-  const { tab, switchTab, loading, form, setForm, suggestions, showSug, setShowSug, handleIdChange, handleSubmit } = useLogin();
+  const { tab, switchTab, loading, form, setForm, loginId, setLoginId, suggestions, showSug, setShowSug, handleIdChange, handleSubmit } = useLogin();
   const { school } = useSelectedSchool();
   const [showPw, setShowPw] = useState(false);
   const sugRef = useRef<HTMLDivElement>(null);
@@ -157,8 +157,9 @@ export default function LoginPage() {
                             key={id}
                             type="button"
                             onMouseDown={() => {
-                              // Staff login uses the ID; student login uses the full name
-                              setForm((prev) => ({ ...prev, id: isStaff ? id : fullName }));
+                              // preserve the entered name for display, but store the selected unique ID for login
+                              setForm((prev) => ({ ...prev, id: fullName }));
+                              setLoginId(id);
                               setShowSug(false);
                             }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
@@ -175,8 +176,8 @@ export default function LoginPage() {
                             <div className="flex-1 min-w-0">
                               <p className="text-gray-900 text-sm font-medium truncate">{fullName}</p>
                               {subtitle && <p className="text-gray-400 text-xs truncate">{subtitle}</p>}
+                              <p className="text-gray-400 text-[11px] font-mono truncate">ID: {id}</p>
                             </div>
-                            <span className="text-gray-400 text-xs font-mono flex-shrink-0">{id}</span>
                           </button>
                         );
                       })}
