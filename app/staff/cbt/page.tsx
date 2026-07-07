@@ -780,8 +780,16 @@ export default function StaffCbt() {
             border: none !important;
             padding: 0 !important;
             margin: 0 !important;
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+            background: white !important;
           }
+          .print-sheet .bubble { border: 1px solid #444 !important; }
+          .avoid-break { page-break-inside: avoid; }
+          html, body { background: white !important; }
         }
+        .roll-box { width: 28px; height: 20px; border: 1px solid #222; display: inline-block; margin-right: 4px }
+        .bubble { width: 18px; height: 18px; border-radius: 50%; border: 1px solid #666; display: inline-block; margin-right: 6px }
       `}</style>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">CBT Management</h1>
@@ -1587,98 +1595,83 @@ export default function StaffCbt() {
           </div>
 
           <div className="bg-white rounded-2xl card shadow-sm p-6 border border-gray-100 print-sheet">
-            <div className="flex flex-col gap-2 border-b border-gray-200 pb-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">OMR Answer Sheet</h3>
-                  <p className="text-sm text-gray-500">Objective questions 1–50 and theory response space.</p>
+
+            <div className="text-center mb-4 avoid-break">
+              <div className="text-2xl font-bold">Your Institute Name &amp; Logo</div>
+              <div className="inline-block mt-1 px-3 py-1 text-xs bg-gray-900 text-white rounded-full">OMR ANSWER SHEET</div>
+            </div>
+
+            <div className="grid grid-cols-12 gap-4 mb-4 avoid-break">
+              <div className="col-span-7 border border-gray-300 p-3">
+                <div className="mb-2 text-sm font-semibold">ROLL NO.</div>
+                <div className="flex items-center">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <div key={i} className="roll-box" />
+                  ))}
                 </div>
-                <div className="text-right text-sm text-gray-600">
-                  <div><span className="font-semibold">Date:</span> {omrForm.date || '—'}</div>
-                  <div><span className="font-semibold">Subject:</span> {omrForm.subject || '—'}</div>
+
+                <div className="mt-3 grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm font-semibold">TEST ID</div>
+                    <div className="flex items-center mt-2">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="roll-box" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-span-5 border border-gray-300 p-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-xs text-gray-600">Name</div>
+                    <div className="font-semibold">{omrForm.studentName || '________________________'}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-600">Batch</div>
+                    <div className="font-semibold">{omrForm.className || '________________'}</div>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="text-xs text-gray-600">Mobile No.</div>
+                    <div className="font-semibold">________________________</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-600">Test Date</div>
+                    <div className="font-semibold">{omrForm.date || '____/__/__'}</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-gray-700 md:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-xl border border-gray-200 p-3">
-                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Student Name</label>
-                <div className="mt-1 block font-semibold">{omrForm.studentName || '________________________'}</div>
-              </div>
-              <div className="rounded-xl border border-gray-200 p-3">
-                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Student ID</label>
-                <div className="mt-1 block font-semibold">{omrForm.studentId || '________________________'}</div>
-              </div>
-              <div className="rounded-xl border border-gray-200 p-3">
-                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Class</label>
-                <select
-                  value={omrForm.className}
-                  onChange={(e) => setOmrForm(prev => ({ ...prev, className: e.target.value }))}
-                  className="mt-1 w-full p-2 border border-gray-200 rounded-md text-sm"
-                >
-                  <option value="">Select class</option>
-                  {classes.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="rounded-xl border border-gray-200 p-3">
-                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Session</label>
-                <select
-                  value={omrForm.session}
-                  onChange={(e) => setOmrForm(prev => ({ ...prev, session: e.target.value }))}
-                  className="mt-1 w-full p-2 border border-gray-200 rounded-md text-sm"
-                >
-                  <option value="">Select session</option>
-                  {sessions.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="rounded-xl border border-gray-200 p-3">
-                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Term</label>
-                <select
-                  value={omrForm.term}
-                  onChange={(e) => setOmrForm(prev => ({ ...prev, term: e.target.value }))}
-                  className="mt-1 w-full p-2 border border-gray-200 rounded-md text-sm"
-                >
-                  <option value="">Select term</option>
-                  {terms.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className="rounded-xl border border-gray-200 p-3">
-                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Signature</span>
-                <span className="mt-1 block font-semibold">________________________</span>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-gray-200 overflow-hidden">
-              <div className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Objective Section</div>
-              <div className="divide-y divide-gray-200">
-                {Array.from({ length: 50 }, (_, index) => index + 1).map((number) => (
-                  <div key={number} className="grid grid-cols-[34px_1fr_56px_56px_56px_56px] items-center gap-2 px-3 py-2 text-sm text-gray-700">
-                    <div className="font-semibold text-gray-600">{number}</div>
-                    <div className="text-gray-600">{number}.</div>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                      <span>A</span>
-                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                      <span>B</span>
-                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                      <span>C</span>
-                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                      <span>D</span>
-                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
-                    </div>
+            <div className="avoid-break">
+              <div className="grid grid-cols-5 gap-6 text-sm">
+                {Array.from({ length: 5 }).map((_, col) => (
+                  <div key={col} className="space-y-3">
+                    {Array.from({ length: 10 }).map((_, row) => {
+                      const qnum = col * 10 + row + 1;
+                      return (
+                        <div key={qnum} className="flex items-center justify-between">
+                          <div className="w-8 font-semibold text-gray-700">{qnum}</div>
+                          <div className="flex items-center gap-3">
+                            <label className="flex items-center gap-2"><span className="text-xs">A</span><span className="bubble" /></label>
+                            <label className="flex items-center gap-2"><span className="text-xs">B</span><span className="bubble" /></label>
+                            <label className="flex items-center gap-2"><span className="text-xs">C</span><span className="bubble" /></label>
+                            <label className="flex items-center gap-2"><span className="text-xs">D</span><span className="bubble" /></label>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-gray-200 p-4">
-              <div className="text-sm font-semibold text-gray-700 mb-2">Theory / Essay Section</div>
-              <div className="h-40 rounded-xl border border-dashed border-gray-300 bg-gray-50" />
+            <div className="mt-6 avoid-break border-t pt-4">
+              <div className="text-sm font-semibold mb-2">Theory / Essay Section</div>
+              <div className="h-40 rounded-xl border border-dashed border-gray-300 bg-white" />
             </div>
           </div>
         </div>
