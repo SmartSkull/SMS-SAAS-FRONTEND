@@ -103,7 +103,7 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Users} label="Total Students" value={data?.total_students ?? data?.student_count ?? 0} color="bg-blue-600" />
         <StatCard icon={BookOpen} label="Assignments" value={data?.total_assignments ?? data?.analytics?.assignments?.total ?? 0} color="bg-blue-600" />
         <StatCard icon={TrendingUp} label="Library Docs" value={data?.total_library ?? data?.analytics?.library?.total ?? 0} color="bg-purple-600" />

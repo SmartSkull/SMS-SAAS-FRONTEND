@@ -1,19 +1,19 @@
 'use client';
-import React from 'react';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints, getImageUrl } from '@/lib/api';
-import type { CbtQuestion } from '@/types';
+import type { CbtQuestion, Student } from '@/types';
+import clsx from 'clsx';
+import { AlertCircle, BarChart2, Calendar, CheckCircle2, CheckSquare, Clock, FileText, HelpCircle, Pencil, Play, Plus, Printer, Search, Square, Trash2, Upload, UserCircle2, X } from 'lucide-react';
+import mammoth from 'mammoth';
+import Image from 'next/image';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Tesseract from 'tesseract.js';
 
 // Resolve the image upload URL relative to the current origin (through the Next.js proxy)
 const CBT_IMAGE_UPLOAD_URL = '/api' + (endpoints.staff.cbtUploadImage);
-import { BarChart2, HelpCircle, Pencil, Plus, Trash2, Upload, FileText, X, Clock, Calendar, CheckCircle2, AlertCircle, Search, CheckSquare, Square, Play } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import Tesseract from 'tesseract.js';
-import mammoth from 'mammoth';
-import clsx from 'clsx';
-import RichTextEditor from '@/components/ui/RichTextEditor';
 
 interface CbtResult {
   id: string; score: string; percentage: string; submittedAt: string;
@@ -60,24 +60,6 @@ function HtmlText({ html, className }: { html: string; className?: string }) {
   );
 }
 
-// Strip HTML tags and decode common HTML entities to plain text.
-// Used before sending to the API so the DB always stores clean text.
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')   // <br> → newline
-    .replace(/<\/p>/gi, '\n')         // closing </p> → newline
-    .replace(/<[^>]+>/g, '')          // remove all remaining tags
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{2,}/g, '\n')         // collapse multiple newlines
-    .trim();
-}
-
 type ManualQ = typeof EMPTY_Q & { savedId?: string }; // savedId = DB id once persisted
 
 const DRAFT_KEY = 'cbt_manual_draft';
@@ -96,14 +78,27 @@ function loadDraft(): { meta: typeof EMPTY_META; qs: ManualQ[]; step: string } |
 }
 
 export default function StaffCbt() {
-  const [tab, setTab] = useState<'questions' | 'results' | 'tests'>('questions');
+  const [tab, setTab] = useState<'questions' | 'results' | 'tests' | 'omr'>('questions');
   const [questions, setQuestions] = useState<CbtQuestion[]>([]);
   const [results, setResults] = useState<CbtResult[]>([]);
   const [tests, setTests] = useState<CbtTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '', search: '' });
+  const [omrStudents, setOmrStudents] = useState<Student[]>([]);
+  const [omrForm, setOmrForm] = useState({
+    studentId: '',
+    studentName: '',
+    className: '',
+    subject: '',
+    session: '',
+    term: '',
+    date: new Date().toISOString().slice(0, 10),
+    studentImage: '',
+  });
   const toast = useToast();
   const { classes, subjects, sessions, terms } = useSchoolData();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // ── Schedule modal ────────────────────────────────────────────────────────
   const [scheduleModal, setScheduleModal] = useState<{ open: boolean; test?: CbtTest }>({ open: false });
@@ -122,7 +117,7 @@ export default function StaffCbt() {
   const [questionCount, setQuestionCount] = useState(10);
   const [manualQs, setManualQs] = useState<ManualQ[]>([]);
   const [manualSubmitting, setManualSubmitting] = useState(false);
-  const [hasDraft, setHasDraft] = useState(false); // true when a saved draft exists but hasn't been resumed yet
+  const [hasDraft, setHasDraft] = useState<boolean>(() => !!loadDraft()); // true when a saved draft exists but hasn't been resumed yet
 
   // OCR / Bulk upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -133,41 +128,63 @@ export default function StaffCbt() {
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [ocrMeta, setOcrMeta] = useState(EMPTY_META);
 
-  const loadQuestions = () => {
+  const loadQuestions = useCallback(() => {
     setLoading(true);
-    const params: any = {};
-    if (filter.class)   params.class   = filter.class;
-    if (filter.course)  params.course  = filter.course;
+    const params: Record<string, string> = {};
+    if (filter.class) params.class = filter.class;
+    if (filter.course) params.course = filter.course;
     if (filter.session) params.session = filter.session;
-    if (filter.term)    params.term    = filter.term;
-    api.get<any>(endpoints.staff.cbtQuestions, params)
+    if (filter.term) params.term = filter.term;
+    api.get<{ data: CbtQuestion[] }>(endpoints.staff.cbtQuestions, params)
       .then((r) => setQuestions(r.data ?? []))
       .catch(() => toast.error('Failed to load questions'))
       .finally(() => setLoading(false));
-  };
+  }, [filter.class, filter.course, filter.session, filter.term, toast]);
 
-  const loadResults = () => {
+  const loadResults = useCallback(() => {
     setLoading(true);
-    api.get<any>(endpoints.staff.cbtResults)
+    api.get<{ data: CbtResult[] }>(endpoints.staff.cbtResults)
       .then((r) => setResults(r.data ?? []))
       .catch(() => toast.error('Failed to load results'))
       .finally(() => setLoading(false));
-  };
+  }, [toast]);
 
-  const loadTests = () => {
+  const loadTests = useCallback(() => {
     setLoading(true);
-    api.get<any>(endpoints.staff.cbt)
+    api.get<{ data: CbtTest[] }>(endpoints.staff.cbt)
       .then((r) => setTests(r.data ?? []))
       .catch(() => toast.error('Failed to load tests'))
       .finally(() => setLoading(false));
-  };
+  }, [toast]);
 
   useEffect(() => {
     if (tab === 'questions') loadQuestions();
     else if (tab === 'results') loadResults();
-    else loadTests();
-    setSelectedIds(new Set()); // clear selection on tab/filter change
-  }, [tab, filter]);
+    else if (tab === 'tests') loadTests();
+    setSelectedIds(new Set());
+  }, [tab, filter.class, filter.course, filter.session, filter.term, filter.search, loadQuestions, loadResults, loadTests]);
+
+  useEffect(() => {
+    api.get<{ data: Student[] }>(endpoints.staff.students, { page: 1, limit: 200 })
+      .then((r) => setOmrStudents(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {});
+  }, []);
+
+  const handleSelectOmrStudent = (studentId: string) => {
+    const student = omrStudents.find((item) => String(item.student_id) === studentId);
+    if (!student) return;
+    setOmrForm((prev) => ({
+      ...prev,
+      studentId: String(student.student_id ?? ''),
+      studentName: `${student.firstname ?? ''} ${student.lastname ?? ''}`.trim(),
+      className: student.class ?? '',
+      studentImage: student.image ?? '',
+    }));
+  };
+
+  const handlePrintOmrSheet = () => {
+    if (typeof window !== 'undefined') window.print();
+  };
 
   // ── Schedule helpers ──────────────────────────────────────────────────────
   const openScheduleModal = (test: CbtTest) => {
@@ -227,14 +244,6 @@ export default function StaffCbt() {
     }
   };
 
-  // ── Restore manual draft on mount ─────────────────────────────────────────
-  useEffect(() => {
-    const draft = loadDraft();
-    if (!draft) return;
-    // Don't auto-open — just flag that a draft exists so the banner appears.
-    setHasDraft(true);
-  }, []);
-
   // ── Persist draft whenever manual state changes (skip on first mount) ──────
   const persistMounted = useRef(false);
   useEffect(() => {
@@ -276,13 +285,11 @@ export default function StaffCbt() {
   };
 
   // ── Bulk selection ────────────────────────────────────────────────────────
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkDeleting, setBulkDeleting] = useState(false);
-
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -765,6 +772,18 @@ export default function StaffCbt() {
 
   return (
     <div className="space-y-6">
+      <style jsx global>{`
+        @media print {
+          body { background: white !important; }
+          .no-print { display: none !important; }
+          .print-sheet {
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+        }
+      `}</style>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">CBT Management</h1>
         {tab === 'questions' && manualStep === null && (
@@ -793,6 +812,12 @@ export default function StaffCbt() {
             tab === 'results' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}>
           <span className="flex items-center gap-1.5"><BarChart2 size={14} /> Results</span>
+        </button>
+        <button onClick={() => setTab('omr')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+            tab === 'omr' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}>
+          <span className="flex items-center gap-1.5"><Printer size={14} /> OMR Sheet</span>
         </button>
       </div>
 
@@ -1436,6 +1461,200 @@ export default function StaffCbt() {
           )
         ) : null}
       </div>
+
+      {tab === 'omr' && (
+        <div className="space-y-6">
+          <div className="no-print bg-white rounded-2xl card shadow-sm p-6 border border-gray-100">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Printable OMR Answer Sheet</h2>
+                <p className="text-sm text-gray-500 mt-1">Use this sheet for objective and theory responses. It is optimized for printing or saving as PDF.</p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button onClick={handlePrintOmrSheet} className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2">
+                  <Printer size={16} /> Print / Save as PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
+                  <select
+                    value={omrForm.studentId}
+                    onChange={(e) => handleSelectOmrStudent(e.target.value)}
+                    className={SEL_CLS + ' w-full'}
+                  >
+                    <option value="">Manual entry</option>
+                    {omrStudents.map((student) => (
+                      <option key={student.student_id} value={student.student_id}>{`${student.firstname ?? ''} ${student.lastname ?? ''}`.trim()} · {student.class ?? '—'}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+                    <input
+                      value={omrForm.studentName}
+                      onChange={(e) => setOmrForm((prev) => ({ ...prev, studentName: e.target.value }))}
+                      className={`${SEL_CLS} w-full`}
+                      placeholder="Enter student name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+                    <input
+                      value={omrForm.studentId}
+                      onChange={(e) => setOmrForm((prev) => ({ ...prev, studentId: e.target.value }))}
+                      className={`${SEL_CLS} w-full`}
+                      placeholder="Enter student ID"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                    <input
+                      value={omrForm.className}
+                      onChange={(e) => setOmrForm((prev) => ({ ...prev, className: e.target.value }))}
+                      className={`${SEL_CLS} w-full`}
+                      placeholder="Enter class"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <input
+                      value={omrForm.subject}
+                      onChange={(e) => setOmrForm((prev) => ({ ...prev, subject: e.target.value }))}
+                      className={`${SEL_CLS} w-full`}
+                      placeholder="Enter subject"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
+                    <input
+                      value={omrForm.session}
+                      onChange={(e) => setOmrForm((prev) => ({ ...prev, session: e.target.value }))}
+                      className={`${SEL_CLS} w-full`}
+                      placeholder="e.g. 2024/2025"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
+                    <input
+                      value={omrForm.term}
+                      onChange={(e) => setOmrForm((prev) => ({ ...prev, term: e.target.value }))}
+                      className={`${SEL_CLS} w-full`}
+                      placeholder="e.g. FIRST"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={omrForm.date}
+                    onChange={(e) => setOmrForm((prev) => ({ ...prev, date: e.target.value }))}
+                    className={`${SEL_CLS} w-full`}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[260px]">
+                {omrForm.studentImage ? (
+                  <Image
+                    src={getImageUrl(omrForm.studentImage) ?? '/student.png'}
+                    alt="Student preview"
+                    width={128}
+                    height={128}
+                    className="w-32 h-32 rounded-2xl object-cover border border-gray-200 bg-white shadow-sm"
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 shadow-sm">
+                    <UserCircle2 size={72} />
+                  </div>
+                )}
+                <p className="mt-3 text-sm font-medium text-gray-700">Student photo slot</p>
+                <p className="text-xs text-gray-500 text-center">The uploaded student image will appear here when available.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl card shadow-sm p-6 border border-gray-100 print-sheet">
+            <div className="flex flex-col gap-2 border-b border-gray-200 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">OMR Answer Sheet</h3>
+                  <p className="text-sm text-gray-500">Objective questions 1–50 and theory response space.</p>
+                </div>
+                <div className="text-right text-sm text-gray-600">
+                  <div><span className="font-semibold">Date:</span> {omrForm.date || '—'}</div>
+                  <div><span className="font-semibold">Subject:</span> {omrForm.subject || '—'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-gray-700 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-gray-200 p-3">
+                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Student Name</span>
+                <span className="mt-1 block font-semibold">{omrForm.studentName || '________________________'}</span>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-3">
+                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Student ID</span>
+                <span className="mt-1 block font-semibold">{omrForm.studentId || '________________________'}</span>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-3">
+                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Class</span>
+                <span className="mt-1 block font-semibold">{omrForm.className || '________________________'}</span>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-3">
+                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Session</span>
+                <span className="mt-1 block font-semibold">{omrForm.session || '________________________'}</span>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-3">
+                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Term</span>
+                <span className="mt-1 block font-semibold">{omrForm.term || '________________________'}</span>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-3">
+                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Signature</span>
+                <span className="mt-1 block font-semibold">________________________</span>
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Objective Section</div>
+              <div className="divide-y divide-gray-200">
+                {Array.from({ length: 50 }, (_, index) => index + 1).map((number) => (
+                  <div key={number} className="grid grid-cols-[34px_1fr_56px_56px_56px_56px] items-center gap-2 px-3 py-2 text-sm text-gray-700">
+                    <div className="font-semibold text-gray-600">{number}</div>
+                    <div className="text-gray-600">{number}.</div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                      <span>A</span>
+                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                      <span>B</span>
+                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                      <span>C</span>
+                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                      <span>D</span>
+                      <div className="h-4 w-4 border border-gray-400 rounded-sm" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-gray-200 p-4">
+              <div className="text-sm font-semibold text-gray-700 mb-2">Theory / Essay Section</div>
+              <div className="h-40 rounded-xl border border-dashed border-gray-300 bg-gray-50" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Schedules tab ──────────────────────────────────────────────── */}
       {tab === 'tests' && (
