@@ -8,7 +8,6 @@ import type { CbtQuestion, Student } from '@/types';
 import clsx from 'clsx';
 import { AlertCircle, BarChart2, Calendar, CheckCircle2, CheckSquare, Clock, FileText, HelpCircle, Pencil, Play, Plus, Printer, Search, Square, Trash2, Upload, UserCircle2, X } from 'lucide-react';
 import mammoth from 'mammoth';
-import Image from 'next/image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
 
@@ -1513,39 +1512,47 @@ export default function StaffCbt() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                    <input
+                    <select
                       value={omrForm.className}
                       onChange={(e) => setOmrForm((prev) => ({ ...prev, className: e.target.value }))}
                       className={`${SEL_CLS} w-full`}
-                      placeholder="Enter class"
-                    />
+                    >
+                      <option value="">Select class</option>
+                      {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                    <input
+                    <select
                       value={omrForm.subject}
                       onChange={(e) => setOmrForm((prev) => ({ ...prev, subject: e.target.value }))}
                       className={`${SEL_CLS} w-full`}
-                      placeholder="Enter subject"
-                    />
+                    >
+                      <option value="">Select subject</option>
+                      {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
-                    <input
+                    <select
                       value={omrForm.session}
                       onChange={(e) => setOmrForm((prev) => ({ ...prev, session: e.target.value }))}
                       className={`${SEL_CLS} w-full`}
-                      placeholder="e.g. 2024/2025"
-                    />
+                    >
+                      <option value="">Select session</option>
+                      {sessions.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
-                    <input
+                    <select
                       value={omrForm.term}
                       onChange={(e) => setOmrForm((prev) => ({ ...prev, term: e.target.value }))}
                       className={`${SEL_CLS} w-full`}
-                      placeholder="e.g. FIRST"
-                    />
+                    >
+                      <option value="">Select term</option>
+                      {terms.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
                 </div>
                 <div>
@@ -1561,7 +1568,7 @@ export default function StaffCbt() {
 
               <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[260px]">
                 {omrForm.studentImage ? (
-                  <Image
+                  <img
                     src={getImageUrl(omrForm.studentImage) ?? '/student.png'}
                     alt="Student preview"
                     width={128}
@@ -1593,26 +1600,47 @@ export default function StaffCbt() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-gray-700 md:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-gray-700 md:grid-cols-2 lg:grid-cols-3">
               <div className="rounded-xl border border-gray-200 p-3">
-                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Student Name</span>
-                <span className="mt-1 block font-semibold">{omrForm.studentName || '________________________'}</span>
+                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Student Name</label>
+                <div className="mt-1 block font-semibold">{omrForm.studentName || '________________________'}</div>
               </div>
               <div className="rounded-xl border border-gray-200 p-3">
-                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Student ID</span>
-                <span className="mt-1 block font-semibold">{omrForm.studentId || '________________________'}</span>
+                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Student ID</label>
+                <div className="mt-1 block font-semibold">{omrForm.studentId || '________________________'}</div>
               </div>
               <div className="rounded-xl border border-gray-200 p-3">
-                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Class</span>
-                <span className="mt-1 block font-semibold">{omrForm.className || '________________________'}</span>
+                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Class</label>
+                <select
+                  value={omrForm.className}
+                  onChange={(e) => setOmrForm(prev => ({ ...prev, className: e.target.value }))}
+                  className="mt-1 w-full p-2 border border-gray-200 rounded-md text-sm"
+                >
+                  <option value="">Select class</option>
+                  {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
               <div className="rounded-xl border border-gray-200 p-3">
-                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Session</span>
-                <span className="mt-1 block font-semibold">{omrForm.session || '________________________'}</span>
+                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Session</label>
+                <select
+                  value={omrForm.session}
+                  onChange={(e) => setOmrForm(prev => ({ ...prev, session: e.target.value }))}
+                  className="mt-1 w-full p-2 border border-gray-200 rounded-md text-sm"
+                >
+                  <option value="">Select session</option>
+                  {sessions.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
               <div className="rounded-xl border border-gray-200 p-3">
-                <span className="block text-[11px] uppercase tracking-wide text-gray-500">Term</span>
-                <span className="mt-1 block font-semibold">{omrForm.term || '________________________'}</span>
+                <label className="block text-[11px] uppercase tracking-wide text-gray-500">Term</label>
+                <select
+                  value={omrForm.term}
+                  onChange={(e) => setOmrForm(prev => ({ ...prev, term: e.target.value }))}
+                  className="mt-1 w-full p-2 border border-gray-200 rounded-md text-sm"
+                >
+                  <option value="">Select term</option>
+                  {terms.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div className="rounded-xl border border-gray-200 p-3">
                 <span className="block text-[11px] uppercase tracking-wide text-gray-500">Signature</span>
