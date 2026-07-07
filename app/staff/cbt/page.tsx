@@ -3,6 +3,7 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
+import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { CbtQuestion, Student } from '@/types';
 import clsx from 'clsx';
@@ -96,6 +97,7 @@ export default function StaffCbt() {
   });
   const toast = useToast();
   const { classes, subjects, sessions, terms } = useSchoolData();
+  const { school } = useSelectedSchool();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
@@ -1596,8 +1598,16 @@ export default function StaffCbt() {
 
           <div className="bg-white rounded-2xl card shadow-sm p-6 border border-gray-100 print-sheet">
 
-            <div className="text-center mb-4 avoid-break">
-              <div className="text-2xl font-bold">Your Institute Name &amp; Logo</div>
+            <div className="text-center mb-4 avoid-break flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {school?.logo ? (
+                  <img src={normalizeSchoolLogo(school.logo) ?? '/student.png'} alt={school?.name ?? 'School Logo'} className="h-12 w-12 object-contain" />
+                ) : null}
+                <div>
+                  <div className="text-2xl font-bold">{school?.name ?? 'Your Institute Name'}</div>
+                  <div className="text-xs text-gray-600">{school?.slogan ?? ''}</div>
+                </div>
+              </div>
               <div className="inline-block mt-1 px-3 py-1 text-xs bg-gray-900 text-white rounded-full">OMR ANSWER SHEET</div>
             </div>
 
@@ -1606,7 +1616,7 @@ export default function StaffCbt() {
                 <div className="mb-2 text-sm font-semibold">ROLL NO.</div>
                 <div className="flex items-center">
                   {Array.from({ length: 10 }).map((_, i) => (
-                    <div key={i} className="roll-box" />
+                    <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
                   ))}
                 </div>
 
@@ -1615,8 +1625,8 @@ export default function StaffCbt() {
                     <div className="text-sm font-semibold">TEST ID</div>
                     <div className="flex items-center mt-2">
                       {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="roll-box" />
-                      ))}
+                          <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
+                        ))}
                     </div>
                   </div>
                 </div>
@@ -1626,40 +1636,40 @@ export default function StaffCbt() {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <div className="text-xs text-gray-600">Name</div>
-                    <div className="font-semibold">{omrForm.studentName || '________________________'}</div>
+                    <div className="font-semibold text-gray-900">{omrForm.studentName || '________________________'}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-600">Batch</div>
-                    <div className="font-semibold">{omrForm.className || '________________'}</div>
+                    <div className="font-semibold text-gray-900">{omrForm.className || '________________'}</div>
                   </div>
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div>
                     <div className="text-xs text-gray-600">Mobile No.</div>
-                    <div className="font-semibold">________________________</div>
+                    <div className="font-semibold text-gray-900">________________________</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-600">Test Date</div>
-                    <div className="font-semibold">{omrForm.date || '____/__/__'}</div>
+                    <div className="font-semibold text-gray-900">{omrForm.date || '____/__/__'}</div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="avoid-break">
-              <div className="grid grid-cols-5 gap-6 text-sm">
+            <div className="avoid-break omr-container">
+              <div className="grid grid-cols-5 gap-4 text-sm">
                 {Array.from({ length: 5 }).map((_, col) => (
-                  <div key={col} className="space-y-3">
+                  <div key={col} className="space-y-2">
                     {Array.from({ length: 10 }).map((_, row) => {
                       const qnum = col * 10 + row + 1;
                       return (
-                        <div key={qnum} className="flex items-center justify-between">
-                          <div className="w-8 font-semibold text-gray-700">{qnum}</div>
-                          <div className="flex items-center gap-3">
-                            <label className="flex items-center gap-2"><span className="text-xs">A</span><span className="bubble" /></label>
-                            <label className="flex items-center gap-2"><span className="text-xs">B</span><span className="bubble" /></label>
-                            <label className="flex items-center gap-2"><span className="text-xs">C</span><span className="bubble" /></label>
-                            <label className="flex items-center gap-2"><span className="text-xs">D</span><span className="bubble" /></label>
+                        <div key={qnum} className="flex items-center justify-between w-full">
+                          <div className="w-8 font-semibold text-gray-800">{qnum}</div>
+                          <div className="flex items-center gap-3 min-w-[180px] justify-between">
+                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">A</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
+                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">B</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
+                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">C</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
+                            <label className="flex items-center gap-2"><span className="text-xs font-semibold">D</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
                           </div>
                         </div>
                       );
