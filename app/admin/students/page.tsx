@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Edit2, Trash2, CheckCircle, ChevronLeft, ChevronRight, X, GraduationCap } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, X, GraduationCap } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -77,12 +77,17 @@ export default function StudentsPage() {
     finally { setConfirmId(null); }
   };
 
-  const verify = async (id: string) => {
-    try { await api.post(endpoints.admin.studentsVerify, { student_id: id }); toast.success('Verified'); load(); }
-    catch { toast.error('Failed to verify'); }
-  };
+   const verify = async (id: string) => {
+     try { await api.post(endpoints.admin.studentsVerify, { student_id: id }); toast.success('Verified'); load(); }
+     catch { toast.error('Failed to verify'); }
+   };
 
-  const bulkVerify = async () => {
+   const unverify = async (id: string) => {
+     try { await api.post(endpoints.admin.studentsUnverify, { student_id: id }); toast.success('Unverified'); load(); }
+     catch { toast.error('Failed to unverify'); }
+   };
+
+   const bulkVerify = async () => {
     try { await api.post(endpoints.admin.studentsBulkVerify, { student_ids: selected }); toast.success(`${selected.length} verified`); setSelected([]); load(); }
     catch { toast.error('Bulk verify failed'); }
   };
@@ -155,6 +160,9 @@ export default function StudentsPage() {
                   <div className="flex items-center gap-2">
                     {s.admin_verify !== '1' && (
                       <button onClick={() => verify(s.student_id)} title="Verify" className="text-blue-600 hover:text-blue-800"><CheckCircle size={16} /></button>
+                    )}
+                    {s.admin_verify === '1' && (
+                      <button onClick={() => unverify(s.student_id)} title="Unverify" className="text-orange-600 hover:text-orange-800"><XCircle size={16} /></button>
                     )}
                     <button onClick={() => { setForm({ firstName: s.firstname, lastName: s.lastname, email: s.email, telephone: '', class: s.class, session: '', password: '' }); setModal({ open: true, student: s }); }} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
                     <button onClick={() => setConfirmId(s.student_id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
