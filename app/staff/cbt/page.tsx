@@ -78,7 +78,7 @@ function loadDraft(): { meta: typeof EMPTY_META; qs: ManualQ[]; step: string } |
 }
 
 export default function StaffCbt() {
-  const [tab, setTab] = useState<'questions' | 'results' | 'tests' | 'omr'>('questions');
+  const [tab, setTab] = useState<'questions' | 'results' | 'tests' | 'schedules' | 'omr'>('questions');
   const [questions, setQuestions] = useState<CbtQuestion[]>([]);
   const [results, setResults] = useState<CbtResult[]>([]);
   const [tests, setTests] = useState<CbtTest[]>([]);
@@ -165,7 +165,7 @@ export default function StaffCbt() {
   useEffect(() => {
     if (tab === 'questions') loadQuestions();
     else if (tab === 'results') loadResults();
-    else if (tab === 'tests') loadTests();
+    else if (tab === 'tests' || tab === 'schedules') loadTests();
     setSelectedIds(new Set());
   }, [tab, filter.class, filter.course, filter.session, filter.term, filter.search, loadQuestions, loadResults, loadTests]);
 
@@ -861,7 +861,13 @@ export default function StaffCbt() {
           className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
             tab === 'tests' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}>
-          <span className="flex items-center gap-1.5"><Calendar size={14} /> Schedules</span>
+          <span className="flex items-center gap-1.5"><Calendar size={14} /> Tests</span>
+        </button>
+        <button onClick={() => setTab('schedules')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+            tab === 'schedules' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}>
+          <span className="flex items-center gap-1.5"><Clock size={14} /> Schedules</span>
         </button>
         <button onClick={() => setTab('results')}
           className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
@@ -1312,7 +1318,7 @@ export default function StaffCbt() {
         </div>
       )}
 
-      <div className={`bg-white rounded-2xl card shadow-sm p-6${tab === 'tests' ? ' hidden' : ''}`}>
+      <div className={`bg-white rounded-2xl card shadow-sm p-6${tab === 'tests' || tab === 'schedules' ? ' hidden' : ''}`}>
         {loading ? (
           <div className="space-y-3 skeleton-stagger">
             {[...Array(4)].map((_, i) => (
@@ -1764,8 +1770,97 @@ export default function StaffCbt() {
         </div>
       )}
 
-      {/* ── Schedules tab ──────────────────────────────────────────────── */}
+      {/* ── Tests tab ────────────────────────────────────────────────── */}
       {tab === 'tests' && (
+        <div className="bg-white rounded-2xl card shadow-sm p-6">
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800 flex items-start gap-2">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <span>
+              All CBT tests created so far. Use this tab to review tests and change their subjects if needed.
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl">
+                  <div className="space-y-2 flex-1">
+                    <div className="shimmer h-4 w-48" />
+                    <div className="shimmer h-3 w-64" />
+                  </div>
+                  <div className="shimmer h-8 w-28 rounded-lg" />
+                </div>
+              ))}
+            </div>
+          ) : tests.length === 0 ? (
+            <EmptyState icon={Calendar} message="No tests found. Add questions first to create a test." card={false} />
+          ) : (
+            <div className="space-y-3">
+              {tests.map((test) => {
+                const now = new Date();
+                const start = test.startTime ? new Date(test.startTime) : null;
+                const end = test.endTime ? new Date(test.endTime) : null;
+                const isScheduled = !!(start && end);
+                const isLive = isScheduled && now >= start! && now <= end!;
+                const isUpcoming = isScheduled && now < start!;
+                const isExpired = isScheduled && now > end!;
+
+                return (
+                  <div key={test.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50/50 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-900 text-sm">{test.course}</p>
+                        <span className="text-gray-400 text-xs">·</span>
+                        <p className="text-sm text-gray-500">{test.class}</p>
+                        <span className="text-gray-400 text-xs">·</span>
+                        <p className="text-xs text-gray-400">{test.questionCount} question{test.questionCount !== 1 ? 's' : ''}</p>
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                        {!isScheduled && (
+                          <span className="flex items-center gap-1 text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                            <AlertCircle size={11} /> No schedule set
+                          </span>
+                        )}
+                        {isLive && (
+                          <span className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium animate-pulse">
+                            <CheckCircle2 size={11} /> Live now
+                          </span>
+                        )}
+                        {isUpcoming && (
+                          <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                            <Clock size={11} /> Upcoming
+                          </span>
+                        )}
+                        {isExpired && (
+                          <span className="flex items-center gap-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">
+                            <AlertCircle size={11} /> Expired
+                          </span>
+                        )}
+                        {isScheduled && (
+                          <span className="text-xs text-gray-500">
+                            {new Date(test.startTime!).toLocaleString()} → {new Date(test.endTime!).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => openSubjectModal(test)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 shrink-0"
+                      >
+                        <Pencil size={14} /> Change Subject
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Schedules tab ────────────────────────────────────────────────── */}
+      {tab === 'schedules' && (
         <div className="bg-white rounded-2xl card shadow-sm p-6">
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-start gap-2">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
