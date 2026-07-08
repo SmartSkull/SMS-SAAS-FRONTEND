@@ -18,6 +18,12 @@ export default function PageLoader() {
                       pathname.startsWith('/student');
 
   useEffect(() => {
+    if (pathname === '/null/dashboard' || pathname.startsWith('/null/')) {
+      window.location.replace('/login');
+    }
+  }, [pathname]);
+
+  useEffect(() => {
     if (isDashboard) return;
 
     setLoading(true);

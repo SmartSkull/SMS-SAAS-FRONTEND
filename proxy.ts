@@ -9,6 +9,11 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get('gka_token')?.value;
   const role = request.cookies.get('gka_role')?.value;
 
+  // Catch malformed /null/* paths (e.g. /null/dashboard from missing school slug)
+  if (pathname.startsWith('/null/') || pathname === '/null') {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
   // Allow public paths and static assets
   if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
     // Redirect authenticated users away from login
