@@ -6,6 +6,7 @@ import type { Role } from '@/types';
 import clsx from 'clsx';
 import { Eye, EyeOff, GraduationCap, Search, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 const TABS: { id: Role; label: string; icon: React.ElementType }[] = [
@@ -19,6 +20,13 @@ export default function LoginPage() {
   const { school } = useSelectedSchool();
   const [showPw, setShowPw] = useState(false);
   const sugRef = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (pathname === '/null/dashboard') {
+      window.location.replace('/login');
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const handler = (event: MouseEvent) => {

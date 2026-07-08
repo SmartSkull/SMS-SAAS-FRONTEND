@@ -111,7 +111,23 @@ export default function AdminSchoolPage() {
     }
   };
 
-  if (loading) return <div className="p-6 text-sm text-gray-500">Loading school information...</div>;
+  if (loading) return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <div className="h-8 w-48 bg-gray-200 rounded-xl animate-pulse" />
+        <div className="h-4 w-96 bg-gray-100 rounded-xl animate-pulse" />
+      </div>
+      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[...Array(8)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />)}
+        </div>
+        <div className="h-32 bg-gray-100 rounded-xl animate-pulse" />
+        <div className="flex justify-end">
+          <div className="h-11 w-40 bg-gray-200 rounded-xl animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
