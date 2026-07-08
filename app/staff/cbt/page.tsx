@@ -106,6 +106,10 @@ export default function StaffCbt() {
   const [scheduleForm, setScheduleForm] = useState({ startTime: '', endTime: '' });
   const [scheduleSaving, setScheduleSaving] = useState(false);
 
+  const [subjectModal, setSubjectModal] = useState<{ open: boolean; test?: CbtTest }>({ open: false });
+  const [subjectForm, setSubjectForm] = useState({ course: '' });
+  const [subjectSaving, setSubjectSaving] = useState(false);
+
   // ── Edit single question ──────────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(EMPTY);
@@ -224,6 +228,32 @@ export default function StaffCbt() {
       toast.error(e?.message ?? 'Failed to save schedule');
     } finally {
       setScheduleSaving(false);
+    }
+  };
+
+  const openSubjectModal = (test: CbtTest) => {
+    setSubjectForm({ course: test.course });
+    setSubjectModal({ open: true, test });
+  };
+
+  const handleSaveSubject = async () => {
+    if (!subjectModal.test) return;
+    if (!subjectForm.course.trim()) {
+      toast.error('Please select a valid subject');
+      return;
+    }
+    setSubjectSaving(true);
+    try {
+      await api.put(endpoints.staff.cbtTest(subjectModal.test.id), {
+        course: subjectForm.course,
+      });
+      toast.success('Subject updated successfully');
+      setSubjectModal({ open: false });
+      loadTests();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to update subject');
+    } finally {
+      setSubjectSaving(false);
     }
   };
 
@@ -1808,12 +1838,20 @@ export default function StaffCbt() {
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => openScheduleModal(test)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 shrink-0"
-                    >
-                      <Clock size={14} /> {isScheduled ? 'Edit Schedule' : 'Set Schedule'}
-                    </button>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => openScheduleModal(test)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 shrink-0"
+                      >
+                        <Clock size={14} /> {isScheduled ? 'Edit Schedule' : 'Set Schedule'}
+                      </button>
+                      <button
+                        onClick={() => openSubjectModal(test)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-100 shrink-0"
+                      >
+                        <Pencil size={14} /> Change Subject
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -1895,16 +1933,67 @@ export default function StaffCbt() {
               )}
               <button
                 onClick={() => setScheduleModal({ open: false })}
-                className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveSchedule}
                 disabled={scheduleSaving}
-                className="flex-1 py-2 btn-brand text-white rounded-xl text-sm font-medium disabled:opacity-60"
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
               >
-                {scheduleSaving ? 'Saving…' : 'Save Schedule'}
+                Save Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {subjectModal.open && subjectModal.test && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="font-semibold text-gray-900">Change CBT Subject</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Update the subject for this test and all its existing questions.
+                </p>
+              </div>
+              <button onClick={() => setSubjectModal({ open: false })}><X size={20} className="text-gray-400" /></button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <select
+                  value={subjectForm.course}
+                  onChange={(e) => setSubjectForm({ course: e.target.value })}
+                  className={`w-full ${SEL_CLS}`}
+                >
+                  <option value="">Select subject</option>
+                  {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                <p className="font-semibold text-gray-900">Current test:</p>
+                <p>{subjectModal.test.course} · {subjectModal.test.class}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 p-6 border-t border-gray-100">
+              <button
+                onClick={() => setSubjectModal({ open: false })}
+                className="px-4 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSubject}
+                disabled={subjectSaving}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold disabled:opacity-50"
+              >
+                Save Subject
               </button>
             </div>
           </div>

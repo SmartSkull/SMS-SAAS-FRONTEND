@@ -197,6 +197,7 @@ export const endpoints = {
     courses: '/staff/courses',
     cbt: '/staff/cbt',
     cbtTestSchedule: (id: string) => `/staff/cbt/tests/${id}/schedule`,
+    cbtTest: (id: string) => `/staff/cbt/tests/${id}`,
     cbtQuestions: '/staff/cbt/questions',
     cbtQuestion: (id: string) => `/staff/cbt/questions/${id}`,
     cbtBulkDeleteQuestions: '/staff/cbt/questions/bulk',
