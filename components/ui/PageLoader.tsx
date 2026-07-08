@@ -19,6 +19,10 @@ export default function PageLoader() {
 
   useEffect(() => {
     if (pathname === '/null/dashboard' || pathname.startsWith('/null/')) {
+      document.cookie = 'gka_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      document.cookie = 'gka_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      document.cookie = 'gka_user=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+      document.cookie = 'gka_role=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
       window.location.replace('/login');
     }
   }, [pathname]);
