@@ -9,7 +9,7 @@ import type { CbtQuestion, Student } from '@/types';
 import clsx from 'clsx';
 import { AlertCircle, BarChart2, Calendar, CheckCircle2, CheckSquare, Clock, FileText, HelpCircle, Pencil, Play, Plus, Printer, Search, Square, Trash2, Upload, UserCircle2, X } from 'lucide-react';
 import mammoth from 'mammoth';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
 
 // Resolve the image upload URL relative to the current origin (through the Next.js proxy)
@@ -19,6 +19,12 @@ interface CbtResult {
   id: string; score: string; percentage: string; submittedAt: string;
   firstname: string; lastname: string;
   student?: { user?: { uniqueId?: string } };
+  test_title?: string;
+  class?: string;
+  subject?: string;
+  session?: string;
+  term?: string;
+  teachers?: string[];
 }
 
 interface CbtTest {
@@ -84,6 +90,13 @@ export default function StaffCbt() {
   const [tests, setTests] = useState<CbtTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '', search: '' });
+  const [resultsFilter, setResultsFilter] = useState({ class: '', course: '', session: '', term: '', teacher: '' });
+
+  const resultsTeachers = useMemo(() => {
+    const set = new Set<string>();
+    results.forEach(r => (r.teachers ?? []).forEach(t => set.add(t)));
+    return Array.from(set);
+  }, [results]);
   const [omrStudents, setOmrStudents] = useState<Student[]>([]);
   const [omrForm, setOmrForm] = useState({
     studentId: '',
@@ -148,11 +161,17 @@ export default function StaffCbt() {
 
   const loadResults = useCallback(() => {
     setLoading(true);
-    api.get<{ data: CbtResult[] }>(endpoints.staff.cbtResults)
+    const params: Record<string, string> = {};
+    if (resultsFilter.class) params.class = resultsFilter.class;
+    if (resultsFilter.course) params.course = resultsFilter.course;
+    if (resultsFilter.session) params.session = resultsFilter.session;
+    if (resultsFilter.term) params.term = resultsFilter.term;
+    if (resultsFilter.teacher) params.teacher = resultsFilter.teacher;
+    api.get<{ data: CbtResult[] }>(endpoints.staff.cbtResults, params)
       .then((r) => setResults(r.data ?? []))
       .catch(() => toast.error('Failed to load results'))
       .finally(() => setLoading(false));
-  }, [toast]);
+  }, [resultsFilter, toast]);
 
   const loadTests = useCallback(() => {
     setLoading(true);
@@ -167,7 +186,7 @@ export default function StaffCbt() {
     else if (tab === 'results') loadResults();
     else if (tab === 'tests' || tab === 'schedules') loadTests();
     setSelectedIds(new Set());
-  }, [tab, filter.class, filter.course, filter.session, filter.term, filter.search, loadQuestions, loadResults, loadTests]);
+  }, [tab, filter.class, filter.course, filter.session, filter.term, filter.search, resultsFilter.class, resultsFilter.course, resultsFilter.session, resultsFilter.term, resultsFilter.teacher, loadQuestions, loadResults, loadTests]);
 
   useEffect(() => {
     api.get<{ data: Student[] }>(endpoints.staff.students, { page: 1, limit: 200 })
@@ -1495,32 +1514,67 @@ export default function StaffCbt() {
             </div>
           )
         ) : tab === 'results' ? (
-          results.length === 0 ? (
-            <EmptyState icon={BarChart2} message="No CBT results yet." card={false} />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b">
-                    <th className="pb-3 font-medium">Student</th>
-                    <th className="pb-3 font-medium">Student ID</th>
-                    <th className="pb-3 font-medium">Score</th>
-                    <th className="pb-3 font-medium">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {results.map((r, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="py-3 font-medium text-gray-800">{r.firstname} {r.lastname}</td>
-                      <td className="py-3 text-gray-500 font-mono text-xs">{r.student?.user?.uniqueId ?? '—'}</td>
-                      <td className="py-3"><span className="font-semibold text-gray-800">{r.score}</span><span className="text-gray-400 text-xs ml-1">({r.percentage}%)</span></td>
-                      <td className="py-3 text-gray-500">{new Date(r.submittedAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div>
+            <div className="flex flex-wrap gap-3 mb-4">
+              <select value={resultsFilter.class} onChange={(e) => setResultsFilter(p => ({ ...p, class: e.target.value }))} className={SEL_CLS}>
+                <option value="">All Classes</option>
+                {classes.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={resultsFilter.course} onChange={(e) => setResultsFilter(p => ({ ...p, course: e.target.value }))} className={SEL_CLS}>
+                <option value="">All Subjects</option>
+                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select value={resultsFilter.session} onChange={(e) => setResultsFilter(p => ({ ...p, session: e.target.value }))} className={SEL_CLS}>
+                <option value="">All Sessions</option>
+                {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select value={resultsFilter.term} onChange={(e) => setResultsFilter(p => ({ ...p, term: e.target.value }))} className={SEL_CLS}>
+                <option value="">All Terms</option>
+                {terms.map(t => <option key={t} value={t}>{t} Term</option>)}
+              </select>
+              <select value={resultsFilter.teacher} onChange={(e) => setResultsFilter(p => ({ ...p, teacher: e.target.value }))} className={SEL_CLS}>
+                <option value="">All Teachers</option>
+                {resultsTeachers.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
-          )
+            {results.length === 0 ? (
+              <EmptyState icon={BarChart2} message="No CBT results yet." card={false} />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="pb-3 font-medium">Student</th>
+                      <th className="pb-3 font-medium">Student ID</th>
+                      <th className="pb-3 font-medium">Class</th>
+                      <th className="pb-3 font-medium">Subject</th>
+                      <th className="pb-3 font-medium">Session</th>
+                      <th className="pb-3 font-medium">Term</th>
+                      <th className="pb-3 font-medium">Teacher(s)</th>
+                      <th className="pb-3 font-medium">Score</th>
+                      <th className="pb-3 font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {results.map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="py-3 font-medium text-gray-800">{r.firstname} {r.lastname}</td>
+                        <td className="py-3 text-gray-500 font-mono text-xs">{r.student?.user?.uniqueId ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.class ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.subject ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.session ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.term ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{(r.teachers ?? []).join(', ') || '—'}</td>
+                        <td className="py-3"><span className="font-semibold text-gray-800">{r.score}</span><span className="text-gray-400 text-xs ml-1">({r.percentage}%)</span></td>
+                        <td className="py-3 text-gray-500">{new Date(r.submittedAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
         ) : null}
       </div>
 
