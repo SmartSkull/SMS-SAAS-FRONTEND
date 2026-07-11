@@ -6,7 +6,7 @@ import { useSchoolData } from '@/hooks/useSchoolData';
 import {
   Monitor, Search, ChevronDown, ChevronUp, User, Clock,
   Calendar, CheckCircle2, AlertCircle, HelpCircle, BookOpen, Trash2,
-  Upload, RefreshCw, CheckCircle,
+  Upload, RefreshCw, CheckCircle, BarChart2,
 } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useEffect, useState } from 'react';
@@ -148,12 +148,17 @@ function ImportResultsButton({ onImported }: { onImported?: () => void }) {
 }
 
 export default function AdminCbtPage() {
-  const { classes, subjects } = useSchoolData();
+  const { classes, subjects, sessions, terms } = useSchoolData();
   const toast = useToast();
 
   const [tests, setTests] = useState<CbtTestSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ class: '', course: '', search: '', teacher: '' });
+  const [tab, setTab] = useState<'tests' | 'results'>('tests');
+
+  const [results, setResults] = useState<any[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsFilter, setResultsFilter] = useState({ class: '', course: '', session: '', term: '', teacher: '' });
 
   // Derive unique teacher names from loaded tests
   const teacherOptions = Array.from(
@@ -179,6 +184,24 @@ export default function AdminCbtPage() {
   };
 
   useEffect(() => { loadTests(); }, [filter.class, filter.course]);
+
+  const loadResults = () => {
+    setResultsLoading(true);
+    const params: any = {};
+    if (resultsFilter.class) params.class = resultsFilter.class;
+    if (resultsFilter.course) params.course = resultsFilter.course;
+    if (resultsFilter.session) params.session = resultsFilter.session;
+    if (resultsFilter.term) params.term = resultsFilter.term;
+    if (resultsFilter.teacher) params.teacher = resultsFilter.teacher;
+    api.get<any>(endpoints.admin.cbtResults, params)
+      .then(r => setResults(r.data ?? []))
+      .catch(() => toast.error('Failed to load CBT results'))
+      .finally(() => setResultsLoading(false));
+  };
+
+  useEffect(() => {
+    if (tab === 'results') loadResults();
+  }, [tab, resultsFilter.class, resultsFilter.course, resultsFilter.session, resultsFilter.term, resultsFilter.teacher]);
 
   const toggleExpand = async (test: CbtTestSummary) => {
     if (expandedId === test.id) { setExpandedId(null); return; }
@@ -244,8 +267,30 @@ export default function AdminCbtPage() {
         <ImportResultsButton onImported={loadTests} />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-2xl card shadow-sm p-4 flex flex-wrap gap-3">
+      {/* Tabs */}
+      <div className="bg-white rounded-2xl card shadow-sm p-1 flex gap-1">
+        <button
+          onClick={() => setTab('tests')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            tab === 'tests' ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <BookOpen size={16} /> Tests
+        </button>
+        <button
+          onClick={() => setTab('results')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+            tab === 'results' ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <BarChart2 size={16} /> Results
+        </button>
+      </div>
+
+      {tab === 'tests' && (
+        <>
+          {/* Filters */}
+          <div className="bg-white rounded-2xl card shadow-sm p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -474,6 +519,76 @@ export default function AdminCbtPage() {
           </div>
         )}
         </div>
+      </>
+      )}
+
+      {tab === 'results' && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-2xl card shadow-sm p-4 flex flex-wrap gap-3">
+            <select value={resultsFilter.class} onChange={(e) => setResultsFilter(p => ({ ...p, class: e.target.value }))} className={SEL}>
+              <option value="">All Classes</option>
+              {classes.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select value={resultsFilter.course} onChange={(e) => setResultsFilter(p => ({ ...p, course: e.target.value }))} className={SEL}>
+              <option value="">All Subjects</option>
+              {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={resultsFilter.session} onChange={(e) => setResultsFilter(p => ({ ...p, session: e.target.value }))} className={SEL}>
+              <option value="">All Sessions</option>
+              {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={resultsFilter.term} onChange={(e) => setResultsFilter(p => ({ ...p, term: e.target.value }))} className={SEL}>
+              <option value="">All Terms</option>
+              {terms.map(t => <option key={t} value={t}>{t} Term</option>)}
+            </select>
+            <select value={resultsFilter.teacher} onChange={(e) => setResultsFilter(p => ({ ...p, teacher: e.target.value }))} className={SEL}>
+              <option value="">All Teachers</option>
+              {teacherOptions.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
+          {results.length === 0 ? (
+            <div className="bg-white rounded-2xl card shadow-sm p-8">
+              <EmptyState icon={BarChart2} message="No CBT results found." card={false} />
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl card shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b">
+                      <th className="pb-3 font-medium">Student</th>
+                      <th className="pb-3 font-medium">Student ID</th>
+                      <th className="pb-3 font-medium">Class</th>
+                      <th className="pb-3 font-medium">Subject</th>
+                      <th className="pb-3 font-medium">Session</th>
+                      <th className="pb-3 font-medium">Term</th>
+                      <th className="pb-3 font-medium">Teacher(s)</th>
+                      <th className="pb-3 font-medium">Score</th>
+                      <th className="pb-3 font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {results.map((r, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="py-3 font-medium text-gray-800">{r.firstname} {r.lastname}</td>
+                        <td className="py-3 text-gray-500 font-mono text-xs">{r.student?.user?.uniqueId ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.class ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.subject ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.session ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{r.term ?? '—'}</td>
+                        <td className="py-3 text-gray-500">{(r.teachers ?? []).join(', ') || '—'}</td>
+                        <td className="py-3"><span className="font-semibold text-gray-800">{r.score}</span><span className="text-gray-400 text-xs ml-1">({r.percentage}%)</span></td>
+                        <td className="py-3 text-gray-500">{new Date(r.submittedAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {confirmDelete && (
         <ConfirmModal
