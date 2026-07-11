@@ -173,6 +173,17 @@ export default function StaffCbt() {
       .finally(() => setLoading(false));
   }, [resultsFilter, toast]);
 
+  const handleDeleteResult = useCallback(async (result: CbtResult) => {
+    if (!window.confirm(`Delete result for ${result.firstname} ${result.lastname}?`)) return;
+    try {
+      await api.delete(endpoints.staff.cbtResult(result.id));
+      setResults(prev => prev.filter(r => r.id !== result.id));
+      toast.success('Result deleted');
+    } catch {
+      toast.error('Failed to delete result');
+    }
+  }, [toast]);
+
   const loadTests = useCallback(() => {
     setLoading(true);
     api.get<{ data: CbtTest[] }>(endpoints.staff.cbt)
@@ -1553,6 +1564,7 @@ export default function StaffCbt() {
                       <th className="pb-3 font-medium">Teacher(s)</th>
                       <th className="pb-3 font-medium">Score</th>
                       <th className="pb-3 font-medium">Date</th>
+                      <th className="pb-3 font-medium"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -1567,6 +1579,11 @@ export default function StaffCbt() {
                         <td className="py-3 text-gray-500">{(r.teachers ?? []).join(', ') || '—'}</td>
                         <td className="py-3"><span className="font-semibold text-gray-800">{r.score}</span><span className="text-gray-400 text-xs ml-1">({r.percentage}%)</span></td>
                         <td className="py-3 text-gray-500">{new Date(r.submittedAt).toLocaleDateString()}</td>
+                        <td className="py-3">
+                          <button onClick={() => handleDeleteResult(r)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg">
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
