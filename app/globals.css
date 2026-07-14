@@ -292,7 +292,7 @@ input::placeholder, textarea::placeholder {
   nav, aside, header, .print\:hidden { display: none !important; }
 
   /* Fit everything on one page */
-  @page { size: A4 landscape; margin: 10mm; }
+  @page { size: A4 landscape; margin: 6mm; }
 
   html, body { height: auto !important; overflow: visible !important; background: white; }
 

@@ -98,16 +98,13 @@ export default function StaffCbt() {
     return Array.from(set);
   }, [results]);
   const [omrStudents, setOmrStudents] = useState<Student[]>([]);
-  const [omrForm, setOmrForm] = useState({
-    studentId: '',
-    studentName: '',
-    className: '',
-    subject: '',
-    session: '',
-    term: '',
-    date: new Date().toISOString().slice(0, 10),
-    studentImage: '',
-  });
+  const [omrClass, setOmrClass] = useState('');
+  const [omrSubject, setOmrSubject] = useState('');
+  const [omrSession, setOmrSession] = useState('');
+  const [omrTerm, setOmrTerm] = useState('');
+  const [omrDate, setOmrDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedOmrIds, setSelectedOmrIds] = useState<Set<string>>(new Set());
+  const [omrPrintSide, setOmrPrintSide] = useState<'front' | 'back' | null>(null);
   const toast = useToast();
   const { classes, subjects, sessions, terms } = useSchoolData();
   const { school } = useSelectedSchool();
@@ -205,20 +202,193 @@ export default function StaffCbt() {
       .catch(() => {});
   }, []);
 
-  const handleSelectOmrStudent = (studentId: string) => {
-    const student = omrStudents.find((item) => String(item.student_id) === studentId);
-    if (!student) return;
-    setOmrForm((prev) => ({
-      ...prev,
-      studentId: String(student.student_id ?? ''),
-      studentName: `${student.firstname ?? ''} ${student.lastname ?? ''}`.trim(),
-      className: student.class ?? '',
-      studentImage: student.image ?? '',
-    }));
+  const omrClassStudents = useMemo(
+    () => omrStudents.filter((s) => s.class === omrClass),
+    [omrStudents, omrClass],
+  );
+
+  const selectedOmrStudents = useMemo(
+    () => omrClassStudents.filter((s) => selectedOmrIds.has(String(s.student_id))),
+    [omrClassStudents, selectedOmrIds],
+  );
+
+  const handleOmrClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cls = e.target.value;
+    setOmrClass(cls);
+    setSelectedOmrIds(new Set(omrStudents.filter((s) => s.class === cls).map((s) => String(s.student_id))));
   };
 
-  const handlePrintOmrSheet = () => {
-    if (typeof window !== 'undefined') window.print();
+  const toggleOmrStudent = (id: string) => {
+    setSelectedOmrIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllOmr = () => setSelectedOmrIds(new Set(omrClassStudents.map((s) => String(s.student_id))));
+  const clearAllOmr = () => setSelectedOmrIds(new Set());
+
+  const handlePrintOmrSide = (side: 'front' | 'back') => {
+    if (!selectedOmrStudents.length) return;
+    setOmrPrintSide(side);
+    setTimeout(() => window.print(), 60);
+  };
+
+  useEffect(() => {
+    const reset = () => setOmrPrintSide(null);
+    window.addEventListener('afterprint', reset);
+    return () => window.removeEventListener('afterprint', reset);
+  }, []);
+
+  const renderOmrSheet = (student: Student) => {
+    const studentName = `${student.firstname ?? ''} ${student.lastname ?? ''}`.trim();
+    const studentId = String(student.student_id ?? '');
+    const sideClass = omrPrintSide === 'front' ? 'print-front-only' : omrPrintSide === 'back' ? 'print-back-only' : '';
+    return (
+      <div className={`bg-white rounded-2xl card shadow-sm p-5 border border-gray-100 print-sheet omr-landscape ${sideClass}`}>
+        {/* FRONT */}
+        <div className="omr-page omr-front">
+          {/* Letterhead */}
+          <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {school?.logo ? (
+                <img src={normalizeSchoolLogo(school.logo) ?? '/student.png'} alt={school?.name ?? 'School Logo'} className="h-12 w-12 object-contain bg-white rounded-lg p-1 shrink-0" />
+              ) : (
+                <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center text-white font-extrabold text-lg shrink-0">
+                  {(school?.name ?? 'S').charAt(0)}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="text-xl font-extrabold leading-tight truncate">{school?.name ?? 'Your Institute Name'}</div>
+                <div className="text-[11px] text-slate-300 truncate">{school?.slogan ?? ''}</div>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="inline-block px-3 py-1 text-[11px] font-bold tracking-widest bg-amber-400 text-slate-900 rounded-full">OMR ANSWER SHEET</div>
+              <div className="text-[10px] text-slate-300 mt-1">{omrSession || '—'} · {omrTerm || '—'}</div>
+            </div>
+          </div>
+
+          <div className="omr-strip mb-3 mt-3">
+            <div className="flex items-center gap-2">
+              {student.image ? (
+                <img src={getImageUrl(student.image) ?? '/student.png'} alt="Student" width={48} height={48} className="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-white" />
+              ) : (
+                <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400">
+                  <UserCircle2 size={30} />
+                </div>
+              )}
+              <div>
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Candidate</div>
+                <div className="font-bold text-slate-900 text-sm">{studentName || '________________________'}</div>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Class</div>
+              <div className="font-semibold text-slate-900">{student.class || '________'}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Subject</div>
+              <div className="font-semibold text-slate-900">{omrSubject || '________'}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</div>
+              <div className="font-semibold text-slate-900">{omrDate || '____/__/__'}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Roll No.</div>
+              <div className="flex items-center flex-wrap">
+                {Array.from({ length: Math.max(studentId.length, 12) }).map((_, i) => (
+                  <div key={i} className="roll-box flex items-center justify-center text-[11px] font-bold text-slate-700" style={{ borderWidth: 2 }}>
+                    {studentId[i] ?? ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div className="avoid-break mb-3 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-[10px] text-blue-800 flex items-start gap-2">
+            <AlertCircle size={12} className="mt-0.5 shrink-0" />
+            <span>Use a blue or black pen. Shade the bubble <strong>completely</strong> for your answer and avoid stray marks. If you change an answer, erase it cleanly.</span>
+          </div>
+
+          {/* FRONT: Section A | Section B */}
+          <div className="omr-columns">
+            <div className="omr-half">
+              <div className="omr-half-title">Section A — Objective (50 Questions)</div>
+              <div className="omr-container grid gap-x-4 gap-y-1 text-[11px]" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                {Array.from({ length: 2 }).map((_, col) => (
+                  <div key={col} className="space-y-1">
+                    {Array.from({ length: 25 }).map((_, row) => {
+                      const q = col * 25 + row + 1;
+                      if (q > 50) return null;
+                      return (
+                        <div key={q} className="flex items-center gap-1.5">
+                          <div className="w-5 text-right text-[10px] font-bold text-slate-400 tabular-nums">{q}</div>
+                          <div className="flex-1 grid grid-cols-4 gap-1">
+                            {['A', 'B', 'C', 'D'].map((opt) => (
+                              <label key={opt} className="flex items-center justify-center gap-1 cursor-pointer">
+                                <span className="text-[10px] font-bold text-slate-500">{opt}</span>
+                                <span className="bubble" style={{ borderWidth: 2 }} />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="omr-half">
+              <div className="omr-half-title">Section B — Theory / Essay</div>
+              <div className="rounded-md border border-dashed border-slate-300 bg-white">
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BACK */}
+        <div className="omr-page omr-back">
+          <div className="omr-back-head">Section B — Theory / Essay (continued)</div>
+          <div className="omr-columns">
+            <div className="omr-half">
+              <div className="omr-half-title">Section B — Theory</div>
+              <div className="rounded-md border border-dashed border-slate-300 bg-white">
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
+                ))}
+              </div>
+            </div>
+            <div className="omr-half">
+              <div className="omr-half-title">Section B — Theory</div>
+              <div className="rounded-md border border-dashed border-slate-300 bg-white">
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-8 border-t border-slate-200 pt-2">
+            <div>
+              <div className="h-7 border-b border-slate-400" />
+              <div className="text-[10px] text-slate-500 mt-1">Candidate&apos;s Signature</div>
+            </div>
+            <div>
+              <div className="h-7 border-b border-slate-400" />
+              <div className="text-[10px] text-slate-500 mt-1">Invigilator&apos;s Signature</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // ── Schedule helpers ──────────────────────────────────────────────────────
@@ -834,43 +1004,90 @@ export default function StaffCbt() {
   return (
     <div className="space-y-6">
       <style jsx global>{`
-        @page { size: A4 portrait; margin: 10mm; }
+        @page { size: A4 landscape; margin: 6mm; }
         @media print {
           html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print { display: none !important; }
+          /* Bulk OMR: hide non-selected sheets on screen, show all when printing; split front/back */
+          .screen-hide { display: block !important; }
+          .print-front-only .omr-back { display: none !important; }
+          .print-back-only .omr-front { display: none !important; }
+          /* Kill the space-y top gap and the sidebar's reserved left margin */
+          [class*="space-y"] > * + * { margin-top: 0 !important; }
+          .portal-theme > div { margin-left: 0 !important; }
           .print-sheet {
             box-shadow: none !important;
             border: none !important;
-            padding: 6mm !important;
+            padding: 0 !important;
             margin: 0 auto !important;
             -webkit-print-color-adjust: exact;
             color-adjust: exact;
             background: white !important;
             width: auto !important;
-            max-width: 190mm !important;
+            max-width: 285mm !important;
             box-sizing: border-box !important;
+            page-break-before: always;
           }
           .print-sheet * { box-sizing: border-box !important; }
-          .print-sheet .bubble { border: 1px solid #222 !important; width: 10px !important; height: 10px !important; margin-right: 3px !important; }
-          .roll-box { border: 1px solid #222 !important; width: 16px !important; height: 16px !important; margin-right: 3px !important; }
-          .print-sheet .omr-container { width: 100% !important; }
+          .print-sheet .bubble { border: 1px solid #222 !important; width: 9px !important; height: 9px !important; margin-right: 2px !important; }
+          .roll-box { border: 1px solid #222 !important; width: 15px !important; height: 15px !important; margin-right: 2px !important; }
+          .print-sheet .omr-container { width: 100% !important; column-gap: 4mm !important; row-gap: 1px !important; }
+          .print-sheet .omr-container .flex { gap: 2px !important; }
           .print-sheet .omr-container .text-sm { font-size: 10px !important; }
           .print-sheet .omr-container .text-xs { font-size: 8px !important; }
           .print-sheet .omr-container .min-w-\[140px\] { min-width: 0 !important; }
-          .print-sheet .omr-container .gap-3 { gap: 0.4rem !important; }
-          .print-sheet .omr-container .gap-4 { gap: 0.5rem !important; }
+          .print-sheet .omr-container .gap-3 { gap: 0.35rem !important; }
+          .print-sheet .omr-container .gap-4 { gap: 0.4rem !important; }
           .print-sheet .grid-cols-12 > * { min-width: 0 !important; }
+          .print-sheet .from-slate-900 { padding: 2.5mm 4mm !important; }
+          .print-sheet .mt-3 { margin-top: 2mm !important; }
+          .print-sheet .mb-3 { margin-bottom: 2mm !important; }
           .avoid-break { page-break-inside: avoid; }
+          .omr-page { page-break-after: always; }
+          .omr-page:last-child { page-break-after: auto; }
+          .omr-columns { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 4mm !important; }
+          .omr-half { border: 1px solid #94a3b8 !important; border-radius: 6px !important; padding: 2.5mm !important; }
+          .omr-half-title { font-size: 10px !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .03em !important; color: #0f172a !important; border-bottom: 2px solid #0f172a !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
+          .omr-back-head { font-size: 9px !important; font-weight: 700 !important; color: #334155 !important; border-bottom: 1px solid #94a3b8 !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
+          .omr-strip { display: flex !important; flex-wrap: wrap !important; gap: 3mm !important; align-items: center !important; margin: 2mm 0 !important; }
         }
         /* non-print / screen fallback and consistent layout */
+        .screen-hide { display: none; }
         .print-sheet { max-width: 1100px; margin: 0 auto; }
-        .roll-box { width: 26px; height: 22px; border: 2px solid #222; display: inline-block; margin-right: 6px }
-        .bubble { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #222; display: inline-block; margin-right: 8px; background: #fff }
+        .omr-landscape .omr-page { margin-bottom: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .omr-landscape .omr-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .omr-landscape .omr-half { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; }
+        .omr-landscape .omr-half-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 3px; margin-bottom: 6px; }
+        .omr-landscape .omr-back-head { font-size: 11px; font-weight: 700; color: #334155; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 6px; }
+        .omr-landscape .omr-strip { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+        .omr-sheet { background: #f8fafc; border: 1px solid #e2e8f0; }
+        .omr-sheet .sheet-header { border-radius: 1rem; padding: 1.25rem 1.5rem; background: #ffffff; border: 1px solid #e2e8f0; }
+        .omr-sheet .sheet-header .title { font-size: 1.15rem; letter-spacing: -0.02em; }
+        .omr-sheet .sheet-header .subtitle { color: #4b5563; }
+        .omr-sheet .sheet-tip { color: #475569; font-size: 0.9rem; }
+        .omr-sheet .sheet-info { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 1rem; padding: 1rem; }
+        .omr-sheet .sheet-info .info-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+        .omr-sheet .sheet-info .field-label { font-size: 0.75rem; font-weight: 700; color: #475569; letter-spacing: 0.01em; }
+        .omr-sheet .sheet-info .field-value { font-size: 0.95rem; color: #111827; font-weight: 700; }
+        .omr-sheet .omr-details { background: #ffffff; border-radius: 1rem; border: 1px solid #e5e7eb; padding: 1rem; }
+        .omr-sheet .omr-details .bubble-row { padding: 0.65rem 0.8rem; border-radius: 0.85rem; background: #f8fafc; border: 1px solid #e5e7eb; }
+        .omr-sheet .omr-details .bubble-label { display: inline-flex; align-items: center; gap: 0.35rem; color: #475569; font-weight: 700; font-size: 0.75rem; }
+        .omr-sheet .omr-details .question-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 0.9rem; border-radius: 0.85rem; border: 1px solid #e5e7eb; background: #ffffff; }
+        .omr-sheet .omr-details .question-row + .question-row { margin-top: 0.35rem; }
+        .omr-sheet .omr-details .question-number { width: 2.2rem; min-width: 2.2rem; color: #111827; font-weight: 700; }
+        .omr-sheet .omr-details .bubble { width: 18px; height: 18px; margin-right: 6px; }
+        .omr-sheet .omr-details .roll-box { width: 26px; height: 26px; margin-right: 6px; }
+        .omr-sheet .omr-details .photo-preview { border-radius: 1rem; }
+        .omr-sheet .text-xs { font-size: 0.75rem; }
+        .omr-sheet .text-sm { font-size: 0.95rem; }
+        .omr-sheet .text-gray-600 { color: #4b5563 !important; }
+        .omr-sheet .print-theory .rotate-90, .omr-sheet .print-theory .-rotate-90 { color: #6b7280; font-weight: 600; }
+        .omr-sheet .print-theory .border-dashed { border-style: dashed !important; }
+        .roll-box { width: 24px; height: 22px; border: 2px solid #334155; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; margin-right: 0; background: #fff; }
+        .bubble { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #334155; display: inline-flex; align-items: center; justify-content: center; margin-right: 0; background: #fff; box-shadow: inset 0 0 0 2px #fff; }
+        .omr-sheet .omr-details .bubble-row:hover { background: #eef2ff; }
         .omr-container .option-group { min-width: 150px; display: flex; gap: 10px; align-items: center; justify-content: space-between }
         .omr-container .text-xs { font-weight: 600; color: #111 }
-        .print-sheet .text-gray-600 { color: #333 !important }
-        /* Theory / essay print helpers */
-        .print-theory .rotate-90, .print-theory .-rotate-90 { color: #999; font-weight: 600 }
         @media print {
           .print-theory .rotate-90, .print-theory .-rotate-90 { color: #666 !important }
           .print-theory .border-dashed { border-style: dashed !important }
@@ -886,33 +1103,33 @@ export default function StaffCbt() {
         )}
       </div>
 
-      <div className="flex gap-2 no-print">
+      <div className="flex gap-2 no-print overflow-x-auto sm:overflow-visible">
         <button onClick={() => setTab('questions')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors shrink-0 whitespace-nowrap ${
             tab === 'questions' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}>
           Questions
         </button>
         <button onClick={() => setTab('tests')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors shrink-0 whitespace-nowrap ${
             tab === 'tests' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}>
           <span className="flex items-center gap-1.5"><Calendar size={14} /> Tests</span>
         </button>
         <button onClick={() => setTab('schedules')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors shrink-0 whitespace-nowrap ${
             tab === 'schedules' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}>
           <span className="flex items-center gap-1.5"><Clock size={14} /> Schedules</span>
         </button>
         <button onClick={() => setTab('results')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors shrink-0 whitespace-nowrap ${
             tab === 'results' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}>
           <span className="flex items-center gap-1.5"><BarChart2 size={14} /> Results</span>
         </button>
         <button onClick={() => setTab('omr')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors shrink-0 whitespace-nowrap ${
             tab === 'omr' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
           }`}>
           <span className="flex items-center gap-1.5"><Printer size={14} /> OMR Sheet</span>
@@ -1519,10 +1736,10 @@ export default function StaffCbt() {
                       <div className="flex gap-1 ml-4 shrink-0">
                         <button onClick={() => openEdit(q)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={15} /></button>
                         <button onClick={() => handleDelete(q.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={15} /></button>
-                      </div>
-                    </div>
-                    </div>
-                  )}
+              </div>
+              </div>
+         </div>
+       )}
                 </div>
               ))}
                   </>
@@ -1610,240 +1827,107 @@ export default function StaffCbt() {
                 <p className="text-sm text-gray-500 mt-1">Use this sheet for objective and theory responses. It is optimized for printing or saving as PDF.</p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <button onClick={handlePrintOmrSheet} className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2">
-                  <Printer size={16} /> Print / Save as PDF
+                <button
+                  disabled={!selectedOmrStudents.length}
+                  onClick={() => handlePrintOmrSide('front')}
+                  className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Printer size={16} /> Print Front Page
                 </button>
+                <button
+                  disabled={!selectedOmrStudents.length}
+                  onClick={() => handlePrintOmrSide('back')}
+                  className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                >
+                  <Printer size={16} /> Print Back Page
+                </button>
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
+                  <AlertCircle size={14} className="shrink-0" />
+                  In the print dialog, set <strong>Orientation → Landscape</strong> so the sheet fits on A4.
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Student</label>
-                  <select
-                    value={omrForm.studentId}
-                    onChange={(e) => handleSelectOmrStudent(e.target.value)}
-                    className={SEL_CLS + ' w-full'}
-                  >
-                    <option value="">Manual entry</option>
-                    {omrStudents.map((student) => (
-                      <option key={student.student_id} value={student.student_id}>{`${student.firstname ?? ''} ${student.lastname ?? ''}`.trim()} · {student.class ?? '—'}</option>
-                    ))}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
+                  <select value={omrClass} onChange={handleOmrClassChange} className={SEL_CLS + ' w-full'}>
+                    <option value="">Select class</option>
+                    {classes.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
-                    <input
-                      value={omrForm.studentName}
-                      onChange={(e) => setOmrForm((prev) => ({ ...prev, studentName: e.target.value }))}
-                      className={`${SEL_CLS} w-full`}
-                      placeholder="Enter student name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
-                    <input
-                      value={omrForm.studentId}
-                      onChange={(e) => setOmrForm((prev) => ({ ...prev, studentId: e.target.value }))}
-                      className={`${SEL_CLS} w-full`}
-                      placeholder="Enter student ID"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                    <select
-                      value={omrForm.className}
-                      onChange={(e) => setOmrForm((prev) => ({ ...prev, className: e.target.value }))}
-                      className={`${SEL_CLS} w-full`}
-                    >
-                      <option value="">Select class</option>
-                      {classes.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                    <select
-                      value={omrForm.subject}
-                      onChange={(e) => setOmrForm((prev) => ({ ...prev, subject: e.target.value }))}
-                      className={`${SEL_CLS} w-full`}
-                    >
+                    <select value={omrSubject} onChange={(e) => setOmrSubject(e.target.value)} className={`${SEL_CLS} w-full`}>
                       <option value="">Select subject</option>
                       {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Session</label>
-                    <select
-                      value={omrForm.session}
-                      onChange={(e) => setOmrForm((prev) => ({ ...prev, session: e.target.value }))}
-                      className={`${SEL_CLS} w-full`}
-                    >
+                    <select value={omrSession} onChange={(e) => setOmrSession(e.target.value)} className={`${SEL_CLS} w-full`}>
                       <option value="">Select session</option>
                       {sessions.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
-                    <select
-                      value={omrForm.term}
-                      onChange={(e) => setOmrForm((prev) => ({ ...prev, term: e.target.value }))}
-                      className={`${SEL_CLS} w-full`}
-                    >
+                    <select value={omrTerm} onChange={(e) => setOmrTerm(e.target.value)} className={`${SEL_CLS} w-full`}>
                       <option value="">Select term</option>
                       {terms.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <input
-                    type="date"
-                    value={omrForm.date}
-                    onChange={(e) => setOmrForm((prev) => ({ ...prev, date: e.target.value }))}
-                    className={`${SEL_CLS} w-full`}
-                  />
-                </div>
-              </div>
-
-              {/* student preview removed from here — moved into printable sheet */}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl card shadow-sm p-6 border border-gray-100 print-sheet">
-
-            <div className="text-center mb-4 avoid-break flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {school?.logo ? (
-                  <img src={normalizeSchoolLogo(school.logo) ?? '/student.png'} alt={school?.name ?? 'School Logo'} className="h-12 w-12 object-contain" />
-                ) : null}
-                <div>
-                  <div className="text-2xl font-bold">{school?.name ?? 'Your Institute Name'}</div>
-                  <div className="text-xs text-gray-600">{school?.slogan ?? ''}</div>
-                </div>
-              </div>
-              <div className="inline-block mt-1 px-3 py-1 text-xs bg-gray-900 text-white rounded-full">OMR ANSWER SHEET</div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-4 mb-4 avoid-break">
-              <div className="col-span-7 border border-gray-300 p-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="mb-2 text-sm font-semibold">ROLL NO.</div>
-                    <div className="flex items-center">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
-                      ))}
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-sm font-semibold">TEST ID</div>
-                        <div className="flex items-center mt-2">
-                          {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="roll-box" style={{ borderWidth: 2 }} />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="w-32 flex-shrink-0">
-                    {omrForm.studentImage ? (
-                      <img
-                        src={getImageUrl(omrForm.studentImage) ?? '/student.png'}
-                        alt="Student preview"
-                        width={128}
-                        height={128}
-                        className="w-32 h-32 rounded-2xl object-cover border border-gray-200 bg-white shadow-sm"
-                      />
-                    ) : (
-                      <div className="w-32 h-32 rounded-2xl border border-gray-200 bg-white flex items-center justify-center text-gray-400 shadow-sm">
-                        <UserCircle2 size={72} />
-                      </div>
-                    )}
-                    <div className="text-xs text-gray-500 text-center mt-2">Photo</div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <input type="date" value={omrDate} onChange={(e) => setOmrDate(e.target.value)} className={`${SEL_CLS} w-full`} />
                   </div>
                 </div>
               </div>
 
-              <div className="col-span-5 border border-gray-300 p-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-xs text-gray-600">Name</div>
-                    <div className="font-semibold text-gray-900">{omrForm.studentName || '________________________'}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-600">Batch</div>
-                    <div className="font-semibold text-gray-900">{omrForm.className || '________________'}</div>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-xs text-gray-600">Mobile No.</div>
-                    <div className="font-semibold text-gray-900">________________________</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-600">Test Date</div>
-                    <div className="font-semibold text-gray-900">{omrForm.date || '____/__/__'}</div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">
+                    Students to print: {selectedOmrStudents.length}/{omrClassStudents.length}
+                  </span>
+                  <div className="flex gap-2">
+                    <button onClick={selectAllOmr} disabled={!omrClassStudents.length} className="text-xs font-medium text-blue-600 hover:underline disabled:opacity-40">Select all</button>
+                    <button onClick={clearAllOmr} disabled={!omrClassStudents.length} className="text-xs font-medium text-gray-500 hover:underline disabled:opacity-40">Clear</button>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            <div className="omr-container">
-              {(() => {
-                const TOTAL_QUESTIONS = 50;
-                const ROWS = 15; // user requested 15 rows per column
-                const COLS = Math.ceil(TOTAL_QUESTIONS / ROWS);
-                return (
-                  <div className="grid gap-4 text-sm" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
-                    {Array.from({ length: COLS }).map((_, col) => (
-                      <div key={col} className="space-y-2">
-                        {Array.from({ length: ROWS }).map((_, row) => {
-                          const qnum = col * ROWS + row + 1;
-                          if (qnum > TOTAL_QUESTIONS) return null;
-                          return (
-                            <div key={qnum} className="flex items-center justify-between w-full">
-                              <div className="w-8 font-semibold text-gray-800">{qnum}</div>
-                              <div className="flex items-center gap-3 min-w-[140px] justify-between">
-                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">A</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">B</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">C</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                                <label className="flex items-center gap-2"><span className="text-xs font-semibold">D</span><span className="bubble" style={{ borderWidth: 2 }} /></label>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="mt-6 avoid-break border-t pt-4 print-theory">
-              <div className="text-sm font-semibold mb-2">Theory / Essay Section</div>
-              <div className="relative">
-                {/* Margin guides (do not write) */}
-                <div className="absolute inset-y-0 left-0 w-[18mm] pointer-events-none flex items-center justify-center">
-                  <div className="rotate-90 text-xs text-gray-400">Do not write here</div>
-                </div>
-                <div className="absolute inset-y-0 right-0 w-[18mm] pointer-events-none flex items-center justify-center">
-                  <div className="-rotate-90 text-xs text-gray-400">Do not write here</div>
-                </div>
-
-                {/* Ruled lines area */}
-                <div className="pl-[18mm] pr-[18mm]">
-                  <div className="rounded-xl border border-dashed border-gray-300 bg-white">
-                    {Array.from({ length: 16 }).map((_, i) => (
-                      <div key={i} className="h-6 border-b border-gray-200 last:border-b-0" />
-                    ))}
-                  </div>
+                <div className="border rounded-xl max-h-64 overflow-y-auto divide-y divide-gray-100">
+                  {!omrClass ? (
+                    <p className="p-3 text-sm text-gray-400">Select a class to see its students.</p>
+                  ) : omrClassStudents.length === 0 ? (
+                    <p className="p-3 text-sm text-gray-400">No students found for this class.</p>
+                  ) : (
+                    omrClassStudents.map((s) => {
+                      const id = String(s.student_id);
+                      const checked = selectedOmrIds.has(id);
+                      return (
+                        <label key={id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                          <input type="checkbox" checked={checked} onChange={() => toggleOmrStudent(id)} className="accent-blue-600" />
+                          <span className="text-sm text-gray-800">{`${s.firstname ?? ''} ${s.lastname ?? ''}`.trim()}</span>
+                          <span className="text-xs text-gray-400 ml-auto font-mono">{id}</span>
+                        </label>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
           </div>
+
+          <div className="no-print text-xs text-gray-500">
+            Preview shows the first selected student. Printing includes all {selectedOmrStudents.length} selected student(s).
+          </div>
+
+          {selectedOmrStudents.map((s, i) => (
+            <div key={String(s.student_id)} className={i === 0 ? '' : 'screen-hide'}>
+              {renderOmrSheet(s)}
+            </div>
+          ))}
         </div>
       )}
 
