@@ -250,12 +250,6 @@ export default function StaffCbt() {
       <div className={`bg-white rounded-2xl card shadow-sm p-5 border border-gray-100 print-sheet omr-landscape ${sideClass}`}>
         {/* FRONT */}
         <div className="omr-page omr-front">
-          {/* Instructions */}
-          <div className="avoid-break mb-3 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-[10px] text-blue-800 flex items-start gap-2">
-            <AlertCircle size={12} className="mt-0.5 shrink-0" />
-            <span>Use a blue or black pen. Shade the bubble <strong>completely</strong> for your answer and avoid stray marks. If you change an answer, erase it cleanly.</span>
-          </div>
-
           <div className="omr-columns">
             {/* LEFT: Section B */}
             <div className="omr-half">
@@ -267,8 +261,13 @@ export default function StaffCbt() {
               </div>
             </div>
 
-            {/* RIGHT: school + student info + Section A */}
+            {/* RIGHT: instructions + school + student info + Section A (right half) */}
             <div>
+              {/* Instructions */}
+              <div className="avoid-break mb-3 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-[10px] text-blue-800 flex items-start gap-2">
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                <span>Use a blue or black pen. Shade the bubble <strong>completely</strong> for your answer and avoid stray marks. If you change an answer, erase it cleanly.</span>
+              </div>
               {/* Letterhead */}
               <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -359,66 +358,8 @@ export default function StaffCbt() {
 
         {/* Section B-only sheet with candidate details (for Section B-only exams) */}
         <div className="omr-page omr-front">
-          {/* Letterhead */}
-          <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              {school?.logo ? (
-                <img src={normalizeSchoolLogo(school.logo) ?? '/student.png'} alt={school?.name ?? 'School Logo'} className="h-12 w-12 object-contain bg-white rounded-lg p-1 shrink-0" />
-              ) : (
-                <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center text-white font-extrabold text-lg shrink-0">
-                  {(school?.name ?? 'S').charAt(0)}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="text-xl font-extrabold leading-tight truncate">{school?.name ?? 'Your Institute Name'}</div>
-                <div className="text-[11px] text-slate-300 truncate">{school?.slogan ?? ''}</div>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="inline-block px-3 py-1 text-[11px] font-bold tracking-widest bg-amber-400 text-slate-900 rounded-full">SECTION B SHEET</div>
-              <div className="text-[10px] text-slate-300 mt-1">{omrSession || '—'} · {omrTerm || '—'}</div>
-            </div>
-          </div>
-
-          <div className="omr-strip mb-3 mt-3">
-            <div className="flex items-center gap-2">
-              {student.image ? (
-                <img src={getImageUrl(student.image) ?? '/student.png'} alt="Student" width={48} height={48} className="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-white" />
-              ) : (
-                <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400">
-                  <UserCircle2 size={30} />
-                </div>
-              )}
-              <div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Candidate</div>
-                <div className="font-bold text-slate-900 text-sm">{studentName || '________________________'}</div>
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Class</div>
-              <div className="font-semibold text-slate-900">{student.class || '________'}</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Subject</div>
-              <div className="font-semibold text-slate-900">{omrSubject || '________'}</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</div>
-              <div className="font-semibold text-slate-900">{omrDate || '____/__/__'}</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Roll No.</div>
-              <div className="flex items-center flex-wrap">
-                {Array.from({ length: Math.max(studentId.length, 12) }).map((_, i) => (
-                  <div key={i} className="roll-box flex items-center justify-center text-[11px] font-bold text-slate-700" style={{ borderWidth: 2 }}>
-                    {studentId[i] ?? ''}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           <div className="omr-columns">
+            {/* LEFT: Section B theory */}
             <div className="omr-half">
               <div className="omr-half-title">Section B — Theory / Essay</div>
               <div className="rounded-md border border-dashed border-slate-300 bg-white">
@@ -427,23 +368,85 @@ export default function StaffCbt() {
                 ))}
               </div>
             </div>
-            <div className="omr-half">
+
+            {/* RIGHT: school + student info + Section B theory + signatures */}
+            <div>
+              {/* Letterhead */}
+              <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  {school?.logo ? (
+                    <img src={normalizeSchoolLogo(school.logo) ?? '/student.png'} alt={school?.name ?? 'School Logo'} className="h-12 w-12 object-contain bg-white rounded-lg p-1 shrink-0" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center text-white font-extrabold text-lg shrink-0">
+                      {(school?.name ?? 'S').charAt(0)}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-xl font-extrabold leading-tight truncate">{school?.name ?? 'Your Institute Name'}</div>
+                    <div className="text-[11px] text-slate-300 truncate">{school?.slogan ?? ''}</div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="inline-block px-3 py-1 text-[11px] font-bold tracking-widest bg-amber-400 text-slate-900 rounded-full">SECTION B SHEET</div>
+                  <div className="text-[10px] text-slate-300 mt-1">{omrSession || '—'} · {omrTerm || '—'}</div>
+                </div>
+              </div>
+
+              <div className="omr-strip mb-3 mt-3">
+                <div className="flex items-center gap-2">
+                  {student.image ? (
+                    <img src={getImageUrl(student.image) ?? '/student.png'} alt="Student" width={48} height={48} className="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-white" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400">
+                      <UserCircle2 size={30} />
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Candidate</div>
+                    <div className="font-bold text-slate-900 text-sm">{studentName || '________________________'}</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Class</div>
+                  <div className="font-semibold text-slate-900">{student.class || '________'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Subject</div>
+                  <div className="font-semibold text-slate-900">{omrSubject || '________'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</div>
+                  <div className="font-semibold text-slate-900">{omrDate || '____/__/__'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Roll No.</div>
+                  <div className="flex items-center flex-wrap">
+                    {Array.from({ length: Math.max(studentId.length, 12) }).map((_, i) => (
+                      <div key={i} className="roll-box flex items-center justify-center text-[11px] font-bold text-slate-700" style={{ borderWidth: 2 }}>
+                        {studentId[i] ?? ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="omr-half-title">Section B — Theory / Essay</div>
               <div className="rounded-md border border-dashed border-slate-300 bg-white">
                 {Array.from({ length: 20 }).map((_, i) => (
                   <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
                 ))}
               </div>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-8 border-t border-slate-200 pt-2">
-            <div>
-              <div className="h-7 border-b border-slate-400" />
-              <div className="text-[10px] text-slate-500 mt-1">Candidate&apos;s Signature</div>
-            </div>
-            <div>
-              <div className="h-7 border-b border-slate-400" />
-              <div className="text-[10px] text-slate-500 mt-1">Invigilator&apos;s Signature</div>
+
+              <div className="mt-4 grid grid-cols-2 gap-8 border-t border-slate-200 pt-2">
+                <div>
+                  <div className="h-7 border-b border-slate-400" />
+                  <div className="text-[10px] text-slate-500 mt-1">Candidate&apos;s Signature</div>
+                </div>
+                <div>
+                  <div className="h-7 border-b border-slate-400" />
+                  <div className="text-[10px] text-slate-500 mt-1">Invigilator&apos;s Signature</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1138,7 +1141,8 @@ export default function StaffCbt() {
           .avoid-break { page-break-inside: avoid; }
           .omr-page { page-break-after: always; }
           .omr-page:last-child { page-break-after: auto; }
-          .omr-columns { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 4mm !important; }
+          .omr-columns { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 4mm !important; }
+          .omr-columns > * { min-width: 0 !important; }
           .omr-half { border: 1px solid #94a3b8 !important; border-radius: 6px !important; padding: 2.5mm !important; }
           .omr-half-title { font-size: 10px !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .03em !important; color: #0f172a !important; border-bottom: 2px solid #0f172a !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
           .omr-back-head { font-size: 9px !important; font-weight: 700 !important; color: #334155 !important; border-bottom: 1px solid #94a3b8 !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
@@ -1148,7 +1152,7 @@ export default function StaffCbt() {
         .screen-hide { display: none; }
         .print-sheet { max-width: 1100px; margin: 0 auto; }
         .omr-landscape .omr-page { margin-bottom: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
-        .omr-landscape .omr-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .omr-landscape .omr-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
         .omr-landscape .omr-half { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; }
         .omr-landscape .omr-half-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 3px; margin-bottom: 6px; }
         .omr-landscape .omr-back-head { font-size: 11px; font-weight: 700; color: #334155; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 6px; }
