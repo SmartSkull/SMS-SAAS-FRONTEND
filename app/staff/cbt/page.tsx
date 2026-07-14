@@ -254,20 +254,11 @@ export default function StaffCbt() {
             {/* LEFT: Section B */}
             <div className="omr-half">
               <div className="omr-half-title">Section B — Theory / Essay</div>
-              <div className="rounded-md border border-dashed border-slate-300 bg-white">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
-                ))}
-              </div>
+              <div className="omr-rules" />
             </div>
 
             {/* RIGHT: instructions + school + student info + Section A (right half) */}
             <div>
-              {/* Instructions */}
-              <div className="avoid-break mb-3 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-[10px] text-blue-800 flex items-start gap-2">
-                <AlertCircle size={12} className="mt-0.5 shrink-0" />
-                <span>Use a blue or black pen. Shade the bubble <strong>completely</strong> for your answer and avoid stray marks. If you change an answer, erase it cleanly.</span>
-              </div>
               {/* Letterhead */}
               <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -327,6 +318,12 @@ export default function StaffCbt() {
                 </div>
               </div>
 
+              {/* Instructions */}
+              <div className="avoid-break mb-3 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-[10px] text-blue-800 flex items-start gap-2">
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                <span>Use a blue or black pen. Shade the bubble <strong>completely</strong> for your answer and avoid stray marks. If you change an answer, erase it cleanly.</span>
+              </div>
+
               {/* Section A — Objective (50 Questions) */}
               <div className="omr-half-title">Section A — Objective (50 Questions)</div>
               <div className="omr-container grid gap-x-4 gap-y-1 text-[11px]" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
@@ -362,11 +359,7 @@ export default function StaffCbt() {
             {/* LEFT: Section B theory */}
             <div className="omr-half">
               <div className="omr-half-title">Section B — Theory / Essay</div>
-              <div className="rounded-md border border-dashed border-slate-300 bg-white">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
-                ))}
-              </div>
+              <div className="omr-rules" />
             </div>
 
             {/* RIGHT: school + student info + Section B theory + signatures */}
@@ -431,11 +424,7 @@ export default function StaffCbt() {
               </div>
 
               <div className="omr-half-title">Section B — Theory / Essay</div>
-              <div className="rounded-md border border-dashed border-slate-300 bg-white">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
-                ))}
-              </div>
+              <div className="omr-rules" />
 
               <div className="mt-4 grid grid-cols-2 gap-8 border-t border-slate-200 pt-2">
                 <div>
@@ -457,19 +446,11 @@ export default function StaffCbt() {
           <div className="omr-columns">
             <div className="omr-half">
               <div className="omr-half-title">Section B — Theory</div>
-              <div className="rounded-md border border-dashed border-slate-300 bg-white">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
-                ))}
-              </div>
+              <div className="omr-rules" />
             </div>
             <div className="omr-half">
               <div className="omr-half-title">Section B — Theory</div>
-              <div className="rounded-md border border-dashed border-slate-300 bg-white">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
-                ))}
-              </div>
+              <div className="omr-rules" />
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-8 border-t border-slate-200 pt-2">
@@ -1143,7 +1124,7 @@ export default function StaffCbt() {
           .omr-page:last-child { page-break-after: auto; }
           .omr-columns { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 4mm !important; }
           .omr-columns > * { min-width: 0 !important; }
-          .omr-half { border: 1px solid #94a3b8 !important; border-radius: 6px !important; padding: 2.5mm !important; }
+          .omr-half { border: 1px solid #94a3b8 !important; border-radius: 6px !important; padding: 2.5mm !important; display: flex !important; flex-direction: column !important; }
           .omr-half-title { font-size: 10px !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .03em !important; color: #0f172a !important; border-bottom: 2px solid #0f172a !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
           .omr-back-head { font-size: 9px !important; font-weight: 700 !important; color: #334155 !important; border-bottom: 1px solid #94a3b8 !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
           .omr-strip { display: flex !important; flex-wrap: wrap !important; gap: 3mm !important; align-items: center !important; margin: 2mm 0 !important; }
@@ -1153,7 +1134,17 @@ export default function StaffCbt() {
         .print-sheet { max-width: 1100px; margin: 0 auto; }
         .omr-landscape .omr-page { margin-bottom: 14px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
         .omr-landscape .omr-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
-        .omr-landscape .omr-half { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; }
+        .omr-landscape .omr-half { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; }
+        .omr-rules {
+          flex: 1 1 auto;
+          min-height: 220px;
+          border: 1px dashed #cbd5e1;
+          border-radius: 6px;
+          background-color: #fff;
+          background-image: repeating-linear-gradient(to bottom, #ffffff 0, #ffffff 23px, #cbd5e1 23px, #cbd5e1 24px);
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
         .omr-landscape .omr-half-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 3px; margin-bottom: 6px; }
         .omr-landscape .omr-back-head { font-size: 11px; font-weight: 700; color: #334155; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 6px; }
         .omr-landscape .omr-strip { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
