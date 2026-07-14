@@ -250,74 +250,85 @@ export default function StaffCbt() {
       <div className={`bg-white rounded-2xl card shadow-sm p-5 border border-gray-100 print-sheet omr-landscape ${sideClass}`}>
         {/* FRONT */}
         <div className="omr-page omr-front">
-          {/* Letterhead */}
-          <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              {school?.logo ? (
-                <img src={normalizeSchoolLogo(school.logo) ?? '/student.png'} alt={school?.name ?? 'School Logo'} className="h-12 w-12 object-contain bg-white rounded-lg p-1 shrink-0" />
-              ) : (
-                <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center text-white font-extrabold text-lg shrink-0">
-                  {(school?.name ?? 'S').charAt(0)}
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="text-xl font-extrabold leading-tight truncate">{school?.name ?? 'Your Institute Name'}</div>
-                <div className="text-[11px] text-slate-300 truncate">{school?.slogan ?? ''}</div>
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className="inline-block px-3 py-1 text-[11px] font-bold tracking-widest bg-amber-400 text-slate-900 rounded-full">OMR ANSWER SHEET</div>
-              <div className="text-[10px] text-slate-300 mt-1">{omrSession || '—'} · {omrTerm || '—'}</div>
-            </div>
-          </div>
-
-          <div className="omr-strip mb-3 mt-3">
-            <div className="flex items-center gap-2">
-              {student.image ? (
-                <img src={getImageUrl(student.image) ?? '/student.png'} alt="Student" width={48} height={48} className="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-white" />
-              ) : (
-                <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400">
-                  <UserCircle2 size={30} />
-                </div>
-              )}
-              <div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Candidate</div>
-                <div className="font-bold text-slate-900 text-sm">{studentName || '________________________'}</div>
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Class</div>
-              <div className="font-semibold text-slate-900">{student.class || '________'}</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Subject</div>
-              <div className="font-semibold text-slate-900">{omrSubject || '________'}</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</div>
-              <div className="font-semibold text-slate-900">{omrDate || '____/__/__'}</div>
-            </div>
-            <div>
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Roll No.</div>
-              <div className="flex items-center flex-wrap">
-                {Array.from({ length: Math.max(studentId.length, 12) }).map((_, i) => (
-                  <div key={i} className="roll-box flex items-center justify-center text-[11px] font-bold text-slate-700" style={{ borderWidth: 2 }}>
-                    {studentId[i] ?? ''}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* Instructions */}
           <div className="avoid-break mb-3 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-[10px] text-blue-800 flex items-start gap-2">
             <AlertCircle size={12} className="mt-0.5 shrink-0" />
             <span>Use a blue or black pen. Shade the bubble <strong>completely</strong> for your answer and avoid stray marks. If you change an answer, erase it cleanly.</span>
           </div>
 
-          {/* FRONT: Section A | Section B */}
           <div className="omr-columns">
+            {/* LEFT: Section B */}
             <div className="omr-half">
+              <div className="omr-half-title">Section B — Theory / Essay</div>
+              <div className="rounded-md border border-dashed border-slate-300 bg-white">
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
+                ))}
+              </div>
+            </div>
+
+            {/* RIGHT: school + student info + Section A */}
+            <div>
+              {/* Letterhead */}
+              <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  {school?.logo ? (
+                    <img src={normalizeSchoolLogo(school.logo) ?? '/student.png'} alt={school?.name ?? 'School Logo'} className="h-12 w-12 object-contain bg-white rounded-lg p-1 shrink-0" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center text-white font-extrabold text-lg shrink-0">
+                      {(school?.name ?? 'S').charAt(0)}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-xl font-extrabold leading-tight truncate">{school?.name ?? 'Your Institute Name'}</div>
+                    <div className="text-[11px] text-slate-300 truncate">{school?.slogan ?? ''}</div>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="inline-block px-3 py-1 text-[11px] font-bold tracking-widest bg-amber-400 text-slate-900 rounded-full">OMR ANSWER SHEET</div>
+                  <div className="text-[10px] text-slate-300 mt-1">{omrSession || '—'} · {omrTerm || '—'}</div>
+                </div>
+              </div>
+
+              <div className="omr-strip mb-3 mt-3">
+                <div className="flex items-center gap-2">
+                  {student.image ? (
+                    <img src={getImageUrl(student.image) ?? '/student.png'} alt="Student" width={48} height={48} className="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-white" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400">
+                      <UserCircle2 size={30} />
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Candidate</div>
+                    <div className="font-bold text-slate-900 text-sm">{studentName || '________________________'}</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Class</div>
+                  <div className="font-semibold text-slate-900">{student.class || '________'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Subject</div>
+                  <div className="font-semibold text-slate-900">{omrSubject || '________'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</div>
+                  <div className="font-semibold text-slate-900">{omrDate || '____/__/__'}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Roll No.</div>
+                  <div className="flex items-center flex-wrap">
+                    {Array.from({ length: Math.max(studentId.length, 12) }).map((_, i) => (
+                      <div key={i} className="roll-box flex items-center justify-center text-[11px] font-bold text-slate-700" style={{ borderWidth: 2 }}>
+                        {studentId[i] ?? ''}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section A — Objective (50 Questions) */}
               <div className="omr-half-title">Section A — Objective (50 Questions)</div>
               <div className="omr-container grid gap-x-4 gap-y-1 text-[11px]" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                 {Array.from({ length: 2 }).map((_, col) => (
@@ -340,15 +351,6 @@ export default function StaffCbt() {
                       );
                     })}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="omr-half">
-              <div className="omr-half-title">Section B — Theory / Essay</div>
-              <div className="rounded-md border border-dashed border-slate-300 bg-white">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div key={i} className="h-6 border-b border-slate-200 last:border-b-0" />
                 ))}
               </div>
             </div>
