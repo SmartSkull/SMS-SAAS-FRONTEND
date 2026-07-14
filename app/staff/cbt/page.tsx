@@ -841,18 +841,24 @@ export default function StaffCbt() {
           .print-sheet {
             box-shadow: none !important;
             border: none !important;
-            padding: 8mm !important;
+            padding: 6mm !important;
             margin: 0 auto !important;
             -webkit-print-color-adjust: exact;
             color-adjust: exact;
             background: white !important;
-            width: 100% !important;
-            max-width: 170mm !important;
+            width: auto !important;
+            max-width: 190mm !important;
             box-sizing: border-box !important;
           }
           .print-sheet * { box-sizing: border-box !important; }
-          .print-sheet .bubble { border: 2px solid #222 !important; width: 13px !important; height: 13px !important; margin-right: 4px !important; }
-          .roll-box { border: 2px solid #222 !important; width: 20px !important; height: 20px !important; margin-right: 4px !important; }
+          .print-sheet .bubble { border: 1px solid #222 !important; width: 10px !important; height: 10px !important; margin-right: 3px !important; }
+          .roll-box { border: 1px solid #222 !important; width: 16px !important; height: 16px !important; margin-right: 3px !important; }
+          .print-sheet .omr-container { width: 100% !important; }
+          .print-sheet .omr-container .text-sm { font-size: 10px !important; }
+          .print-sheet .omr-container .text-xs { font-size: 8px !important; }
+          .print-sheet .omr-container .min-w-\[140px\] { min-width: 0 !important; }
+          .print-sheet .omr-container .gap-3 { gap: 0.4rem !important; }
+          .print-sheet .omr-container .gap-4 { gap: 0.5rem !important; }
           .print-sheet .grid-cols-12 > * { min-width: 0 !important; }
           .avoid-break { page-break-inside: avoid; }
         }
@@ -1785,7 +1791,7 @@ export default function StaffCbt() {
               </div>
             </div>
 
-            <div className="avoid-break omr-container">
+            <div className="omr-container">
               {(() => {
                 const TOTAL_QUESTIONS = 50;
                 const ROWS = 15; // user requested 15 rows per column
