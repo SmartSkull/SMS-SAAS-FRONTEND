@@ -7,7 +7,7 @@ import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchoo
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { CbtQuestion, Student } from '@/types';
 import clsx from 'clsx';
-import { AlertCircle, BarChart2, Calendar, CheckCircle2, CheckSquare, Clock, FileText, HelpCircle, Pencil, Play, Plus, Printer, Search, Square, Trash2, Upload, UserCircle2, X } from 'lucide-react';
+import { AlertCircle, BarChart2, Calendar, CheckCircle2, CheckSquare, Clock, Download, FileText, HelpCircle, Pencil, Play, Plus, Printer, Search, Square, Trash2, Upload, UserCircle2, X } from 'lucide-react';
 import mammoth from 'mammoth';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Tesseract from 'tesseract.js';
@@ -1749,7 +1749,7 @@ export default function StaffCbt() {
           )
         ) : tab === 'results' ? (
           <div>
-            <div className="flex flex-wrap gap-3 mb-4">
+            <div className="flex flex-wrap gap-3 mb-4 items-center">
               <select value={resultsFilter.class} onChange={(e) => setResultsFilter(p => ({ ...p, class: e.target.value }))} className={SEL_CLS}>
                 <option value="">All Classes</option>
                 {classes.map(c => <option key={c} value={c}>{c}</option>)}
@@ -1770,10 +1770,19 @@ export default function StaffCbt() {
                 <option value="">All Teachers</option>
                 {resultsTeachers.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
+              <button
+                onClick={() => window.print()}
+                disabled={results.length === 0}
+                className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ml-auto no-print disabled:opacity-50"
+              >
+                <Download size={16} /> Export to PDF
+              </button>
             </div>
             {results.length === 0 ? (
               <EmptyState icon={BarChart2} message="No CBT results yet." card={false} />
             ) : (
+              <>
+              <h2 className="hidden print:block text-base font-bold text-gray-800 mb-2">CBT Results</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -1812,6 +1821,7 @@ export default function StaffCbt() {
                   </tbody>
                 </table>
               </div>
+              </>
             )
           }
         </div>
