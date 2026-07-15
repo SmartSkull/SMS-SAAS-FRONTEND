@@ -363,7 +363,7 @@ export default function StaffCbt() {
             </div>
 
             {/* RIGHT: school + student info + Section B theory + signatures */}
-            <div>
+            <div className="flex flex-col">
               {/* Letterhead */}
               <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -1124,6 +1124,8 @@ export default function StaffCbt() {
           .omr-page:last-child { page-break-after: auto; }
           .omr-columns { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; gap: 4mm !important; }
           .omr-columns > * { min-width: 0 !important; }
+          .omr-page { min-height: 196mm !important; display: flex !important; flex-direction: column !important; }
+          .omr-page > .omr-columns { flex: 1 1 auto !important; }
           .omr-half { border: 1px solid #94a3b8 !important; border-radius: 6px !important; padding: 2.5mm !important; display: flex !important; flex-direction: column !important; }
           .omr-half-title { font-size: 10px !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: .03em !important; color: #0f172a !important; border-bottom: 2px solid #0f172a !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
           .omr-back-head { font-size: 9px !important; font-weight: 700 !important; color: #334155 !important; border-bottom: 1px solid #94a3b8 !important; padding-bottom: 1px !important; margin-bottom: 2px !important; }
