@@ -1177,12 +1177,7 @@ export default function StaffCbt() {
       </div>`;
     };
 
-    // Top 3 & bottom 3 performers
-    const sorted = [...filteredResults].sort((a, b) => (parseFloat(b.percentage) || 0) - (parseFloat(a.percentage) || 0));
-    const top3 = sorted.slice(0, 3);
-    const bottom3 = sorted.slice(-3).reverse();
-
-    // Per-subject breakdown (only if multiple subjects)
+    const scoreColor = (pct: number) =>
     const subjectMap: Record<string, number[]> = {};
     filteredResults.forEach(r => {
       const subj = r.subject ?? 'Unknown';
@@ -1193,7 +1188,6 @@ export default function StaffCbt() {
       subj,
       avg: vals.reduce((a, b) => a + b, 0) / vals.length,
       count: vals.length,
-      pass: vals.filter(v => v >= 50).length,
     })).sort((a, b) => b.avg - a.avg);
     const showSubjectBreakdown = subjects.length > 1;
 
@@ -1239,7 +1233,6 @@ export default function StaffCbt() {
     }).join('');
 
     const subjectRows = subjects.map(s => {
-      const passRate = ((s.pass / s.count) * 100).toFixed(0);
       const barWidth = s.avg.toFixed(1);
       return `<tr>
         <td style="font-weight:600;color:#111827;">${s.subj}</td>
@@ -1252,7 +1245,6 @@ export default function StaffCbt() {
             <span style="font-weight:700;color:${scoreColor(s.avg)};">${s.avg.toFixed(1)}%</span>
           </div>
         </td>
-        <td><span style="color:${parseFloat(passRate) >= 50 ? '#16a34a' : '#dc2626'};font-weight:600;">${passRate}%</span></td>
       </tr>`;
     }).join('');
 
@@ -1397,105 +1389,8 @@ export default function StaffCbt() {
   <!-- Filter summary -->
   ${activeFilters ? `<div class="filter-bar"><strong>Filters applied:</strong> &nbsp;${activeFilters}</div>` : ''}
 
-  <!-- Analytics cards -->
-  <div class="analytics">
-    <div class="card blue">
-      <div class="label">Total Students</div>
-      <div class="value">${filteredResults.length}</div>
-      <div class="sub">Results in this report</div>
-    </div>
-    <div class="card blue">
-      <div class="label">Average Score</div>
-      <div class="value">${avg.toFixed(1)}%</div>
-      <div class="sub">Class average</div>
-    </div>
-    <div class="card green">
-      <div class="label">Pass Rate</div>
-      <div class="value">${passRate}%</div>
-      <div class="sub">${passed} passed · ${failed} failed</div>
-    </div>
-    <div class="card amber">
-      <div class="label">Score Range</div>
-      <div class="value">${lowest.toFixed(0)}–${highest.toFixed(0)}</div>
-      <div class="sub">Lowest – Highest %</div>
-    </div>
-  </div>
-
-  <!-- Grade distribution + Performers -->
-  <div class="two-col">
-    <!-- Grade distribution -->
-    <div class="section-box">
-      <div class="section-title">📊 Grade Distribution</div>
-      <div class="section-body">
-        ${[
-          { grade: 'A', range: '80–100%', count: gradeCount.A, color: '#16a34a' },
-          { grade: 'B', range: '70–79%',  count: gradeCount.B, color: '#2563eb' },
-          { grade: 'C', range: '60–69%',  count: gradeCount.C, color: '#d97706' },
-          { grade: 'D', range: '50–59%',  count: gradeCount.D, color: '#ea580c' },
-          { grade: 'F', range: '0–49%',   count: gradeCount.F, color: '#dc2626' },
-        ].map(({ grade, range, count, color }) => {
-          const pct = filteredResults.length ? (count / filteredResults.length * 100) : 0;
-          return `<div class="grade-row">
-            <span class="grade-label" style="color:${color};">${grade}</span>
-            <span class="grade-range">${range}</span>
-            <div class="grade-bar-track">
-              <div style="width:${pct.toFixed(1)}%;height:100%;background:${color};border-radius:99px;"></div>
-            </div>
-            <span class="grade-count">${count}</span>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- Top & Bottom performers -->
-    <div class="section-box">
-      <div class="section-title">🏆 Top Performers</div>
-      <div class="section-body">
-        ${top3.map((r, i) => {
-          const pct = parseFloat(r.percentage) || 0;
-          const medals = ['🥇', '🥈', '🥉'];
-          return `<div class="performer-row">
-            <span class="performer-rank">${medals[i] ?? i + 1}</span>
-            <span class="performer-name">${r.firstname} ${r.lastname}</span>
-            <span class="performer-score" style="color:${scoreColor(pct)};">${pct.toFixed(1)}%</span>
-          </div>`;
-        }).join('')}
-        <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;">
-          <div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px;">Needs Improvement</div>
-          ${bottom3.map((r) => {
-            const pct = parseFloat(r.percentage) || 0;
-            return `<div class="performer-row">
-              <span class="performer-rank" style="color:#dc2626;">↓</span>
-              <span class="performer-name">${r.firstname} ${r.lastname}</span>
-              <span class="performer-score" style="color:${scoreColor(pct)};">${pct.toFixed(1)}%</span>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  ${showSubjectBreakdown ? `
-  <!-- Subject breakdown -->
+  <!-- Results table first -->
   <div class="section-box" style="margin-bottom:14px;">
-    <div class="section-title">📚 Per-Subject Breakdown</div>
-    <div style="padding:0 4px;">
-      <table class="subj-table">
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>Students</th>
-            <th>Average Score</th>
-            <th>Pass Rate</th>
-          </tr>
-        </thead>
-        <tbody>${subjectRows}</tbody>
-      </table>
-    </div>
-  </div>` : ''}
-
-  <!-- Results table -->
-  <div class="section-box">
     <div class="section-title">📋 Full Results (${filteredResults.length} student${filteredResults.length !== 1 ? 's' : ''})</div>
     <table class="results-table">
       <thead>
@@ -1521,6 +1416,89 @@ export default function StaffCbt() {
       </tfoot>
     </table>
   </div>
+
+  <!-- Analytics cards -->
+  <div class="analytics">
+    <div class="card blue">
+      <div class="label">Total Students</div>
+      <div class="value">${filteredResults.length}</div>
+      <div class="sub">Results in this report</div>
+    </div>
+    <div class="card blue">
+      <div class="label">Average Score</div>
+      <div class="value">${avg.toFixed(1)}%</div>
+      <div class="sub">Class average</div>
+    </div>
+    <div class="card green">
+      <div class="label">Pass Rate</div>
+      <div class="value">${passRate}%</div>
+      <div class="sub">${passed} passed · ${failed} failed</div>
+    </div>
+  </div>
+
+    <!-- Grade distribution + Score summary -->
+  <div class="two-col">
+    <!-- Grade distribution -->
+    <div class="section-box">
+      <div class="section-title">📊 Grade Distribution</div>
+      <div class="section-body">
+        ${[
+          { grade: 'A', range: '80–100%', count: gradeCount.A, color: '#16a34a' },
+          { grade: 'B', range: '70–79%',  count: gradeCount.B, color: '#2563eb' },
+          { grade: 'C', range: '60–69%',  count: gradeCount.C, color: '#d97706' },
+          { grade: 'D', range: '50–59%',  count: gradeCount.D, color: '#ea580c' },
+          { grade: 'F', range: '0–49%',   count: gradeCount.F, color: '#dc2626' },
+        ].map(({ grade, range, count, color }) => {
+          const pct = filteredResults.length ? (count / filteredResults.length * 100) : 0;
+          return `<div class="grade-row">
+            <span class="grade-label" style="color:${color};">${grade}</span>
+            <span class="grade-range">${range}</span>
+            <div class="grade-bar-track">
+              <div style="width:${pct.toFixed(1)}%;height:100%;background:${color};border-radius:99px;"></div>
+            </div>
+            <span class="grade-count">${count}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Score summary card -->
+    <div class="section-box">
+      <div class="section-title">📈 Score Summary</div>
+      <div class="section-body">
+        ${[
+          { label: 'Highest Score', value: `${highest.toFixed(1)}%`, color: '#15803d' },
+          { label: 'Lowest Score',  value: `${lowest.toFixed(1)}%`,  color: '#b91c1c' },
+          { label: 'Class Average', value: `${avg.toFixed(1)}%`,     color: '#1d4ed8' },
+          { label: 'Students Passed (≥50%)', value: `${passed} / ${filteredResults.length}`, color: '#15803d' },
+          { label: 'Students Failed (<50%)', value: `${failed} / ${filteredResults.length}`, color: '#b91c1c' },
+        ].map(({ label, value, color }) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;">
+            <span style="font-size:8.5pt;color:#374151;">${label}</span>
+            <span style="font-size:10pt;font-weight:700;color:${color};">${value}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+
+  ${showSubjectBreakdown ? `
+  <!-- Subject breakdown -->
+  <div class="section-box" style="margin-bottom:14px;">
+    <div class="section-title">📚 Per-Subject Breakdown</div>
+    <div style="padding:0 4px;">
+      <table class="subj-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Students</th>
+            <th>Average Score</th>
+          </tr>
+        </thead>
+        <tbody>${subjectRows}</tbody>
+      </table>
+    </div>
+  </div>` : ''}
 
   <!-- Footer -->
   <div class="footer">
