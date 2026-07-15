@@ -1133,6 +1133,103 @@ export default function StaffCbt() {
     }
   };
 
+  const handleExportResultsPDF = () => {
+    if (!results.length) return;
+
+    const filterMeta = [
+      resultsFilter.class && `Class: <strong>${resultsFilter.class}</strong>`,
+      resultsFilter.course && `Subject: <strong>${resultsFilter.course}</strong>`,
+      resultsFilter.session && `Session: <strong>${resultsFilter.session}</strong>`,
+      resultsFilter.term && `Term: <strong>${resultsFilter.term} Term</strong>`,
+      resultsFilter.teacher && `Teacher: <strong>${resultsFilter.teacher}</strong>`,
+    ].filter(Boolean).join(' &nbsp;·&nbsp; ');
+
+    const rows = results.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td><strong>${r.firstname} ${r.lastname}</strong></td>
+        <td class="mono">${r.student?.user?.uniqueId ?? '—'}</td>
+        <td>${r.class ?? '—'}</td>
+        <td>${r.subject ?? '—'}</td>
+        <td>${r.session ?? '—'}</td>
+        <td>${r.term ?? '—'}</td>
+        <td>${(r.teachers ?? []).join(', ') || '—'}</td>
+        <td><strong>${r.score}</strong> <span class="pct">(${r.percentage}%)</span></td>
+        <td>${new Date(r.submittedAt).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>CBT Results</title>
+  <style>
+    @page { size: A4 portrait; margin: 15mm; }
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; margin: 0; padding: 0; }
+    h1 { font-size: 16pt; margin: 0 0 4px; }
+    .meta { font-size: 9pt; color: #555; margin-bottom: 16px; }
+    .meta span { margin-right: 12px; }
+    .summary { font-size: 10pt; color: #333; margin-bottom: 8px; }
+    .print-date { float: right; color: #888; font-size: 9pt; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+    thead tr { background: #1e3a5f; color: #fff; }
+    thead th { padding: 6px 8px; text-align: left; font-weight: 600; }
+    tbody tr:nth-child(even) { background: #f5f7fa; }
+    tbody tr { border-bottom: 1px solid #ddd; }
+    td { padding: 5px 8px; vertical-align: middle; }
+    tfoot td { padding: 8px; font-weight: bold; border-top: 2px solid #333; font-size: 10pt; }
+    .mono { font-family: monospace; font-size: 8.5pt; }
+    .pct { color: #666; font-size: 8.5pt; }
+  </style>
+</head>
+<body>
+  <h1>CBT Results</h1>
+  <div class="meta">
+    <span class="print-date">Printed: ${new Date().toLocaleDateString()}</span>
+    ${filterMeta || '<em>All results</em>'}
+  </div>
+  <div class="summary">Total students: <strong>${results.length}</strong></div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Student</th>
+        <th>Student ID</th>
+        <th>Class</th>
+        <th>Subject</th>
+        <th>Session</th>
+        <th>Term</th>
+        <th>Teacher(s)</th>
+        <th>Score</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="10">Total: ${results.length} student${results.length !== 1 ? 's' : ''}</td>
+      </tr>
+    </tfoot>
+  </table>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      toast.error('Pop-up blocked. Please allow pop-ups for this site and try again.');
+      return;
+    }
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      win.print();
+      win.close();
+    }, 300);
+  };
+
   const sfLocal = (k: keyof typeof ocrMeta) => (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) =>
     setOcrMeta(p => ({ ...p, [k]: e.target.value }));
 
@@ -1933,7 +2030,7 @@ export default function StaffCbt() {
                 {resultsTeachers.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
               <button
-                onClick={() => window.print()}
+                onClick={handleExportResultsPDF}
                 disabled={results.length === 0}
                 className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ml-auto no-print disabled:opacity-50"
               >
