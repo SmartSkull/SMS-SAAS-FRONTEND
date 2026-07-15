@@ -90,13 +90,23 @@ export default function StaffCbt() {
   const [tests, setTests] = useState<CbtTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '', search: '' });
-  const [resultsFilter, setResultsFilter] = useState({ class: '', course: '', session: '', term: '', teacher: '' });
+  const [resultsFilter, setResultsFilter] = useState({ class: '', course: '', session: '', term: '', teacher: '', student: '' });
 
   const resultsTeachers = useMemo(() => {
     const set = new Set<string>();
     results.forEach(r => (r.teachers ?? []).forEach(t => set.add(t)));
     return Array.from(set);
   }, [results]);
+
+  // Client-side student name filter applied on top of the server-filtered results
+  const filteredResults = useMemo(() => {
+    const q = resultsFilter.student.trim().toLowerCase();
+    if (!q) return results;
+    return results.filter(r =>
+      `${r.firstname} ${r.lastname}`.toLowerCase().includes(q) ||
+      (r.student?.user?.uniqueId ?? '').toLowerCase().includes(q)
+    );
+  }, [results, resultsFilter.student]);
   const [omrStudents, setOmrStudents] = useState<Student[]>([]);
   const [omrClass, setOmrClass] = useState('');
   const [omrSubject, setOmrSubject] = useState('');
@@ -1134,7 +1144,7 @@ export default function StaffCbt() {
   };
 
   const handleExportResultsPDF = () => {
-    if (!results.length) return;
+    if (!filteredResults.length) return;
 
     const filterMeta = [
       resultsFilter.class && `Class: <strong>${resultsFilter.class}</strong>`,
@@ -1142,9 +1152,10 @@ export default function StaffCbt() {
       resultsFilter.session && `Session: <strong>${resultsFilter.session}</strong>`,
       resultsFilter.term && `Term: <strong>${resultsFilter.term} Term</strong>`,
       resultsFilter.teacher && `Teacher: <strong>${resultsFilter.teacher}</strong>`,
+      resultsFilter.student && `Student: <strong>${resultsFilter.student}</strong>`,
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
-    const rows = results.map((r, i) => `
+    const rows = filteredResults.map((r, i) => `
       <tr>
         <td>${i + 1}</td>
         <td><strong>${r.firstname} ${r.lastname}</strong></td>
@@ -1190,7 +1201,7 @@ export default function StaffCbt() {
     <span class="print-date">Printed: ${new Date().toLocaleDateString()}</span>
     ${filterMeta || '<em>All results</em>'}
   </div>
-  <div class="summary">Total students: <strong>${results.length}</strong></div>
+  <div class="summary">Total students: <strong>${filteredResults.length}</strong></div>
   <table>
     <thead>
       <tr>
@@ -1209,7 +1220,7 @@ export default function StaffCbt() {
     <tbody>${rows}</tbody>
     <tfoot>
       <tr>
-        <td colspan="10">Total: ${results.length} student${results.length !== 1 ? 's' : ''}</td>
+        <td colspan="10">Total: ${filteredResults.length} student${filteredResults.length !== 1 ? 's' : ''}</td>
       </tr>
     </tfoot>
   </table>
@@ -2008,7 +2019,26 @@ export default function StaffCbt() {
           )
         ) : tab === 'results' ? (
           <div>
+            {/* Filter row */}
             <div className="flex flex-wrap gap-3 mb-4 items-center">
+              {/* Student search — client-side filter */}
+              <div className="relative min-w-48 flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <input
+                  value={resultsFilter.student}
+                  onChange={(e) => setResultsFilter(p => ({ ...p, student: e.target.value }))}
+                  placeholder="Search student name or ID…"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {resultsFilter.student && (
+                  <button
+                    onClick={() => setResultsFilter(p => ({ ...p, student: '' }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
               <select value={resultsFilter.class} onChange={(e) => setResultsFilter(p => ({ ...p, class: e.target.value }))} className={SEL_CLS}>
                 <option value="">All Classes</option>
                 {classes.map(c => <option key={c} value={c}>{c}</option>)}
@@ -2031,41 +2061,46 @@ export default function StaffCbt() {
               </select>
               <button
                 onClick={handleExportResultsPDF}
-                disabled={results.length === 0}
+                disabled={filteredResults.length === 0}
                 className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ml-auto no-print disabled:opacity-50"
               >
                 <Download size={16} /> Export to PDF
               </button>
             </div>
+
+            {/* Summary bar */}
+            {results.length > 0 && (
+              <div className="no-print flex items-center gap-2 mb-3 px-1 text-sm text-gray-600">
+                <span>
+                  Showing <span className="font-semibold text-gray-900">{filteredResults.length}</span>
+                  {filteredResults.length !== results.length && (
+                    <span className="text-gray-400"> of {results.length}</span>
+                  )} result{filteredResults.length !== 1 ? 's' : ''}
+                </span>
+                {resultsFilter.student && (
+                  <span className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
+                    Student: &quot;{resultsFilter.student}&quot;
+                    <button onClick={() => setResultsFilter(p => ({ ...p, student: '' }))} className="hover:text-blue-900"><X size={11} /></button>
+                  </span>
+                )}
+                {resultsFilter.class && (
+                  <span className="flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+                    {resultsFilter.class}
+                  </span>
+                )}
+                {resultsFilter.course && (
+                  <span className="flex items-center gap-1 bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
+                    {resultsFilter.course}
+                  </span>
+                )}
+              </div>
+            )}
+
             {results.length === 0 ? (
-              <EmptyState icon={BarChart2} message="No CBT results yet." card={false} />
+              <EmptyState icon={BarChart2} message="No CBT results yet. Apply filters above to load results." card={false} />
+            ) : filteredResults.length === 0 ? (
+              <EmptyState icon={BarChart2} message={`No results match "${resultsFilter.student}".`} card={false} />
             ) : (
-              <>
-              {/* Print header — only visible when printing */}
-              <div className="hidden print:block mb-4">
-                <h2 className="text-lg font-bold text-gray-900">CBT Results</h2>
-                <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-1">
-                  {resultsFilter.class && <span><strong>Class:</strong> {resultsFilter.class}</span>}
-                  {resultsFilter.course && <span><strong>Subject:</strong> {resultsFilter.course}</span>}
-                  {resultsFilter.session && <span><strong>Session:</strong> {resultsFilter.session}</span>}
-                  {resultsFilter.term && <span><strong>Term:</strong> {resultsFilter.term} Term</span>}
-                  {resultsFilter.teacher && <span><strong>Teacher:</strong> {resultsFilter.teacher}</span>}
-                  <span><strong>Total Students:</strong> {results.length}</span>
-                  <span className="ml-auto text-gray-400">Printed: {new Date().toLocaleDateString()}</span>
-                </div>
-              </div>
-
-              {/* Summary bar — visible on screen only */}
-              <div className="no-print flex items-center justify-between mb-3 px-1">
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-900">{results.length}</span> student{results.length !== 1 ? 's' : ''} found
-                  {resultsFilter.class && <span className="text-gray-400"> · {resultsFilter.class}</span>}
-                  {resultsFilter.course && <span className="text-gray-400"> · {resultsFilter.course}</span>}
-                  {resultsFilter.session && <span className="text-gray-400"> · {resultsFilter.session}</span>}
-                  {resultsFilter.term && <span className="text-gray-400"> · {resultsFilter.term} Term</span>}
-                </p>
-              </div>
-
               <div className="overflow-x-auto" id="cbt-results-print-area">
                 <table className="w-full text-sm">
                   <thead>
@@ -2084,8 +2119,8 @@ export default function StaffCbt() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {results.map((r, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
+                    {filteredResults.map((r, i) => (
+                      <tr key={r.id} className="hover:bg-gray-50">
                         <td className="py-3 text-gray-400 text-xs">{i + 1}</td>
                         <td className="py-3 font-medium text-gray-800">{r.firstname} {r.lastname}</td>
                         <td className="py-3 text-gray-500 font-mono text-xs">{r.student?.user?.uniqueId ?? '—'}</td>
@@ -2104,19 +2139,19 @@ export default function StaffCbt() {
                       </tr>
                     ))}
                   </tbody>
-                  {/* Print footer showing total */}
                   <tfoot className="border-t border-gray-200">
                     <tr>
-                      <td colSpan={8} className="pt-3 text-sm font-semibold text-gray-700">Total Students: {results.length}</td>
-                      <td colSpan={3} className="pt-3 text-xs text-gray-400 text-right no-print"></td>
+                      <td colSpan={8} className="pt-3 text-sm font-semibold text-gray-700">
+                        Total: {filteredResults.length} student{filteredResults.length !== 1 ? 's' : ''}
+                        {filteredResults.length !== results.length && <span className="text-gray-400 font-normal"> (filtered from {results.length})</span>}
+                      </td>
+                      <td colSpan={3} className="no-print" />
                     </tr>
                   </tfoot>
                 </table>
               </div>
-              </>
-            )
-          }
-        </div>
+            )}
+          </div>
         ) : null}
       </div>
 
