@@ -91,6 +91,8 @@ export default function StaffCbt() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ class: '', course: '', session: '', term: '', search: '' });
   const [resultsFilter, setResultsFilter] = useState({ class: '', course: '', session: '', term: '', teacher: '', student: '' });
+  // studentInput is the live value in the search box; student is committed on Enter
+  const [studentInput, setStudentInput] = useState('');
 
   const resultsTeachers = useMemo(() => {
     const set = new Set<string>();
@@ -2021,18 +2023,26 @@ export default function StaffCbt() {
           <div>
             {/* Filter row */}
             <div className="flex flex-wrap gap-3 mb-4 items-center">
-              {/* Student search — client-side filter */}
+              {/* Student search — client-side filter, triggered on Enter */}
               <div className="relative min-w-48 flex-1">
                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <input
-                  value={resultsFilter.student}
-                  onChange={(e) => setResultsFilter(p => ({ ...p, student: e.target.value }))}
-                  placeholder="Search student name or ID…"
+                  value={studentInput}
+                  onChange={(e) => setStudentInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setResultsFilter(p => ({ ...p, student: studentInput.trim() }));
+                    } else if (e.key === 'Escape') {
+                      setStudentInput('');
+                      setResultsFilter(p => ({ ...p, student: '' }));
+                    }
+                  }}
+                  placeholder="Search student name or ID… (press Enter)"
                   className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                {resultsFilter.student && (
+                {(studentInput || resultsFilter.student) && (
                   <button
-                    onClick={() => setResultsFilter(p => ({ ...p, student: '' }))}
+                    onClick={() => { setStudentInput(''); setResultsFilter(p => ({ ...p, student: '' })); }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     <X size={14} />
@@ -2080,7 +2090,7 @@ export default function StaffCbt() {
                 {resultsFilter.student && (
                   <span className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">
                     Student: &quot;{resultsFilter.student}&quot;
-                    <button onClick={() => setResultsFilter(p => ({ ...p, student: '' }))} className="hover:text-blue-900"><X size={11} /></button>
+                    <button onClick={() => { setStudentInput(''); setResultsFilter(p => ({ ...p, student: '' })); }} className="hover:text-blue-900"><X size={11} /></button>
                   </span>
                 )}
                 {resultsFilter.class && (
