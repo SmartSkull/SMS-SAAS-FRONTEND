@@ -1148,84 +1148,386 @@ export default function StaffCbt() {
   const handleExportResultsPDF = () => {
     if (!filteredResults.length) return;
 
-    const filterMeta = [
+    // ── Analytics ────────────────────────────────────────────────────────
+    const scores = filteredResults.map(r => parseFloat(r.percentage) || 0);
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const highest = Math.max(...scores);
+    const lowest = Math.min(...scores);
+    const passed = scores.filter(s => s >= 50).length;
+    const failed = scores.length - passed;
+    const passRate = ((passed / scores.length) * 100).toFixed(1);
+
+    // Grade distribution
+    const gradeCount = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+    scores.forEach(s => {
+      if (s >= 80) gradeCount.A++;
+      else if (s >= 70) gradeCount.B++;
+      else if (s >= 60) gradeCount.C++;
+      else if (s >= 50) gradeCount.D++;
+      else gradeCount.F++;
+    });
+
+    const gradeBar = (count: number, total: number, color: string) => {
+      const pct = total ? (count / total) * 100 : 0;
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <div style="width:120px;height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;">
+          <div style="width:${pct.toFixed(1)}%;height:100%;background:${color};border-radius:99px;"></div>
+        </div>
+        <span style="font-size:8.5pt;color:#374151;">${count} (${pct.toFixed(0)}%)</span>
+      </div>`;
+    };
+
+    // Top 3 & bottom 3 performers
+    const sorted = [...filteredResults].sort((a, b) => (parseFloat(b.percentage) || 0) - (parseFloat(a.percentage) || 0));
+    const top3 = sorted.slice(0, 3);
+    const bottom3 = sorted.slice(-3).reverse();
+
+    // Per-subject breakdown (only if multiple subjects)
+    const subjectMap: Record<string, number[]> = {};
+    filteredResults.forEach(r => {
+      const subj = r.subject ?? 'Unknown';
+      if (!subjectMap[subj]) subjectMap[subj] = [];
+      subjectMap[subj].push(parseFloat(r.percentage) || 0);
+    });
+    const subjects = Object.entries(subjectMap).map(([subj, vals]) => ({
+      subj,
+      avg: vals.reduce((a, b) => a + b, 0) / vals.length,
+      count: vals.length,
+      pass: vals.filter(v => v >= 50).length,
+    })).sort((a, b) => b.avg - a.avg);
+    const showSubjectBreakdown = subjects.length > 1;
+
+    const scoreColor = (pct: number) =>
+      pct >= 80 ? '#16a34a' : pct >= 70 ? '#2563eb' : pct >= 60 ? '#d97706' : pct >= 50 ? '#ea580c' : '#dc2626';
+
+    const gradeBadge = (pct: number) => {
+      const grade = pct >= 80 ? 'A' : pct >= 70 ? 'B' : pct >= 60 ? 'C' : pct >= 50 ? 'D' : 'F';
+      const bg = pct >= 80 ? '#dcfce7' : pct >= 70 ? '#dbeafe' : pct >= 60 ? '#fef9c3' : pct >= 50 ? '#ffedd5' : '#fee2e2';
+      const color = pct >= 80 ? '#15803d' : pct >= 70 ? '#1d4ed8' : pct >= 60 ? '#a16207' : pct >= 50 ? '#c2410c' : '#b91c1c';
+      return `<span style="display:inline-block;padding:1px 6px;border-radius:4px;background:${bg};color:${color};font-weight:700;font-size:8pt;">${grade}</span>`;
+    };
+
+    const schoolName = school?.name ?? 'School Portal';
+    const printDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const activeFilters = [
       resultsFilter.class && `Class: <strong>${resultsFilter.class}</strong>`,
       resultsFilter.course && `Subject: <strong>${resultsFilter.course}</strong>`,
       resultsFilter.session && `Session: <strong>${resultsFilter.session}</strong>`,
       resultsFilter.term && `Term: <strong>${resultsFilter.term} Term</strong>`,
-      resultsFilter.teacher && `Teacher: <strong>${resultsFilter.teacher}</strong>`,
       resultsFilter.student && `Student: <strong>${resultsFilter.student}</strong>`,
     ].filter(Boolean).join(' &nbsp;·&nbsp; ');
 
-    const rows = filteredResults.map((r, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td><strong>${r.firstname} ${r.lastname}</strong></td>
-        <td class="mono">${r.student?.user?.uniqueId ?? '—'}</td>
-        <td>${r.class ?? '—'}</td>
-        <td>${r.subject ?? '—'}</td>
-        <td>${r.session ?? '—'}</td>
-        <td>${r.term ?? '—'}</td>
-        <td>${(r.teachers ?? []).join(', ') || '—'}</td>
-        <td><strong>${r.score}</strong> <span class="pct">(${r.percentage}%)</span></td>
-        <td>${new Date(r.submittedAt).toLocaleDateString()}</td>
-      </tr>
-    `).join('');
+    const rows = filteredResults.map((r, i) => {
+      const pct = parseFloat(r.percentage) || 0;
+      const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+      return `<tr style="background:${rowBg};">
+        <td style="color:#9ca3af;font-size:8pt;">${i + 1}</td>
+        <td><strong style="color:#111827;">${r.firstname} ${r.lastname}</strong></td>
+        <td style="font-family:monospace;font-size:8pt;color:#6b7280;">${r.student?.user?.uniqueId ?? '—'}</td>
+        <td style="color:#374151;">${r.class ?? '—'}</td>
+        <td style="color:#374151;">${r.subject ?? '—'}</td>
+        <td style="color:#374151;">${r.session ?? '—'}</td>
+        <td style="color:#374151;">${r.term ?? '—'}</td>
+        <td>
+          <span style="font-weight:700;color:${scoreColor(pct)};font-size:10pt;">${r.score}</span>
+          <span style="color:#9ca3af;font-size:8pt;margin-left:3px;">${r.percentage}%</span>
+        </td>
+        <td>${gradeBadge(pct)}</td>
+        <td style="color:#6b7280;font-size:8.5pt;">${new Date(r.submittedAt).toLocaleDateString('en-GB')}</td>
+      </tr>`;
+    }).join('');
+
+    const subjectRows = subjects.map(s => {
+      const passRate = ((s.pass / s.count) * 100).toFixed(0);
+      const barWidth = s.avg.toFixed(1);
+      return `<tr>
+        <td style="font-weight:600;color:#111827;">${s.subj}</td>
+        <td style="color:#374151;">${s.count}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:80px;height:8px;background:#e5e7eb;border-radius:99px;overflow:hidden;">
+              <div style="width:${barWidth}%;height:100%;background:${scoreColor(s.avg)};border-radius:99px;"></div>
+            </div>
+            <span style="font-weight:700;color:${scoreColor(s.avg)};">${s.avg.toFixed(1)}%</span>
+          </div>
+        </td>
+        <td><span style="color:${parseFloat(passRate) >= 50 ? '#16a34a' : '#dc2626'};font-weight:600;">${passRate}%</span></td>
+      </tr>`;
+    }).join('');
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>CBT Results</title>
+  <title>CBT Results — ${schoolName}</title>
   <style>
-    @page { size: A4 portrait; margin: 15mm; }
-    * { box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; font-size: 11pt; color: #111; margin: 0; padding: 0; }
-    h1 { font-size: 16pt; margin: 0 0 4px; }
-    .meta { font-size: 9pt; color: #555; margin-bottom: 16px; }
-    .meta span { margin-right: 12px; }
-    .summary { font-size: 10pt; color: #333; margin-bottom: 8px; }
-    .print-date { float: right; color: #888; font-size: 9pt; }
-    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
-    thead tr { background: #1e3a5f; color: #fff; }
-    thead th { padding: 6px 8px; text-align: left; font-weight: 600; }
-    tbody tr:nth-child(even) { background: #f5f7fa; }
-    tbody tr { border-bottom: 1px solid #ddd; }
-    td { padding: 5px 8px; vertical-align: middle; }
-    tfoot td { padding: 8px; font-weight: bold; border-top: 2px solid #333; font-size: 10pt; }
-    .mono { font-family: monospace; font-size: 8.5pt; }
-    .pct { color: #666; font-size: 8.5pt; }
+    @page { size: A4 portrait; margin: 12mm 14mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #1f2937; background: #fff; }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 18px 22px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left h1 { font-size: 18pt; font-weight: 800; letter-spacing: -0.02em; }
+    .header-left p { font-size: 9pt; opacity: 0.8; margin-top: 3px; }
+    .header-right { text-align: right; }
+    .header-right .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .header-right .date { font-size: 8pt; opacity: 0.7; }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 8.5pt;
+      color: #475569;
+      margin-bottom: 14px;
+    }
+
+    /* ── Analytics cards ── */
+    .analytics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    .card {
+      border-radius: 8px;
+      padding: 12px 14px;
+      border: 1px solid #e2e8f0;
+    }
+    .card .label { font-size: 7.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin-bottom: 4px; }
+    .card .value { font-size: 17pt; font-weight: 800; line-height: 1; }
+    .card .sub { font-size: 8pt; color: #6b7280; margin-top: 3px; }
+    .card.blue { background: #eff6ff; border-color: #bfdbfe; }
+    .card.blue .value { color: #1d4ed8; }
+    .card.green { background: #f0fdf4; border-color: #bbf7d0; }
+    .card.green .value { color: #15803d; }
+    .card.red { background: #fef2f2; border-color: #fecaca; }
+    .card.red .value { color: #b91c1c; }
+    .card.amber { background: #fffbeb; border-color: #fde68a; }
+    .card.amber .value { color: #b45309; }
+
+    /* ── Two-column section ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .section-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .section-box .section-title {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 7px 12px;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #374151;
+    }
+    .section-box .section-body { padding: 10px 12px; }
+
+    /* ── Grade distribution ── */
+    .grade-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .grade-label { width: 16px; font-size: 8.5pt; font-weight: 700; }
+    .grade-range { width: 60px; font-size: 7.5pt; color: #9ca3af; }
+    .grade-bar-track { flex: 1; height: 9px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
+    .grade-count { width: 30px; text-align: right; font-size: 8pt; color: #374151; font-weight: 600; }
+
+    /* ── Performers ── */
+    .performer-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f1f5f9; }
+    .performer-row:last-child { border-bottom: none; }
+    .performer-rank { width: 20px; font-size: 8pt; font-weight: 700; color: #9ca3af; }
+    .performer-name { flex: 1; font-size: 9pt; font-weight: 600; color: #111827; }
+    .performer-score { font-size: 9pt; font-weight: 700; }
+
+    /* ── Subject breakdown ── */
+    .subj-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+    .subj-table th { padding: 6px 8px; text-align: left; font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    .subj-table td { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; }
+
+    /* ── Main results table ── */
+    .results-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+    .results-table thead tr {
+      background: linear-gradient(90deg, #1e3a5f, #2563eb);
+      color: white;
+    }
+    .results-table thead th { padding: 7px 9px; text-align: left; font-weight: 600; font-size: 8pt; }
+    .results-table tbody td { padding: 6px 9px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .results-table tfoot td { padding: 8px 9px; border-top: 2px solid #1e3a5f; font-weight: 700; font-size: 9pt; color: #1e3a5f; background: #f0f4ff; }
+
+    /* ── Footer ── */
+    .footer { margin-top: 16px; border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; justify-content: space-between; font-size: 7.5pt; color: #9ca3af; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .results-table thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
-  <h1>CBT Results</h1>
-  <div class="meta">
-    <span class="print-date">Printed: ${new Date().toLocaleDateString()}</span>
-    ${filterMeta || '<em>All results</em>'}
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <h1>${schoolName}</h1>
+      <p>Computer Based Test (CBT) — Results Report</p>
+    </div>
+    <div class="header-right">
+      <div class="badge">📋 Official Results</div>
+      <div class="date">Printed: ${printDate}</div>
+    </div>
   </div>
-  <div class="summary">Total students: <strong>${filteredResults.length}</strong></div>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Student</th>
-        <th>Student ID</th>
-        <th>Class</th>
-        <th>Subject</th>
-        <th>Session</th>
-        <th>Term</th>
-        <th>Teacher(s)</th>
-        <th>Score</th>
-        <th>Date</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-    <tfoot>
-      <tr>
-        <td colspan="10">Total: ${filteredResults.length} student${filteredResults.length !== 1 ? 's' : ''}</td>
-      </tr>
-    </tfoot>
-  </table>
+
+  <!-- Filter summary -->
+  ${activeFilters ? `<div class="filter-bar"><strong>Filters applied:</strong> &nbsp;${activeFilters}</div>` : ''}
+
+  <!-- Analytics cards -->
+  <div class="analytics">
+    <div class="card blue">
+      <div class="label">Total Students</div>
+      <div class="value">${filteredResults.length}</div>
+      <div class="sub">Results in this report</div>
+    </div>
+    <div class="card blue">
+      <div class="label">Average Score</div>
+      <div class="value">${avg.toFixed(1)}%</div>
+      <div class="sub">Class average</div>
+    </div>
+    <div class="card green">
+      <div class="label">Pass Rate</div>
+      <div class="value">${passRate}%</div>
+      <div class="sub">${passed} passed · ${failed} failed</div>
+    </div>
+    <div class="card amber">
+      <div class="label">Score Range</div>
+      <div class="value">${lowest.toFixed(0)}–${highest.toFixed(0)}</div>
+      <div class="sub">Lowest – Highest %</div>
+    </div>
+  </div>
+
+  <!-- Grade distribution + Performers -->
+  <div class="two-col">
+    <!-- Grade distribution -->
+    <div class="section-box">
+      <div class="section-title">📊 Grade Distribution</div>
+      <div class="section-body">
+        ${[
+          { grade: 'A', range: '80–100%', count: gradeCount.A, color: '#16a34a' },
+          { grade: 'B', range: '70–79%',  count: gradeCount.B, color: '#2563eb' },
+          { grade: 'C', range: '60–69%',  count: gradeCount.C, color: '#d97706' },
+          { grade: 'D', range: '50–59%',  count: gradeCount.D, color: '#ea580c' },
+          { grade: 'F', range: '0–49%',   count: gradeCount.F, color: '#dc2626' },
+        ].map(({ grade, range, count, color }) => {
+          const pct = filteredResults.length ? (count / filteredResults.length * 100) : 0;
+          return `<div class="grade-row">
+            <span class="grade-label" style="color:${color};">${grade}</span>
+            <span class="grade-range">${range}</span>
+            <div class="grade-bar-track">
+              <div style="width:${pct.toFixed(1)}%;height:100%;background:${color};border-radius:99px;"></div>
+            </div>
+            <span class="grade-count">${count}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Top & Bottom performers -->
+    <div class="section-box">
+      <div class="section-title">🏆 Top Performers</div>
+      <div class="section-body">
+        ${top3.map((r, i) => {
+          const pct = parseFloat(r.percentage) || 0;
+          const medals = ['🥇', '🥈', '🥉'];
+          return `<div class="performer-row">
+            <span class="performer-rank">${medals[i] ?? i + 1}</span>
+            <span class="performer-name">${r.firstname} ${r.lastname}</span>
+            <span class="performer-score" style="color:${scoreColor(pct)};">${pct.toFixed(1)}%</span>
+          </div>`;
+        }).join('')}
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f1f5f9;">
+          <div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin-bottom:6px;">Needs Improvement</div>
+          ${bottom3.map((r) => {
+            const pct = parseFloat(r.percentage) || 0;
+            return `<div class="performer-row">
+              <span class="performer-rank" style="color:#dc2626;">↓</span>
+              <span class="performer-name">${r.firstname} ${r.lastname}</span>
+              <span class="performer-score" style="color:${scoreColor(pct)};">${pct.toFixed(1)}%</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  ${showSubjectBreakdown ? `
+  <!-- Subject breakdown -->
+  <div class="section-box" style="margin-bottom:14px;">
+    <div class="section-title">📚 Per-Subject Breakdown</div>
+    <div style="padding:0 4px;">
+      <table class="subj-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Students</th>
+            <th>Average Score</th>
+            <th>Pass Rate</th>
+          </tr>
+        </thead>
+        <tbody>${subjectRows}</tbody>
+      </table>
+    </div>
+  </div>` : ''}
+
+  <!-- Results table -->
+  <div class="section-box">
+    <div class="section-title">📋 Full Results (${filteredResults.length} student${filteredResults.length !== 1 ? 's' : ''})</div>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Student Name</th>
+          <th>Student ID</th>
+          <th>Class</th>
+          <th>Subject</th>
+          <th>Session</th>
+          <th>Term</th>
+          <th>Score</th>
+          <th>Grade</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="7">Total Students: ${filteredResults.length}</td>
+          <td colspan="3">Class Average: ${avg.toFixed(1)}% &nbsp;|&nbsp; Pass Rate: ${passRate}%</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>${schoolName} — CBT Results Report</span>
+    <span>Generated on ${printDate} &nbsp;|&nbsp; ${filteredResults.length} record${filteredResults.length !== 1 ? 's' : ''}</span>
+  </div>
+
 </body>
 </html>`;
 
