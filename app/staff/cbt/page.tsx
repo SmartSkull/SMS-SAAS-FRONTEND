@@ -1143,6 +1143,20 @@ export default function StaffCbt() {
         @media print {
           html, body { background: white !important; margin: 0 !important; padding: 0 !important; }
           .no-print { display: none !important; }
+
+          /* ── Results PDF export ──────────────────────────────────────── */
+          /* Hide sidebar (fixed aside) and sticky header navbar            */
+          aside, header { display: none !important; }
+          /* The content wrapper: reset margin so it fills the full width   */
+          .portal-theme > div.flex-1 { margin-left: 0 !important; }
+          /* Shrink padding so content fills the page */
+          .portal-theme main { padding: 8px 12px !important; }
+          /* Fit results table to page */
+          #cbt-results-print-area { width: 100% !important; }
+          #cbt-results-print-area table { font-size: 10pt !important; border-collapse: collapse !important; }
+          #cbt-results-print-area th { font-size: 9pt !important; padding: 4px 6px !important; background: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          #cbt-results-print-area td { padding: 4px 6px !important; border-bottom: 1px solid #e2e8f0 !important; }
+
           /* Bulk OMR: hide non-selected sheets on screen, show all when printing; split front/back */
           .screen-hide { display: block !important; }
           .print-front-only .omr-back { display: none !important; }
@@ -1930,11 +1944,36 @@ export default function StaffCbt() {
               <EmptyState icon={BarChart2} message="No CBT results yet." card={false} />
             ) : (
               <>
-              <h2 className="hidden print:block text-base font-bold text-gray-800 mb-2">CBT Results</h2>
-              <div className="overflow-x-auto">
+              {/* Print header — only visible when printing */}
+              <div className="hidden print:block mb-4">
+                <h2 className="text-lg font-bold text-gray-900">CBT Results</h2>
+                <div className="flex flex-wrap gap-4 text-sm text-gray-600 mt-1">
+                  {resultsFilter.class && <span><strong>Class:</strong> {resultsFilter.class}</span>}
+                  {resultsFilter.course && <span><strong>Subject:</strong> {resultsFilter.course}</span>}
+                  {resultsFilter.session && <span><strong>Session:</strong> {resultsFilter.session}</span>}
+                  {resultsFilter.term && <span><strong>Term:</strong> {resultsFilter.term} Term</span>}
+                  {resultsFilter.teacher && <span><strong>Teacher:</strong> {resultsFilter.teacher}</span>}
+                  <span><strong>Total Students:</strong> {results.length}</span>
+                  <span className="ml-auto text-gray-400">Printed: {new Date().toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              {/* Summary bar — visible on screen only */}
+              <div className="no-print flex items-center justify-between mb-3 px-1">
+                <p className="text-sm text-gray-600">
+                  <span className="font-semibold text-gray-900">{results.length}</span> student{results.length !== 1 ? 's' : ''} found
+                  {resultsFilter.class && <span className="text-gray-400"> · {resultsFilter.class}</span>}
+                  {resultsFilter.course && <span className="text-gray-400"> · {resultsFilter.course}</span>}
+                  {resultsFilter.session && <span className="text-gray-400"> · {resultsFilter.session}</span>}
+                  {resultsFilter.term && <span className="text-gray-400"> · {resultsFilter.term} Term</span>}
+                </p>
+              </div>
+
+              <div className="overflow-x-auto" id="cbt-results-print-area">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 border-b">
+                      <th className="pb-3 font-medium">#</th>
                       <th className="pb-3 font-medium">Student</th>
                       <th className="pb-3 font-medium">Student ID</th>
                       <th className="pb-3 font-medium">Class</th>
@@ -1944,12 +1983,13 @@ export default function StaffCbt() {
                       <th className="pb-3 font-medium">Teacher(s)</th>
                       <th className="pb-3 font-medium">Score</th>
                       <th className="pb-3 font-medium">Date</th>
-                      <th className="pb-3 font-medium"></th>
+                      <th className="pb-3 font-medium no-print"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {results.map((r, i) => (
                       <tr key={i} className="hover:bg-gray-50">
+                        <td className="py-3 text-gray-400 text-xs">{i + 1}</td>
                         <td className="py-3 font-medium text-gray-800">{r.firstname} {r.lastname}</td>
                         <td className="py-3 text-gray-500 font-mono text-xs">{r.student?.user?.uniqueId ?? '—'}</td>
                         <td className="py-3 text-gray-500">{r.class ?? '—'}</td>
@@ -1959,7 +1999,7 @@ export default function StaffCbt() {
                         <td className="py-3 text-gray-500">{(r.teachers ?? []).join(', ') || '—'}</td>
                         <td className="py-3"><span className="font-semibold text-gray-800">{r.score}</span><span className="text-gray-400 text-xs ml-1">({r.percentage}%)</span></td>
                         <td className="py-3 text-gray-500">{new Date(r.submittedAt).toLocaleDateString()}</td>
-                        <td className="py-3">
+                        <td className="py-3 no-print">
                           <button onClick={() => handleDeleteResult(r)} className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg">
                             <Trash2 size={15} />
                           </button>
@@ -1967,6 +2007,13 @@ export default function StaffCbt() {
                       </tr>
                     ))}
                   </tbody>
+                  {/* Print footer showing total */}
+                  <tfoot className="border-t border-gray-200">
+                    <tr>
+                      <td colSpan={8} className="pt-3 text-sm font-semibold text-gray-700">Total Students: {results.length}</td>
+                      <td colSpan={3} className="pt-3 text-xs text-gray-400 text-right no-print"></td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
               </>
