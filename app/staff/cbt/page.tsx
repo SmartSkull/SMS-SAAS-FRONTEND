@@ -444,7 +444,7 @@ export default function StaffCbt() {
         <div className="omr-page omr-back">
           <div className="omr-columns">
             {/* LEFT: school + student info */}
-            <div>
+            <div className="flex flex-col">
               <div className="avoid-break bg-gradient-to-r from-slate-900 to-slate-700 text-white px-5 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   {school?.logo ? (
@@ -502,6 +502,7 @@ export default function StaffCbt() {
                   </div>
                 </div>
               </div>
+              <div className="omr-rules" />
             </div>
 
             {/* RIGHT: Section B continued */}
