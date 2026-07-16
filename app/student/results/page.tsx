@@ -42,7 +42,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   const totalScore = results.reduce((s: number, r: any) => s + Number(r.totalScore), 0);
   const avg = results.length ? (totalScore / results.length).toFixed(1) : '0';
 
-  const photoUrl = user?.image ? `${UPLOADS}/${user.image}` : '';
+  const photoUrl = data.student?.image ? `${UPLOADS}/${data.student.image}` : (user?.image ? `${UPLOADS}/${user.image}` : '');
   const teacherPhotoUrl = data.teacher?.image ? `${UPLOADS}/${data.teacher.image}` : '';
   const principalPhotoUrl = data.principal?.image ? `${UPLOADS}/${data.principal.image}` : '';
 
@@ -125,7 +125,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
     <div style="display:flex;gap:15px">
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${user?.firstName} ${user?.lastName}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${user?.uniqueId || ''}</div></div>
-      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class</div><div style="font-weight:600;font-size:10px">${data.class || 'N/A'}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class</div><div style="font-weight:600;font-size:10px">${data.student?.class || data.class || 'N/A'}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class Size</div><div style="font-weight:600;font-size:10px">${data.class_size || 'N/A'}</div></div>
     </div>
     <div class="stats">
@@ -213,18 +213,18 @@ async function printResultSheet(data: any, results: any[], session: string, term
   ` : ''}
 
   <div class="cmts">
-    ${data.teacher ? `<div class="cmt t"><div class="ttl">Teacher's Comment</div><div class="txt">"${data.teacher.comment || '—'}"</div></div>` : ''}
-    ${data.principal ? `<div class="cmt p"><div class="ttl">Principal's Comment</div><div class="txt">"${data.principal.comment || '—'}"</div></div>` : ''}
+    <div class="cmt t"><div class="ttl">Teacher's Comment</div><div class="txt">"${data.attendance?.teacherComment || '—'}"</div></div>
+    <div class="cmt p"><div class="ttl">Principal's Comment</div><div class="txt">"${data.attendance?.principalComment || '—'}"</div></div>
   </div>
 
   <div class="foot">
     <div class="sig">
-      <div class="ttl">Teacher</div>
-      <div class="date-val"></div>
+      <div class="ttl">Class Teacher</div>
+      <div class="date-val">___________________________</div>
     </div>
     <div class="sig">
       <div class="ttl">Principal</div>
-      <div class="date-val"></div>
+      <div class="date-val">___________________________</div>
     </div>
   </div>
 </div></body></html>`);
@@ -507,7 +507,7 @@ export default function StudentResults() {
       )}
 
       {/* Teacher & Principal Comments */}
-      {data && (data.teacher || data.principal) && (
+      {data && (
         <div className="grid md:grid-cols-2 gap-4 print:hidden">
           {([
             { key: 'teacherComment',   label: 'TEACHER',   title: "Teacher's Comment",  border: 'border-yellow-200', bg: 'bg-yellow-50', iconColor: 'text-yellow-600', iconBg: 'bg-yellow-100' },
