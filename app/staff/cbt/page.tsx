@@ -1178,6 +1178,8 @@ export default function StaffCbt() {
     };
 
     const scoreColor = (pct: number) =>
+      pct >= 80 ? '#16a34a' : pct >= 70 ? '#2563eb' : pct >= 60 ? '#d97706' : pct >= 50 ? '#ea580c' : '#dc2626';
+
     const subjectMap: Record<string, number[]> = {};
     filteredResults.forEach(r => {
       const subj = r.subject ?? 'Unknown';
@@ -1190,9 +1192,6 @@ export default function StaffCbt() {
       count: vals.length,
     })).sort((a, b) => b.avg - a.avg);
     const showSubjectBreakdown = subjects.length > 1;
-
-    const scoreColor = (pct: number) =>
-      pct >= 80 ? '#16a34a' : pct >= 70 ? '#2563eb' : pct >= 60 ? '#d97706' : pct >= 50 ? '#ea580c' : '#dc2626';
 
     const gradeBadge = (pct: number) => {
       const grade = pct >= 80 ? 'A' : pct >= 70 ? 'B' : pct >= 60 ? 'C' : pct >= 50 ? 'D' : 'F';
