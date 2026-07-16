@@ -219,12 +219,10 @@ async function printResultSheet(data: any, results: any[], session: string, term
 
   <div class="foot">
     <div class="sig">
-      ${teacherB64 ? `<img src="${teacherB64}" class="sig-img">` : ''}
       <div class="ttl">Teacher</div>
       <div class="date-val"></div>
     </div>
     <div class="sig">
-      ${principalB64 ? `<img src="${principalB64}" class="sig-img">` : ''}
       <div class="ttl">Principal</div>
       <div class="date-val"></div>
     </div>
@@ -512,20 +510,15 @@ export default function StudentResults() {
       {data && (data.teacher || data.principal) && (
         <div className="grid md:grid-cols-2 gap-4 print:hidden">
           {([
-            { key: 'teacherComment',   person: data.teacher,   title: "Teacher's Comment",  border: 'border-yellow-200', bg: 'bg-yellow-50' },
-            { key: 'principalComment', person: data.principal, title: "Principal's Comment", border: 'border-indigo-200', bg: 'bg-indigo-50' },
-          ] as const).map(({ key, person, title, border, bg }) => (
+            { key: 'teacherComment',   label: 'TEACHER',   title: "Teacher's Comment",  border: 'border-yellow-200', bg: 'bg-yellow-50', iconColor: 'text-yellow-600', iconBg: 'bg-yellow-100' },
+            { key: 'principalComment', label: 'PRINCIPAL', title: "Principal's Comment", border: 'border-indigo-200', bg: 'bg-indigo-50',  iconColor: 'text-indigo-600', iconBg: 'bg-indigo-100' },
+          ] as const).map(({ key, label, title, border, bg, iconColor, iconBg }) => (
             <div key={key} className={'rounded-2xl border ' + border + ' ' + bg + ' p-5'}>
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-black/10">
-                <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
-                  {getImageUrl(person?.image)
-                    ? <img src={getImageUrl(person.image)!} alt="" className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-gray-400"><User size={18} /></div>}
+                <div className={'w-10 h-10 rounded-full ' + iconBg + ' flex items-center justify-center flex-shrink-0'}>
+                  <User size={18} className={iconColor} />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900">{person?.name ?? '—'}</p>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">{title.split("'")[0]}</p>
-                </div>
+                <p className={'text-sm font-bold uppercase tracking-wide ' + iconColor}>{label}</p>
               </div>
               <p className="text-sm text-gray-700 italic">
                 {data.attendance?.[key] ? '"' + data.attendance[key] + '"' : 'No comment provided yet.'}
