@@ -42,8 +42,17 @@ export default function LoginPage() {
 
   if (!school) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+      <main
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/studentgroup2.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: '#1f1f2e',
+        }}
+      >
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm p-8 text-center shadow-sm">
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
             <Search size={24} />
           </div>
