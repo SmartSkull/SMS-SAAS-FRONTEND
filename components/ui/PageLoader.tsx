@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 export default function PageLoader() {
   const pathname = usePathname();
@@ -43,14 +44,12 @@ export default function PageLoader() {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       <div className="absolute inset-0 backdrop-blur-md bg-black/40" />
       <div className="relative z-10 flex flex-col items-center gap-6">
-        <object
-          type="image/svg+xml"
-          data="/school-loader.svg"
-          aria-label="Loading..."
-          width="192"
-          height="192"
-          className="pointer-events-none"
-        >Loading...</object>
+        <DotLottieReact
+          src="https://lottie.host/2841ad02-f65d-4660-855b-5b4c22d6f88a/Ry3vJ3j6At.lottie"
+          loop
+          autoplay
+          className="w-52 h-52"
+        />
         <div className="w-44 h-2 bg-white/15 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-300"
