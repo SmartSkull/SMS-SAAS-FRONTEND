@@ -40,25 +40,23 @@ export default function PageLoader() {
   if (isDashboard || (!loading && progress === 0)) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-md">
-      <div className="flex flex-col items-center gap-6">
-        <div className="relative w-24 h-24">
-          <div className="absolute inset-0 rounded-full border-4 border-white/20" />
-          <div
-            className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin"
-            style={{ borderTopColor: 'var(--brand, #2563eb)' }}
-          />
-        </div>
-        <div className="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+      <div className="absolute inset-0 backdrop-blur-md bg-black/40" />
+      <div className="relative z-10 flex flex-col items-center gap-6">
+        <img
+          src="/school-loader.svg"
+          alt="Loading..."
+          className="w-40 h-40"
+        />
+        <div className="w-44 h-2 bg-white/15 rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-300"
             style={{
               width: `${progress}%`,
-              background: 'var(--brand, #2563eb)',
+              background: 'linear-gradient(90deg, #3b82f6, #60a5fa)',
             }}
           />
         </div>
-        <p className="text-white/80 text-sm font-medium">Loading…</p>
       </div>
     </div>
   );
