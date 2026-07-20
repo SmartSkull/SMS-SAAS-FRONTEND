@@ -82,12 +82,12 @@ export default function StudentMessages() {
       .finally(() => setLoadingUsers(false));
   }, [newRole, newClass]);
 
-  const startChat = async (userId: string) => {
+  const startChat = async (u: any) => {
     setShowNew(false);
     setNewRole(null);
     setNewClass('');
     setUserList([]);
-    await openConvo(userId);
+    await openConvo(u.id, `${u.firstname ?? ''} ${u.lastname ?? ''}`.trim(), u.image ?? null);
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
@@ -233,7 +233,7 @@ export default function StudentMessages() {
                   ) : (
                     <div className="space-y-1">
                       {userList.map((u) => (
-                        <button key={u.id} onClick={() => startChat(u.id)}
+                        <button key={u.id} onClick={() => startChat(u)}
                           className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left">
                           <Avatar name={u.firstname} image={u.image} />
                           <div className="flex-1 min-w-0">

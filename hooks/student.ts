@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse, Assignment, LibraryItem, CbtTest, Conversation, Message, Post } from '@/types';
@@ -134,19 +134,28 @@ export function useMessages() {
   const [convos, setConvos] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [active, setActive] = useState<string | null>(null);
+  const [activeInfo, setActiveInfo] = useState<{ name?: string; image?: string | null } | null>(null);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  useEffect(() => {
-    api.get<ApiResponse<Conversation[]>>(endpoints.student.messages)
-      .then((r) => setConvos(r.data))
-      .catch(() => toast.error('Failed to load messages'))
-      .finally(() => setLoading(false));
-  }, []);
+  const loadConvos = async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const r = await api.get<ApiResponse<Conversation[]>>(endpoints.student.messages);
+      setConvos(r.data);
+    } catch {
+      if (!quiet) toast.error('Failed to load messages');
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  };
 
-  const openConvo = async (userId: string) => {
+  useEffect(() => { loadConvos(); }, []);
+
+  const openConvo = async (userId: string, name?: string, image?: string | null) => {
     setActive(userId);
+    if (name || image !== undefined) setActiveInfo({ name, image });
     try {
       const r = await api.get<ApiResponse<any>>(`${endpoints.student.messages}/thread`, { uid: userId });
       setMessages(r.data?.messages ?? r.data);
@@ -160,13 +169,34 @@ export function useMessages() {
     setMessages(p => [...p, optimistic]);
     try {
       await api.post(endpoints.student.messages, { receiver_id: active, message: text });
+      // Refresh conversation list so the new convo appears immediately
+      loadConvos(true);
     } catch {
       setMessages(p => p.filter(m => (m as any).id !== optimistic.id));
       toast.error('Failed to send message');
     }
   };
 
-  return { convos, messages, active, loading, openConvo, sendMessage, clearActive: () => setActive(null), partnerLastLogin };
+  // Merge activeInfo into convos so the header shows the correct name even
+  // before the server-side convo list has the new entry
+  const mergedConvos = useMemo(() => {
+    if (!active || !activeInfo) return convos;
+    const exists = convos.some(c => c.user_id === active);
+    if (exists) return convos;
+    return [
+      ...convos,
+      {
+        user_id: active,
+        name: activeInfo.name ?? active,
+        image: activeInfo.image ?? null,
+        last_message: '',
+        unread: 0,
+        created_at: new Date().toISOString(),
+      } as Conversation,
+    ];
+  }, [convos, active, activeInfo]);
+
+  return { convos: mergedConvos, messages, active, loading, openConvo, sendMessage, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin };
 }
 
 /* ── Timetable ─────────────────────────────────────────────────────────── */
