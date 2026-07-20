@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { useMessagesSocket } from '@/hooks/useMessagesSocket';
 import type { ApiResponse, Assignment, LibraryItem, CbtTest, Conversation, Message, Post } from '@/types';
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
@@ -153,6 +154,10 @@ export function useMessages() {
 
   useEffect(() => { loadConvos(); }, []);
 
+  useMessagesSocket(() => {
+    loadConvos(true);
+  });
+
   const openConvo = async (userId: string, name?: string, image?: string | null) => {
     setActive(userId);
     if (name || image !== undefined) setActiveInfo({ name, image });
@@ -169,7 +174,6 @@ export function useMessages() {
     setMessages(p => [...p, optimistic]);
     try {
       await api.post(endpoints.student.messages, { receiver_id: active, message: text });
-      // Refresh conversation list so the new convo appears immediately
       loadConvos(true);
     } catch {
       setMessages(p => p.filter(m => (m as any).id !== optimistic.id));

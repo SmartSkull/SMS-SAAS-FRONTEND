@@ -4,6 +4,7 @@ import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRigh
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { ApiResponse } from '@/types';
 import { useToast } from '@/components/ui/Toast';
+import { useMessagesSocket } from '@/hooks/useMessagesSocket';
 import clsx from 'clsx';
 
 function Avatar({ name, image, size = 10 }: { name?: string; image?: string | null; size?: number }) {
@@ -73,12 +74,25 @@ export default function StaffMessages() {
   const activeConvo = convos.find(c => c.user_id === active);
   const filtered = convos.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()));
 
+  const loadConvos = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const r = await api.get<ApiResponse<any[]>>(endpoints.staff.messages);
+      setConvos(r.data ?? []);
+    } catch {
+      if (!quiet) toast.error('Failed to load messages');
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
-    api.get<ApiResponse<any[]>>(endpoints.staff.messages)
-      .then(r => setConvos(r.data ?? []))
-      .catch(() => toast.error('Failed to load messages'))
-      .finally(() => setLoading(false));
-  }, []);
+    loadConvos();
+  }, [loadConvos]);
+
+  useMessagesSocket(() => {
+    loadConvos(true);
+  });
 
   const openConvo = async (userId: string) => {
     setActive(userId);
