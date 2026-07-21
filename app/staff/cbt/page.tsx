@@ -686,7 +686,7 @@ export default function StaffCbt() {
     if (!confirm(`Delete ${ids.length} selected question${ids.length !== 1 ? 's' : ''}? This cannot be undone.`)) return;
     setBulkDeleting(true);
     try {
-      await api.delete(endpoints.staff.cbtBulkDeleteQuestions, { ids });
+      await api.post(`${endpoints.staff.cbtBulkDeleteQuestions}`, { ids });
       toast.success(`Deleted ${ids.length} question${ids.length !== 1 ? 's' : ''}`);
       setSelectedIds(new Set());
       loadQuestions();

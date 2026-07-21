@@ -31,8 +31,7 @@ function downloadResultsTemplate(students: any[], className: string, subject: st
 function parseResultsCSV(text: string): { student_id: string; test_score: string; exam_score: string }[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  // Parse header to find column indices
-  const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+  const header = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
   const idIdx   = header.findIndex(h => h === 'student_id');
   const caIdx   = header.findIndex(h => h.startsWith('test_score'));
   const examIdx = header.findIndex(h => h.startsWith('exam_score'));
@@ -40,15 +39,30 @@ function parseResultsCSV(text: string): { student_id: string; test_score: string
 
   const results: { student_id: string; test_score: string; exam_score: string }[] = [];
   for (let i = 1; i < lines.length; i++) {
-    // Simple CSV split — handles quoted fields
-    const cols = lines[i].match(/(".*?"|[^,]+|(?<=,)(?=,)|(?<=,)$|^(?=,))/g) ?? [];
-    const clean = (v: string | undefined) => (v ?? '').replace(/^"|"$/g, '').trim();
-    const student_id = clean(cols[idIdx]);
-    const test_score = clean(cols[caIdx]);
-    const exam_score = clean(cols[examIdx]);
+    if (!lines[i].trim()) continue;
+    const cols = parseCSVLine(lines[i]);
+    const student_id = (cols[idIdx] || '').trim();
+    const test_score = (cols[caIdx] || '').trim();
+    const exam_score = (cols[examIdx] || '').trim();
     if (student_id) results.push({ student_id, test_score, exam_score });
   }
   return results;
+}
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (char === ',' && !inQuotes) { result.push(current); current = ''; }
+    else { current += char; }
+  }
+  result.push(current);
+  return result;
 }
 
 async function toBase64(url: string): Promise<string> {
@@ -466,21 +480,23 @@ export default function StaffResults() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = ev.target?.result as string;
+      const text = (ev.target?.result as string || '').replace(/^\uFEFF/, '');
       const parsed = parseResultsCSV(text);
       if (!parsed.length) { toast.error('No valid rows found. Make sure you are using the downloaded template.'); return; }
       let matched = 0;
       setRows(prev => {
         const next = { ...prev };
+        const normalizedKeys: Record<string, string> = {};
+        Object.keys(next).forEach(k => { normalizedKeys[k.toUpperCase()] = k; });
         parsed.forEach(({ student_id, test_score, exam_score }) => {
-          if (next[student_id] !== undefined) {
-            next[student_id] = { test_score, exam_score };
+          const originalKey = normalizedKeys[student_id.toUpperCase()];
+          if (originalKey !== undefined) {
+            next[originalKey] = { test_score, exam_score };
             matched++;
           }
         });
         return next;
       });
-      // reset file input so the same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = '';
       const unmatched = parsed.length - matched;
       if (matched === 0) toast.error('No student IDs in the file match this class. Download a fresh template.');
@@ -775,9 +791,9 @@ export default function StaffResults() {
                       <button
                         type="button"
                         onClick={() => downloadResultsTemplate(uploadStudents, uploadClass, uploadCourse, uploadSession, uploadTerm)}
-                        disabled={!uploadCourse}
+                        disabled={!uploadCourse || loadingUploadStudents}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
-                        title={!uploadCourse ? 'Select a subject first' : 'Download CSV template'}
+                        title={!uploadCourse ? 'Select a subject first' : loadingUploadStudents ? 'Loading students…' : 'Download CSV template'}
                       >
                         <Download size={13} /> Template
                       </button>
