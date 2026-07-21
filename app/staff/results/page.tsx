@@ -15,7 +15,7 @@ const UPLOADS_BASE = typeof window !== 'undefined' ? `${window.location.origin}/
 function downloadResultsTemplate(students: any[], className: string, subject: string, session: string, term: string) {
   const header = ['student_id', 'firstname', 'lastname', 'class', 'test_score (max 40)', 'exam_score (max 60)'];
   const rows = students.map(s => [
-    s.student_id, s.firstname, s.lastname, className, '', '',
+    `\t${s.student_id}`, s.firstname, s.lastname, className, '', '',
   ]);
   const csv = [header, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -41,9 +41,10 @@ function parseResultsCSV(text: string): { student_id: string; test_score: string
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
     const cols = parseCSVLine(lines[i]);
-    const student_id = (cols[idIdx] || '').trim();
+    let student_id = (cols[idIdx] || '').trim();
     const test_score = (cols[caIdx] || '').trim();
     const exam_score = (cols[examIdx] || '').trim();
+    student_id = student_id.replace(/^\t+/, '').replace(/[^\x20-\x7E]/g, '').trim();
     if (student_id) results.push({ student_id, test_score, exam_score });
   }
   return results;
@@ -486,10 +487,16 @@ export default function StaffResults() {
       let matched = 0;
       setRows(prev => {
         const next = { ...prev };
+        const keyCount = Object.keys(next).length;
+        if (keyCount === 0) {
+          toast.error('No students loaded for this class. Please select a class first and wait for students to load.');
+          return next;
+        }
         const normalizedKeys: Record<string, string> = {};
         Object.keys(next).forEach(k => { normalizedKeys[k.toUpperCase()] = k; });
         parsed.forEach(({ student_id, test_score, exam_score }) => {
-          const originalKey = normalizedKeys[student_id.toUpperCase()];
+          const cleanId = student_id.replace(/^\t+/, '').replace(/[^\x20-\x7E]/g, '').trim().toUpperCase();
+          const originalKey = normalizedKeys[cleanId];
           if (originalKey !== undefined) {
             next[originalKey] = { test_score, exam_score };
             matched++;
