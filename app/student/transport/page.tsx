@@ -4,13 +4,14 @@ import { io, Socket } from 'socket.io-client';
 import {
   Bus, Wifi, WifiOff, AlertTriangle, CheckCircle, Clock, Navigation,
   MapPin, Phone, Share2, Gauge, MessageCircle, Users, History, Search, Siren,
+  Mic, Square, Play, Volume2, MessageSquare, Pin, Send, UserPlus, Radio,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, endpoints } from '@/lib/api';
 
 interface BusInfo {
   busId: string; plateNumber: string; routeName?: string; routeFare?: number | null;
-  routePolyline?: [number, number][] | null; driverName?: string; driverPhone?: string | null;
+  routeId?: string | null; routePolyline?: [number, number][] | null; driverName?: string; driverPhone?: string | null;
   driverUserId?: string | null; tripActive: boolean; schoolName?: string;
   lat: number | null; lng: number | null; gpsUpdatedAt: string | null;
   absentToday: boolean; homeLat: number | null; homeLng: number | null;
@@ -201,6 +202,20 @@ export default function StudentTransportPage() {
   const [busFee, setBusFee] = useState<{ fare: number; feeConfigured: boolean; status: string; paidAt: string | null; reference: string | null; history: any[] } | null>(null);
   const [feeLoading, setFeeLoading] = useState(false);
   const [payingFee, setPayingFee] = useState(false);
+
+  // Route chat state
+  const [routeChat, setRouteChat] = useState<any[]>([]);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [showRouteChat, setShowRouteChat] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Broadcasts state
+  const [broadcasts, setBroadcasts] = useState<any[]>([]);
+  const [showBroadcasts, setShowBroadcasts] = useState(false);
+  const [pinnedBroadcast, setPinnedBroadcast] = useState<any>(null);
   const socketRef = useRef<Socket | null>(null);
   const etaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevCoordsRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
@@ -246,7 +261,11 @@ export default function StudentTransportPage() {
     if (!busInfo?.tripActive || !busInfo.busId) return;
     const socket = io(`${BACKEND_WS}/transport`, { transports: ['websocket'] });
     socketRef.current = socket;
-    socket.on('connect', () => { setConnected(true); socket.emit('student:watch', { busId: busInfo.busId }); });
+    socket.on('connect', () => {
+      setConnected(true);
+      socket.emit('student:watch', { busId: busInfo.busId });
+      if (busInfo.routeId) socket.emit('route:join', { routeId: busInfo.routeId });
+    });
     socket.on('disconnect', () => setConnected(false));
     socket.on('bus:location', (data: { lat: number; lng: number }) => {
       const now = Date.now();
@@ -267,13 +286,29 @@ export default function StudentTransportPage() {
         prevCoordsRef.current = { lat: data.lat, lng: data.lng, time: now };
         return { lat: data.lat, lng: data.lng };
       });
-      // Browser notification if ETA ≤ 5 mins
       if (eta && eta.durationSeconds <= 300 && Notification.permission === 'granted') {
         new Notification('🚌 Bus almost here!', { body: `Your bus is about ${fmt(eta.durationSeconds)} away.` });
       }
     });
+    socket.on('route:chat', (msg: any) => {
+      setRouteChat(prev => {
+        const exists = prev.some(m => m.id === msg.id);
+        if (exists) return prev;
+        return [...prev, msg];
+      });
+    });
+    socket.on('route:broadcast', (b: any) => {
+      setBroadcasts(prev => {
+        const exists = prev.some(x => x.id === b.id);
+        if (exists) return prev;
+        return [b, ...prev];
+      });
+      if (!b.expiresAt || new Date(b.expiresAt) > new Date()) {
+        setPinnedBroadcast(b);
+      }
+    });
     return () => { socket.disconnect(); };
-  }, [busInfo?.tripActive, busInfo?.busId]);
+  }, [busInfo?.tripActive, busInfo?.busId, busInfo?.routeId, eta]);
 
   // Request notification permission once
   useEffect(() => {
@@ -347,12 +382,89 @@ export default function StudentTransportPage() {
     if (!complaint.trim()) return;
     setComplaintSending(true);
     try {
-      // Route through messages to admin
       await api.post('/student/messages', { message: `[Transport Complaint] ${complaint}` });
       setComplaint(''); setShowComplaint(false);
       setMessage('Complaint sent to admin.'); setTimeout(() => setMessage(''), 4000);
     } catch { setMessage('Failed to send complaint.'); setTimeout(() => setMessage(''), 3000); }
     finally { setComplaintSending(false); }
+  };
+
+  const loadRouteChat = async () => {
+    if (!busInfo?.routeId) return;
+    setChatLoading(true);
+    try {
+      const r = await api.get<any>(endpoints.student.transportRouteChat(busInfo.routeId));
+      setRouteChat(r.data ?? []);
+    } catch { /* silent */ }
+    finally { setChatLoading(false); }
+  };
+
+  const sendRouteChatMessage = async () => {
+    if (!chatMessage.trim() || !busInfo?.routeId) return;
+    setChatLoading(true);
+    try {
+      await api.post(endpoints.student.transportRouteChat(busInfo.routeId), { message: chatMessage, type: 'text' });
+      setChatMessage('');
+    } catch { setMessage('Failed to send message'); setTimeout(() => setMessage(''), 3000); }
+    finally { setChatLoading(false); }
+  };
+
+  const startVoiceNote = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const fd = new FormData();
+        fd.append('audio', blob, 'voice-note.webm');
+        setChatLoading(true);
+        try {
+          const routeId = busInfo?.routeId;
+          if (routeId) {
+            await api.upload(endpoints.student.transportRouteChat(routeId), fd);
+          }
+        } catch { setMessage('Failed to send voice note'); setTimeout(() => setMessage(''), 3000); }
+        finally { setChatLoading(false); }
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorder.start();
+      setRecording(true);
+      setRecordingTime(10);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(t => {
+          if (t <= 1) {
+            clearInterval(recordingTimerRef.current!);
+            mediaRecorder.stop();
+            setRecording(false);
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
+    } catch { setMessage('Microphone access denied'); setTimeout(() => setMessage(''), 3000); }
+  };
+
+  const loadBroadcasts = async () => {
+    if (!busInfo?.routeId) return;
+    try {
+      const r = await api.get<any>(endpoints.student.transportRouteBroadcasts(busInfo.routeId));
+      const list = r.data ?? [];
+      setBroadcasts(list);
+      const active = list.find((b: any) => !b.expiresAt || new Date(b.expiresAt) > new Date());
+      setPinnedBroadcast(active || null);
+    } catch { /* silent */ }
+  };
+
+  const shareTrackingLink = async () => {
+    if (!busInfo?.driverUserId) return;
+    try {
+      const r = await api.get<any>(endpoints.student.transportParentTrackingLink(busInfo.driverUserId));
+      const text = `Track my school bus live: ${r.data.trackingUrl}`;
+      if (navigator.share) await navigator.share({ title: 'Bus Location', text, url: r.data.trackingUrl });
+      else window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    } catch { setMessage('Failed to generate tracking link'); setTimeout(() => setMessage(''), 3000); }
   };
 
   const payBusFee = async () => {
@@ -658,6 +770,114 @@ export default function StudentTransportPage() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Admin Broadcast ── */}
+      {pinnedBroadcast && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+            <Radio size={16} className="text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Admin Broadcast</p>
+            <p className="text-sm text-gray-800">{pinnedBroadcast.message}</p>
+            {pinnedBroadcast.expiresAt && (
+              <p className="text-[10px] text-gray-400 mt-1">Expires: {new Date(pinnedBroadcast.expiresAt).toLocaleString()}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Route Group Chat ── */}
+      {busInfo?.routeId && (
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Users size={15} className="text-purple-500" /> Route Chat
+            </p>
+            <button onClick={() => { setShowRouteChat(p => !p); if (!showRouteChat) loadRouteChat(); }}
+              className="text-xs text-purple-600 font-medium">
+              {showRouteChat ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          {showRouteChat && (
+            <div className="flex flex-col gap-3">
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {chatLoading && routeChat.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-3">Loading chat…</p>
+                ) : routeChat.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-3">No messages yet. Say hello!</p>
+                ) : (
+                  routeChat.map((msg: any) => (
+                    <div key={msg.id} className={`flex ${msg.userId === busInfo.driverUserId ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs ${msg.userId === busInfo.driverUserId ? 'bg-gray-100 text-gray-900 rounded-bl-sm' : 'bg-purple-600 text-white rounded-br-sm'}`}>
+                        <p className="font-semibold text-[10px] mb-0.5 opacity-70">{msg.user?.firstName || 'User'}</p>
+                        {msg.type === 'voice' && msg.voiceUrl ? (
+                          <div className="flex items-center gap-2">
+                            <Play size={12} />
+                            <audio controls src={msg.voiceUrl} className="h-8 max-w-[150px]" />
+                          </div>
+                        ) : (
+                          <p>{msg.message}</p>
+                        )}
+                        <p className="text-[9px] opacity-50 mt-0.5">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input value={chatMessage} onChange={e => setChatMessage(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && sendRouteChatMessage()}
+                  placeholder="Type a message…"
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-400" />
+                <button onClick={sendRouteChatMessage} disabled={chatLoading || !chatMessage.trim()}
+                  className="p-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-40">
+                  <Send size={14} />
+                </button>
+                <button onClick={startVoiceNote} disabled={recording || chatLoading}
+                  className={`p-2 rounded-xl ${recording ? 'bg-red-500 text-white animate-pulse' : 'bg-purple-100 text-purple-600 hover:bg-purple-200'} disabled:opacity-40`}>
+                  {recording ? <><Square size={14} /> {recordingTime}s</> : <Mic size={14} />}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Share Tracking Link ── */}
+      {busInfo?.driverUserId && (
+        <div className="bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><Share2 size={15} className="text-purple-500" /> Share Bus Location</p>
+          <p className="text-xs text-gray-400 mb-3">Send a read-only live tracking link to a parent/guardian via WhatsApp or SMS.</p>
+          <button onClick={shareTrackingLink}
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600">
+            <UserPlus size={15} /> Share with Parent/Guardian
+          </button>
+        </div>
+      )}
+
+      {/* ── Admin Broadcasts ── */}
+      <div className="bg-white rounded-2xl shadow-sm p-4">
+        <button onClick={() => { setShowBroadcasts(p => !p); if (!showBroadcasts) loadBroadcasts(); }}
+          className="w-full flex items-center justify-between text-sm font-medium text-gray-700">
+          <span className="flex items-center gap-2"><Radio size={15} className="text-purple-500" />Admin Broadcasts</span>
+          <span className="text-xs text-gray-400">{showBroadcasts ? '▲' : '▼'}</span>
+        </button>
+        {showBroadcasts && (
+          <div className="mt-3 space-y-2">
+            {broadcasts.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">No broadcasts yet.</p>
+            ) : (
+              broadcasts.map((b: any) => (
+                <div key={b.id} className={`p-3 rounded-xl text-xs ${b.expiresAt && new Date(b.expiresAt) < new Date() ? 'bg-gray-50 text-gray-400 line-through' : 'bg-amber-50 text-gray-800'}`}>
+                  <p>{b.message}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{new Date(b.createdAt).toLocaleString()}</p>
+                </div>
+              ))
             )}
           </div>
         )}
