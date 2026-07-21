@@ -5,13 +5,12 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints, getImageUrl } from '@/lib/api';
-import type { SchoolProfile } from '@/types';
+import type { ApiResponse, SchoolProfile } from '@/types';
 import { Download, Eye, FileBarChart2, FileUp, Loader2, MessageSquare, Plus, Printer, Search, Upload, User, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const UPLOADS_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
-// ── CSV helpers ───────────────────────────────────────────────────────────────
 function downloadResultsTemplate(students: any[], className: string, subject: string, session: string, term: string) {
   const header = ['student_id', 'firstname', 'lastname', 'class', 'test_score (max 40)', 'exam_score (max 60)'];
   const rows = students.map(s => [
@@ -26,44 +25,6 @@ function downloadResultsTemplate(students: any[], className: string, subject: st
   a.download = `results_template_${safeName(className)}_${safeName(subject)}_${safeName(session)}_${safeName(term)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function parseResultsCSV(text: string): { student_id: string; test_score: string; exam_score: string }[] {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const header = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
-  const idIdx   = header.findIndex(h => h === 'student_id');
-  const caIdx   = header.findIndex(h => h.startsWith('test_score'));
-  const examIdx = header.findIndex(h => h.startsWith('exam_score'));
-  if (idIdx === -1 || caIdx === -1 || examIdx === -1) return [];
-
-  const results: { student_id: string; test_score: string; exam_score: string }[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const cols = parseCSVLine(lines[i]);
-    let student_id = (cols[idIdx] || '').trim();
-    const test_score = (cols[caIdx] || '').trim();
-    const exam_score = (cols[examIdx] || '').trim();
-    student_id = student_id.replace(/^\t+/, '').replace(/[^\x20-\x7E]/g, '').trim();
-    if (student_id) results.push({ student_id, test_score, exam_score });
-  }
-  return results;
-}
-
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if (char === ',' && !inQuotes) { result.push(current); current = ''; }
-    else { current += char; }
-  }
-  result.push(current);
-  return result;
 }
 
 async function toBase64(url: string): Promise<string> {
@@ -476,41 +437,35 @@ export default function StaffResults() {
     finally { setSubmitting(false); }
   };
 
-  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = (ev.target?.result as string || '').replace(/^\uFEFF/, '');
-      const parsed = parseResultsCSV(text);
-      if (!parsed.length) { toast.error('No valid rows found. Make sure you are using the downloaded template.'); return; }
-      let matched = 0;
-      setRows(prev => {
-        const next = { ...prev };
-        const keyCount = Object.keys(next).length;
-        if (keyCount === 0) {
-          toast.error('No students loaded for this class. Please select a class first and wait for students to load.');
-          return next;
-        }
-        const normalizedKeys: Record<string, string> = {};
-        Object.keys(next).forEach(k => { normalizedKeys[k.toUpperCase()] = k; });
-        parsed.forEach(({ student_id, test_score, exam_score }) => {
-          const cleanId = student_id.replace(/^\t+/, '').replace(/[^\x20-\x7E]/g, '').trim().toUpperCase();
-          const originalKey = normalizedKeys[cleanId];
-          if (originalKey !== undefined) {
-            next[originalKey] = { test_score, exam_score };
-            matched++;
-          }
-        });
-        return next;
-      });
+    if (!uploadClass) { toast.error('Select a class first'); return; }
+    if (!uploadCourse) { toast.error('Select a subject first'); return; }
+    if (!uploadSession) { toast.error('Select a session first'); return; }
+    if (!uploadTerm) { toast.error('Select a term first'); return; }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('class', uploadClass);
+    formData.append('course', uploadCourse);
+    formData.append('session', uploadSession);
+    formData.append('term', uploadTerm);
+
+    setSubmitting(true);
+    try {
+      const r = await api.upload<ApiResponse<any>>(endpoints.staff.resultsUploadCsv, formData);
+      const data = r.data ?? r;
+      const matched = data.matched ?? 0;
+      const skipped = data.skipped ?? 0;
+      toast.success(r.message || `Uploaded ${matched} result(s)`);
+      load();
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to import CSV');
+    } finally {
+      setSubmitting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
-      const unmatched = parsed.length - matched;
-      if (matched === 0) toast.error('No student IDs in the file match this class. Download a fresh template.');
-      else if (unmatched > 0) toast.success(`${matched} scores loaded · ${unmatched} ID(s) not found in this class (skipped)`);
-      else toast.success(`${matched} scores loaded from file`);
-    };
-    reader.readAsText(file);
+    }
   };
 
   const handleDelete = async () => {

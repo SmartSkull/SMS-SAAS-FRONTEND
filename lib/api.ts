@@ -184,6 +184,7 @@ export const endpoints = {
     registerStudent: '/staff/students',
     student: (id: string) => `/staff/students/${encodeURIComponent(id)}`,
     results: '/staff/results',
+    resultsUploadCsv: '/staff/results/upload-csv',
     attendance: '/staff/attendance',
     comment: '/staff/comment',
     assignments: '/staff/assignments',
