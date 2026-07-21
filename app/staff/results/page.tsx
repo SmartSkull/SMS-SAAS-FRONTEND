@@ -6,7 +6,7 @@ import { useSchoolData } from '@/hooks/useSchoolData';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { ApiResponse, SchoolProfile } from '@/types';
-import { Download, Eye, FileBarChart2, FileUp, Loader2, MessageSquare, Plus, Printer, Search, Upload, User, X } from 'lucide-react';
+import { Download, Eye, FileBarChart2, FileUp, Loader2, MessageSquare, Plus, Printer, Search, Trash2, Upload, User, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const UPLOADS_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
@@ -258,6 +258,8 @@ export default function StaffResults() {
   const [attendanceRows, setAttendanceRows] = useState<Record<string, { present: string; absent: string }>>({});
   const [totalSchoolDays, setTotalSchoolDays] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<any | null>(null);
+  const [bulkDeleteSelected, setBulkDeleteSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   const [viewingStudent, setViewingStudent] = useState<string | null>(null);
   const [rowLoading, setRowLoading] = useState<Record<string, string>>({});
   const [traitsModal, setTraitsModal] = useState(false);
@@ -482,6 +484,24 @@ export default function StaffResults() {
     finally { setConfirmDelete(null); }
   };
 
+  const handleBulkDelete = async () => {
+    if (bulkDeleteSelected.size === 0) return;
+    if (!confirm(`Delete results for ${bulkDeleteSelected.size} selected student(s)? This cannot be undone.`)) return;
+    setBulkDeleteLoading(true);
+    try {
+      await api.post(endpoints.staff.resultsBulkDelete, {
+        course: courseFilter,
+        session: sessionFilter || undefined,
+        term: termFilter || undefined,
+        student_ids: Array.from(bulkDeleteSelected),
+      });
+      toast.success(`Deleted results for ${bulkDeleteSelected.size} student(s)`);
+      setBulkDeleteSelected(new Set());
+      load();
+    } catch { toast.error('Failed to delete results'); }
+    finally { setBulkDeleteLoading(false); }
+  };
+
   const handleComment = async () => {
     if (!commentModal) return;
     try {
@@ -627,6 +647,16 @@ export default function StaffResults() {
           <option value="approved">Approved</option>
           <option value="pending">Not Verified</option>
         </select>
+        {bulkDeleteSelected.size > 0 && (
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteLoading}
+            className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+          >
+            {bulkDeleteLoading ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+            Delete Selected ({bulkDeleteSelected.size})
+          </button>
+        )}
       </div>
 
       {/* Results Table */}
@@ -635,6 +665,20 @@ export default function StaffResults() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase w-10">
+                  <input
+                    type="checkbox"
+                    checked={results.length > 0 && bulkDeleteSelected.size === results.length}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setBulkDeleteSelected(new Set(results.map((r: any) => r.student_id)));
+                      } else {
+                        setBulkDeleteSelected(new Set());
+                      }
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                </th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Subjects</th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Average</th>
@@ -644,11 +688,11 @@ export default function StaffResults() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {!classFilter ? (
-                <tr><td colSpan={5}><EmptyState icon={Search} message="Select a class to view results." card={false} /></td></tr>
+                <tr><td colSpan={6}><EmptyState icon={Search} message="Select a class to view results." card={false} /></td></tr>
               ) : loading ? (
-                [...Array(5)].map((_, i) => <tr key={i}><td colSpan={5} className="p-3"><div className="h-5 bg-gray-100 rounded animate-pulse" /></td></tr>)
+                [...Array(5)].map((_, i) => <tr key={i}><td colSpan={6} className="p-3"><div className="h-5 bg-gray-100 rounded animate-pulse" /></td></tr>)
               ) : results.length === 0 ? (
-                <tr><td colSpan={5}><EmptyState icon={FileBarChart2} message="No results found." card={false} /></td></tr>
+                <tr><td colSpan={6}><EmptyState icon={FileBarChart2} message="No results found." card={false} /></td></tr>
               ) : (() => {
                 // Group by student_id
                 const grouped = new Map<string, any>();
@@ -666,6 +710,19 @@ export default function StaffResults() {
                   const approved = s._rows.every((r: any) => r.approvedAt);
                   return (
                     <tr key={s.student_id} className="hover:bg-gray-50">
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={bulkDeleteSelected.has(s.student_id)}
+                          onChange={(e) => {
+                            const next = new Set(bulkDeleteSelected);
+                            if (e.target.checked) next.add(s.student_id);
+                            else next.delete(s.student_id);
+                            setBulkDeleteSelected(next);
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                      </td>
                       <td className="p-3">
                         <p className="font-medium text-gray-900">{s.firstname} {s.lastname}</p>
                         <p className="text-xs text-gray-400 font-mono">{s.student_id}</p>

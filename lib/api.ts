@@ -185,6 +185,7 @@ export const endpoints = {
     student: (id: string) => `/staff/students/${encodeURIComponent(id)}`,
     results: '/staff/results',
     resultsUploadCsv: '/staff/results/upload-csv',
+    resultsBulkDelete: '/staff/results/bulk-delete',
     attendance: '/staff/attendance',
     comment: '/staff/comment',
     assignments: '/staff/assignments',
