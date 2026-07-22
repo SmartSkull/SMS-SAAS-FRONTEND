@@ -288,6 +288,7 @@ export const endpoints = {
     notificationsRead: '/admin/notifications/read',
     schoolDaysDelete: (s: string, t: string) => `/admin/school-days/${s}/${t}`,
     settings: '/admin/settings',
+    settingsUploadSignature: '/admin/settings/upload-signature',
     school: '/admin/school',
     attendanceLocation: '/attendance/admin/location',
     attendanceReport: '/attendance/admin/report',

@@ -359,7 +359,6 @@ export function useAdminPayments(limit = 20) {
 
 /* ── Settings ──────────────────────────────────────────────────────────── */
 interface SchoolDayRecord { session: string; term: string; totalDays: number; }
-
 export function useAdminSettings() {
   const [records, setRecords] = useState<SchoolDayRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -397,4 +396,90 @@ export function useAdminSettings() {
   };
 
   return { records, form, setForm, loading, saving, save, remove };
+}
+
+/* ── Settings Config (principal, signature, class-teacher) ─────────────── */
+export interface ClassTeacherSetting {
+  id: string;
+  name: string;
+  teacherUniqueId: string | null;
+  teacherName: string | null;
+}
+
+export interface StaffOption {
+  uniqueId: string;
+  name: string;
+  image: string | null;
+}
+
+export interface SettingsConfig {
+  principal: string | null;
+  signature: string | null;
+  classes: ClassTeacherSetting[];
+  staff: StaffOption[];
+}
+
+export function useAdminSettingsConfig() {
+  const [config, setConfig] = useState<SettingsConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const toast = useToast();
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api.get<ApiResponse<SettingsConfig>>(endpoints.admin.settings)
+      .then((r) => setConfig(r.data))
+      .catch(() => toast.error('Failed to load settings'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async (data: {
+    principal?: string;
+    classTeachers?: { classId: string; teacherUniqueId: string | null }[];
+  }) => {
+    setSaving(true);
+    try {
+      await api.put(endpoints.admin.settings, data);
+      toast.success('Settings saved');
+      load();
+    } catch {
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const uploadSignature = async (file: File) => {
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('signature', file);
+      const r = await api.upload<ApiResponse<{ signature: string }>>(endpoints.admin.settingsUploadSignature, fd);
+      const url = (r as any).data?.signature ?? null;
+      setConfig((prev) => prev ? { ...prev, signature: url } : prev);
+      toast.success('Signature uploaded');
+    } catch {
+      toast.error('Failed to upload signature');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeSignature = async () => {
+    setSaving(true);
+    try {
+      await api.put(endpoints.admin.settings, { signature: '' });
+      setConfig((prev) => prev ? { ...prev, signature: null } : prev);
+      toast.success('Signature removed');
+    } catch {
+      toast.error('Failed to remove signature');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return { config, loading, saving, uploading, save, uploadSignature, removeSignature };
 }
