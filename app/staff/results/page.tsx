@@ -843,7 +843,7 @@ export default function StaffResults() {
                 <h2 className="font-semibold text-gray-900">Upload Results</h2>
                 {uploadSession && <p className="text-xs text-gray-400 mt-0.5">{uploadSession} — {uploadTerm} Term</p>}
               </div>
-              <button onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); clearResultsDraft(); setDraftRestored(false); }}>
+              <button onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); setDraftRestored(false); }}>
                 <X size={20} className="text-gray-400" />
               </button>
             </div>
@@ -973,7 +973,7 @@ export default function StaffResults() {
                   className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
                   {submitting ? 'Uploading…' : `Upload Results (${Object.values(rows).filter(r => r.test_score !== '' && r.exam_score !== '').length} students)`}
                 </button>
-                <button type="button" onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); clearResultsDraft(); setDraftRestored(false); }}
+                <button type="button" onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); setDraftRestored(false); }}
                   className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
               </div>
             </form>
