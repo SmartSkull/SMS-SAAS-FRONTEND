@@ -11,6 +11,37 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const UPLOADS_BASE = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
+const RESULTS_DRAFT_KEY = 'staff_results_draft';
+
+type ResultsDraft = {
+  uploadClass: string;
+  uploadCourse: string;
+  uploadSession: string;
+  uploadTerm: string;
+  rows: Record<string, { test_score: string; exam_score: string }>;
+  savedAt: number;
+};
+
+function saveResultsDraft(draft: ResultsDraft) {
+  try { localStorage.setItem(RESULTS_DRAFT_KEY, JSON.stringify(draft)); } catch {}
+}
+function clearResultsDraft() {
+  try { localStorage.removeItem(RESULTS_DRAFT_KEY); } catch {}
+}
+function loadResultsDraft(): ResultsDraft | null {
+  try {
+    const raw = localStorage.getItem(RESULTS_DRAFT_KEY);
+    if (!raw) return null;
+    const draft: ResultsDraft = JSON.parse(raw);
+    // Discard drafts older than 7 days
+    if (Date.now() - draft.savedAt > 7 * 24 * 60 * 60 * 1000) {
+      clearResultsDraft();
+      return null;
+    }
+    return draft;
+  } catch { return null; }
+}
+
 function downloadResultsTemplate(students: any[], className: string, subject: string, session: string, term: string) {
   const header = ['student_id', 'firstname', 'lastname', 'class', 'test_score (max 40)', 'exam_score (max 60)'];
   const rows = students.map(s => [
@@ -249,6 +280,7 @@ export default function StaffResults() {
   const [uploadSession, setUploadSession] = useState('');
   const [uploadTerm, setUploadTerm]       = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [commentModal, setCommentModal] = useState<{ student_id: string; comment: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attendanceModal, setAttendanceModal] = useState(false);
@@ -270,6 +302,34 @@ export default function StaffResults() {
   const [submittingTraits, setSubmittingTraits] = useState(false);
   const { classes, subjects, sessions, terms } = useSchoolData();
   const toast = useToast();
+
+  // Restore draft on mount
+  useEffect(() => {
+    const draft = loadResultsDraft();
+    if (!draft) return;
+    setUploadClass(draft.uploadClass);
+    setUploadCourse(draft.uploadCourse);
+    if (draft.uploadSession) setUploadSession(draft.uploadSession);
+    if (draft.uploadTerm) setUploadTerm(draft.uploadTerm);
+    setRows(draft.rows);
+    setShowUpload(true);
+    setDraftRestored(true);
+  }, []);
+
+  // Auto-save draft whenever scores or form fields change
+  useEffect(() => {
+    if (!showUpload) return;
+    const hasAnyScore = Object.values(rows).some(r => r.test_score !== '' || r.exam_score !== '');
+    if (!hasAnyScore && !uploadClass && !uploadCourse) return;
+    saveResultsDraft({
+      uploadClass,
+      uploadCourse,
+      uploadSession,
+      uploadTerm,
+      rows,
+      savedAt: Date.now(),
+    });
+  }, [rows, uploadClass, uploadCourse, uploadSession, uploadTerm, showUpload]);
 
   // Fetch current session/term for upload modal
   useEffect(() => {
@@ -428,6 +488,8 @@ export default function StaffResults() {
         results: validRows,
       });
       toast.success('Results uploaded');
+      clearResultsDraft();
+      setDraftRestored(false);
       setClassFilter(uploadClass);
       setShowUpload(false);
       setRows({});
@@ -766,10 +828,26 @@ export default function StaffResults() {
                 <h2 className="font-semibold text-gray-900">Upload Results</h2>
                 {uploadSession && <p className="text-xs text-gray-400 mt-0.5">{uploadSession} — {uploadTerm} Term</p>}
               </div>
-              <button onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); }}>
+              <button onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); clearResultsDraft(); setDraftRestored(false); }}>
                 <X size={20} className="text-gray-400" />
               </button>
             </div>
+            {draftRestored && (
+              <div className="mx-6 mt-4 flex items-center justify-between gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm">
+                <div className="flex items-center gap-2 text-amber-800">
+                  <span>⚡</span>
+                  <span className="font-semibold">Draft restored</span>
+                  <span className="text-amber-600">— your unsaved scores have been recovered.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { clearResultsDraft(); setDraftRestored(false); setRows({}); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); }}
+                  className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap"
+                >
+                  Discard draft
+                </button>
+              </div>
+            )}
             <form onSubmit={handleUpload} className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -880,7 +958,7 @@ export default function StaffResults() {
                   className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
                   {submitting ? 'Uploading…' : `Upload Results (${Object.values(rows).filter(r => r.test_score !== '' && r.exam_score !== '').length} students)`}
                 </button>
-                <button type="button" onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); }}
+                <button type="button" onClick={() => { setShowUpload(false); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); setRows({}); clearResultsDraft(); setDraftRestored(false); }}
                   className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
               </div>
             </form>
