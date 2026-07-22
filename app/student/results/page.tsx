@@ -220,11 +220,11 @@ async function printResultSheet(data: any, results: any[], session: string, term
   <div class="foot">
     <div class="sig">
       <div class="ttl">Class Teacher</div>
-      <div class="date-val">___________________________</div>
+      <div class="date-val">${data.teacher?.name || '___________________________'}</div>
     </div>
     <div class="sig">
       <div class="ttl">Principal</div>
-      <div class="date-val">___________________________</div>
+      <div class="date-val">${data.principal?.name || '___________________________'}</div>
     </div>
   </div>
 </div></body></html>`);
@@ -510,15 +510,20 @@ export default function StudentResults() {
       {data && (
         <div className="grid md:grid-cols-2 gap-4 print:hidden">
           {([
-            { key: 'teacherComment',   label: 'TEACHER',   title: "Teacher's Comment",  border: 'border-yellow-200', bg: 'bg-yellow-50', iconColor: 'text-yellow-600', iconBg: 'bg-yellow-100' },
-            { key: 'principalComment', label: 'PRINCIPAL', title: "Principal's Comment", border: 'border-indigo-200', bg: 'bg-indigo-50',  iconColor: 'text-indigo-600', iconBg: 'bg-indigo-100' },
-          ] as const).map(({ key, label, title, border, bg, iconColor, iconBg }) => (
+            { key: 'teacherComment',   label: 'TEACHER',   title: "Teacher's Comment",  person: data.teacher,   border: 'border-yellow-200', bg: 'bg-yellow-50', iconColor: 'text-yellow-600', iconBg: 'bg-yellow-100' },
+            { key: 'principalComment', label: 'PRINCIPAL', title: "Principal's Comment", person: data.principal, border: 'border-indigo-200', bg: 'bg-indigo-50',  iconColor: 'text-indigo-600', iconBg: 'bg-indigo-100' },
+          ] as const).map(({ key, label, title, person, border, bg, iconColor, iconBg }) => (
             <div key={key} className={'rounded-2xl border ' + border + ' ' + bg + ' p-5'}>
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-black/10">
-                <div className={'w-10 h-10 rounded-full ' + iconBg + ' flex items-center justify-center flex-shrink-0'}>
-                  <User size={18} className={iconColor} />
+                <div className={'w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ' + iconBg}>
+                  {getImageUrl((person as any)?.image)
+                    ? <img src={getImageUrl((person as any).image)!} alt="" className="w-full h-full object-cover" />
+                    : <div className={'w-full h-full flex items-center justify-center'}><User size={18} className={iconColor} /></div>}
                 </div>
-                <p className={'text-sm font-bold uppercase tracking-wide ' + iconColor}>{label}</p>
+                <div>
+                  <p className={'text-sm font-bold text-gray-900'}>{(person as any)?.name || '—'}</p>
+                  <p className={'text-xs font-medium uppercase tracking-wide ' + iconColor}>{label}</p>
+                </div>
               </div>
               <p className="text-sm text-gray-700 italic">
                 {data.attendance?.[key] ? '"' + data.attendance[key] + '"' : 'No comment provided yet.'}
