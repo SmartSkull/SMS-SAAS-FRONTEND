@@ -281,6 +281,8 @@ export default function StaffResults() {
   const [uploadTerm, setUploadTerm]       = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [draftRestored, setDraftRestored] = useState(false);
+  // Holds the draft rows during the async student-load so they can be merged in
+  const draftRowsRef = useRef<Record<string, { test_score: string; exam_score: string }> | null>(null);
   const [commentModal, setCommentModal] = useState<{ student_id: string; comment: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attendanceModal, setAttendanceModal] = useState(false);
@@ -311,6 +313,8 @@ export default function StaffResults() {
     setUploadCourse(draft.uploadCourse);
     if (draft.uploadSession) setUploadSession(draft.uploadSession);
     if (draft.uploadTerm) setUploadTerm(draft.uploadTerm);
+    // Keep draft rows in a ref — the uploadClass effect will merge them in
+    draftRowsRef.current = draft.rows;
     setRows(draft.rows);
     setShowUpload(true);
     setDraftRestored(true);
@@ -319,8 +323,8 @@ export default function StaffResults() {
   // Auto-save draft whenever scores or form fields change
   useEffect(() => {
     if (!showUpload) return;
-    const hasAnyScore = Object.values(rows).some(r => r.test_score !== '' || r.exam_score !== '');
-    if (!hasAnyScore && !uploadClass && !uploadCourse) return;
+    // Always persist whenever the modal is open — even if rows are empty,
+    // so class/subject selection is remembered too
     saveResultsDraft({
       uploadClass,
       uploadCourse,
@@ -331,14 +335,15 @@ export default function StaffResults() {
     });
   }, [rows, uploadClass, uploadCourse, uploadSession, uploadTerm, showUpload]);
 
-  // Fetch current session/term for upload modal
+  // Fetch current session/term for upload modal (skip if draft already restored)
   useEffect(() => {
     api.get<any>(endpoints.public.currentPeriod)
       .then(async r => {
         const session = r.data?.session ?? '';
         const term = r.data?.term ?? '';
-        setUploadSession(session);
-        setUploadTerm(term);
+        // Only set if not already populated by a restored draft
+        setUploadSession(prev => prev || session);
+        setUploadTerm(prev => prev || term);
         // Fetch admin-configured school days for this session/term
         if (session && term) {
           try {
@@ -423,6 +428,15 @@ export default function StaffResults() {
             });
           } catch { /* no existing results, leave empty */ }
         }
+        // Merge draft rows on top — draft values take priority over DB values
+        if (draftRowsRef.current) {
+          Object.entries(draftRowsRef.current).forEach(([student_id, vals]) => {
+            if (initial[student_id] && (vals.test_score !== '' || vals.exam_score !== '')) {
+              initial[student_id] = vals;
+            }
+          });
+          draftRowsRef.current = null; // consume once
+        }
         setRows(initial);
       } catch {
         toast.error('Failed to load students');
@@ -489,6 +503,7 @@ export default function StaffResults() {
       });
       toast.success('Results uploaded');
       clearResultsDraft();
+      draftRowsRef.current = null;
       setDraftRestored(false);
       setClassFilter(uploadClass);
       setShowUpload(false);
@@ -841,7 +856,7 @@ export default function StaffResults() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => { clearResultsDraft(); setDraftRestored(false); setRows({}); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); }}
+                  onClick={() => { clearResultsDraft(); draftRowsRef.current = null; setDraftRestored(false); setRows({}); setUploadClass(''); setUploadCourse(''); setUploadStudents([]); }}
                   className="text-xs font-semibold text-amber-700 hover:text-amber-900 underline whitespace-nowrap"
                 >
                   Discard draft
