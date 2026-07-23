@@ -59,10 +59,19 @@ function downloadResultsTemplate(students: any[], className: string, subject: st
 }
 
 async function toBase64(url: string): Promise<string> {
+  if (!url) return '';
   try {
-    const res = await fetch(url, { mode: 'cors' });
+    const absUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+    const headers: Record<string, string> = { 'ngrok-skip-browser-warning': '1' };
+    if (absUrl.includes('/api/uploads/')) {
+      const { auth } = await import('@/lib/auth');
+      const token = auth.getToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(absUrl, { headers });
+    if (!res.ok) return '';
     const blob = await res.blob();
-    return await new Promise((resolve) => {
+    return await new Promise<string>((resolve) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result as string);
       r.onerror = () => resolve('');
@@ -87,16 +96,17 @@ async function printResultSheet(data: any, results: any[], session: string, term
   const totalScore = results.reduce((s: number, r: any) => s + Number(r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score))), 0);
   const avg = results.length ? (totalScore / results.length).toFixed(1) : '0';
 
-  const photoUrl = student?.image ? `${UPLOADS_BASE}/${student.image}` : '';
-  const teacherPhotoUrl = data.teacher?.image ? `${UPLOADS_BASE}/${data.teacher.image}` : '';
-  const principalPhotoUrl = data.principal?.image ? `${UPLOADS_BASE}/${data.principal.image}` : '';
+  const photoUrl          = getImageUrl(student?.image) ?? '';
+  const teacherPhotoUrl   = getImageUrl(data.teacher?.image) ?? '';
+  const principalPhotoUrl = getImageUrl(data.principal?.image) ?? '';
+  const signatureUrl      = getImageUrl(data.signature) ?? '';
 
   const logoUrl = normalizeSchoolLogo(school?.logo) || '';
   const primary = school?.primaryColor || '#1d4ed8';
   const schoolName = school?.name || 'School Portal';
   const schoolSlogan = school?.slogan || school?.motto || '';
   const [logoB64, photoB64, sigB64, teacherB64, principalB64] = await Promise.all([
-    toBase64(logoUrl), toBase64(photoUrl), Promise.resolve(''),
+    toBase64(logoUrl), toBase64(photoUrl), toBase64(signatureUrl),
     toBase64(teacherPhotoUrl), toBase64(principalPhotoUrl),
   ]);
 
@@ -253,8 +263,12 @@ async function printResultSheet(data: any, results: any[], session: string, term
     </div>
   </div>
   <div class="foot">
-    <div class="sig">${sigB64 ? `<img src="${sigB64}" class="sig-img" alt="Signature">` : '<div style="height:35px"></div>'}<div class="ttl">Principal</div></div>
-    <div class="sig"><div class="date-val">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div><div class="ttl">Date Approved</div></div>
+    <div class="sig"><div class="date-val">${data.teacher?.name || '___________________________'}</div><div class="ttl">Class Teacher</div></div>
+    <div class="sig">
+      ${sigB64 ? `<img src="${sigB64}" class="sig-img" alt="Signature">` : ''}
+      <div class="date-val">${data.principal?.name || '___________________________'}</div>
+      <div class="ttl">Principal</div>
+    </div>
   </div>
 </div></body></html>`);
   win.document.close();
@@ -1204,24 +1218,11 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
   useEffect(() => {
     if (!studentId) { setLoading(false); return; }
     setLoading(true);
-    api.get<any>(endpoints.staff.results, { 
-      student_id: studentId, 
-      session: session || undefined, 
-      term: term || undefined 
+    api.get<any>(endpoints.admin.resultStudent(studentId), {
+      session: session || undefined,
+      term: term || undefined,
     })
-      .then(r => {
-        if (Array.isArray(r.data)) {
-          const filtered = r.data.filter((row: any) => row.student_id === studentId);
-          setData({ results: filtered, student: filtered[0] ? {
-            firstName: filtered[0].firstname,
-            lastName: filtered[0].lastname,
-            image: filtered[0].student?.user?.image,
-            uniqueId: filtered[0].student_id,
-          } : null });
-        } else {
-          setData(r.data);
-        }
-      })
+      .then(r => setData(r.data))
       .finally(() => setLoading(false));
   }, [studentId, session, term]);
 
@@ -1230,7 +1231,7 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
   const showFirst  = termLower === 'second' || termLower === 'third';
   const showSecond = termLower === 'third';
   const avg = results.length
-    ? (results.reduce((s: number, r: any) => s + Number(r.testScore) + Number(r.examScore), 0) / results.length).toFixed(1)
+    ? (results.reduce((s: number, r: any) => s + Number(r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score))), 0) / results.length).toFixed(1)
     : '0';
 
   const gradeColor = (total: number) => {
@@ -1293,7 +1294,6 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
                   </div>
                 </div>
               )}
-              {/* Results table */}
               <div className="overflow-x-auto rounded-xl border border-gray-100">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-800 text-white">
