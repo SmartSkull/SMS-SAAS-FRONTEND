@@ -45,13 +45,14 @@ async function printResultSheet(data: any, results: any[], session: string, term
   const photoUrl = data.student?.image ? `${UPLOADS}/${data.student.image}` : (user?.image ? `${UPLOADS}/${user.image}` : '');
   const teacherPhotoUrl = data.teacher?.image ? `${UPLOADS}/${data.teacher.image}` : '';
   const principalPhotoUrl = data.principal?.image ? `${UPLOADS}/${data.principal.image}` : '';
+  const signatureUrl = data.signature ? (data.signature.startsWith('http') ? data.signature : `${UPLOADS}/${data.signature}`) : '';
 
   const logoUrl = normalizeSchoolLogo(school?.logo) || '';
   const primary = school?.primaryColor || '#1d4ed8';
   const schoolName = school?.name || 'School Portal';
   const schoolSlogan = school?.slogan || school?.motto || '';
   const [logoB64, photoB64, sigB64, teacherB64, principalB64] = await Promise.all([
-    toBase64(logoUrl), toBase64(photoUrl), Promise.resolve(''),
+    toBase64(logoUrl), toBase64(photoUrl), toBase64(signatureUrl),
     toBase64(teacherPhotoUrl), toBase64(principalPhotoUrl),
   ]);
 
@@ -223,8 +224,9 @@ async function printResultSheet(data: any, results: any[], session: string, term
       <div class="date-val">${data.teacher?.name || '___________________________'}</div>
     </div>
     <div class="sig">
-      <div class="ttl">Principal</div>
+      ${sigB64 ? `<img src="${sigB64}" class="sig-img" alt="Signature">` : ''}
       <div class="date-val">${data.principal?.name || '___________________________'}</div>
+      <div class="ttl">Principal</div>
     </div>
   </div>
 </div></body></html>`);
@@ -510,9 +512,9 @@ export default function StudentResults() {
       {data && (
         <div className="grid md:grid-cols-2 gap-4 print:hidden">
           {([
-            { key: 'teacherComment',   label: 'TEACHER',   title: "Teacher's Comment",  person: data.teacher,   border: 'border-yellow-200', bg: 'bg-yellow-50', iconColor: 'text-yellow-600', iconBg: 'bg-yellow-100' },
-            { key: 'principalComment', label: 'PRINCIPAL', title: "Principal's Comment", person: data.principal, border: 'border-indigo-200', bg: 'bg-indigo-50',  iconColor: 'text-indigo-600', iconBg: 'bg-indigo-100' },
-          ] as const).map(({ key, label, title, person, border, bg, iconColor, iconBg }) => (
+            { key: 'teacherComment',   label: 'TEACHER',   person: data.teacher,   border: 'border-yellow-200', bg: 'bg-yellow-50', iconColor: 'text-yellow-600', iconBg: 'bg-yellow-100' },
+            { key: 'principalComment', label: 'PRINCIPAL', person: data.principal, border: 'border-indigo-200', bg: 'bg-indigo-50',  iconColor: 'text-indigo-600', iconBg: 'bg-indigo-100' },
+          ] as const).map(({ key, label, person, border, bg, iconColor, iconBg }) => (
             <div key={key} className={'rounded-2xl border ' + border + ' ' + bg + ' p-5'}>
               <div className="flex items-center gap-3 mb-3 pb-3 border-b border-black/10">
                 <div className={'w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ' + iconBg}>
@@ -528,6 +530,16 @@ export default function StudentResults() {
               <p className="text-sm text-gray-700 italic">
                 {data.attendance?.[key] ? '"' + data.attendance[key] + '"' : 'No comment provided yet.'}
               </p>
+              {key === 'principalComment' && data.signature && (
+                <div className="mt-3 pt-3 border-t border-indigo-100">
+                  <p className="text-xs text-gray-500 mb-1">Signature</p>
+                  <img
+                    src={data.signature.startsWith('http') ? data.signature : getImageUrl(data.signature) ?? data.signature}
+                    alt="Principal signature"
+                    className="h-12 object-contain"
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
