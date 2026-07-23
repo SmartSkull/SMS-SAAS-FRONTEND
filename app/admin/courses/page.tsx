@@ -25,8 +25,8 @@ export default function CoursesPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get<ApiResponse<{ courses: Course[] }>>(endpoints.admin.courses)
-      .then((r) => setCourses(r.data.courses ?? []))
+    api.get<{ success: boolean; data: Course[] }>(endpoints.admin.courses)
+      .then((r) => setCourses(r.data ?? []))
       .catch(() => toast.error('Failed to load courses'))
       .finally(() => setLoading(false));
   }, []);
