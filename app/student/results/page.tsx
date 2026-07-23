@@ -13,10 +13,20 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 const UPLOADS = typeof window !== 'undefined' ? `${window.location.origin}/api/uploads` : '/api/uploads';
 
 async function toBase64(url: string): Promise<string> {
+  if (!url) return '';
   try {
-    const res = await fetch(url, { mode: 'cors' });
+    // Resolve relative paths to absolute (needed when called from a popup window)
+    const absUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+    const headers: Record<string, string> = { 'ngrok-skip-browser-warning': '1' };
+    // Attach auth token for proxied upload routes
+    if (absUrl.includes('/api/uploads/')) {
+      const token = auth.getToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(absUrl, { headers });
+    if (!res.ok) return '';
     const blob = await res.blob();
-    return await new Promise((resolve) => {
+    return await new Promise<string>((resolve) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result as string);
       r.onerror = () => resolve('');
@@ -38,14 +48,43 @@ function gradeColor(g: string) {
 async function printResultSheet(data: any, results: any[], session: string, term: string, user: any, school?: SchoolProfile | null) {
   const showFirst  = term.toLowerCase() === 'second' || term.toLowerCase() === 'third';
   const showSecond = term.toLowerCase() === 'third';
+  // Pre-build traits HTML to avoid nested template literals inside the print string
+  const traitsHtml = data.trait ? (
+    '<div class="traits-section">' +
+      '<div class="traits-title">Affective Traits</div>' +
+      '<div class="traits-grid">' +
+        '<div class="trait-item"><span class="trait-label">Punctuality</span><span class="trait-score">' + data.trait.punctuality + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Perseverance</span><span class="trait-score">' + data.trait.perseverance + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Responsibility</span><span class="trait-score">' + data.trait.responsibility + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Diligence</span><span class="trait-score">' + data.trait.diligence + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Self Control</span><span class="trait-score">' + data.trait.selfControl + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Honesty</span><span class="trait-score">' + data.trait.honesty + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Attendance</span><span class="trait-score">' + data.trait.attendance + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Attentiveness</span><span class="trait-score">' + data.trait.attentiveness + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Creativity</span><span class="trait-score">' + data.trait.creativity + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Curiosity</span><span class="trait-score">' + data.trait.curiosity + '/5</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="traits-section">' +
+      '<div class="traits-title">Psychomotor Traits</div>' +
+      '<div class="traits-grid">' +
+        '<div class="trait-item"><span class="trait-label">Drawing</span><span class="trait-score">' + data.trait.drawing + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Physical Activity</span><span class="trait-score">' + data.trait.physicalActivity + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Accuracy</span><span class="trait-score">' + data.trait.accuracy + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Handling of Tools</span><span class="trait-score">' + data.trait.handlingOfTools + '/5</span></div>' +
+        '<div class="trait-item"><span class="trait-label">Mental Skills</span><span class="trait-score">' + data.trait.mentalSkills + '/5</span></div>' +
+      '</div>' +
+    '</div>'
+  ) : '';
 
   const totalScore = results.reduce((s: number, r: any) => s + Number(r.totalScore), 0);
   const avg = results.length ? (totalScore / results.length).toFixed(1) : '0';
 
-  const photoUrl = data.student?.image ? `${UPLOADS}/${data.student.image}` : (user?.image ? `${UPLOADS}/${user.image}` : '');
-  const teacherPhotoUrl = data.teacher?.image ? `${UPLOADS}/${data.teacher.image}` : '';
-  const principalPhotoUrl = data.principal?.image ? `${UPLOADS}/${data.principal.image}` : '';
-  const signatureUrl = data.signature ? (data.signature.startsWith('http') ? data.signature : `${UPLOADS}/${data.signature}`) : '';
+  // Use getImageUrl() which handles http URLs, null/empty, and the /api/uploads proxy path
+  const photoUrl         = getImageUrl(data.student?.image ?? user?.image) ?? '';
+  const teacherPhotoUrl  = getImageUrl(data.teacher?.image) ?? '';
+  const principalPhotoUrl = getImageUrl(data.principal?.image) ?? '';
+  const signatureUrl     = getImageUrl(data.signature) ?? '';
 
   const logoUrl = normalizeSchoolLogo(school?.logo) || '';
   const primary = school?.primaryColor || '#1d4ed8';
@@ -61,11 +100,15 @@ async function printResultSheet(data: any, results: any[], session: string, term
   const totalDays = present + absent;
   const attendanceRate = totalDays > 0 ? ((present / totalDays) * 100).toFixed(1) : '0';
 
+  // Open the popup AFTER all images are ready (prevents blank images in PDF)
   const win = window.open('', '_blank');
-  if (!win) return;
+  if (!win) {
+    alert('Pop-up blocked. Please allow pop-ups for this site and try again.');
+    return;
+  }
 
-  win.document.write(`<!DOCTYPE html><html><head>
-  <title>Result — ${user?.firstName} ${user?.lastName}</title>
+  const html = `<!DOCTYPE html><html><head>
+  <title>Result — ${user?.firstname} ${user?.lastname}</title>
   <style>
     @page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:10px;background:#fff}
@@ -106,7 +149,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   </style></head><body><div>
   <div class="hdr">
     <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:4px">
-      ${logoB64 ? `<img src="${logoB64}" style="width:56px;height:56px;object-fit:contain">` : ''}
+      ${logoB64 ? '<img src="' + logoB64 + '" style="width:56px;height:56px;object-fit:contain">' : ''}
       <div style="text-align:left">
         <div style="color:${primary};font-size:17px;font-weight:700">${schoolName}</div>
         <div style="color:#555;font-size:9px">${schoolSlogan}</div>
@@ -122,9 +165,9 @@ async function printResultSheet(data: any, results: any[], session: string, term
   </div>
 
   <div class="info-bar">
-    ${photoB64 ? `<img src="${photoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ${primary};margin-right:10px">` : ''}
+    ${photoB64 ? '<img src="' + photoB64 + '" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ' + primary + ';margin-right:10px">' : ''}
     <div style="display:flex;gap:15px">
-      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${user?.firstName} ${user?.lastName}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${user?.firstname} ${user?.lastname}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${user?.uniqueId || ''}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class</div><div style="font-weight:600;font-size:10px">${data.student?.class || data.class || 'N/A'}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class Size</div><div style="font-weight:600;font-size:10px">${data.class_size || 'N/A'}</div></div>
@@ -158,8 +201,8 @@ async function printResultSheet(data: any, results: any[], session: string, term
         const gc = gradeColor(r.grade);
         return `<tr>
           <td>${i + 1}</td><td class="sn">${r.course}</td>
-          ${showFirst  ? `<td style="background:#eff6ff">${r.first_term_score ?? '-'}</td>` : ''}
-          ${showSecond ? `<td style="background:#f0fdf4">${r.second_term_score ?? '-'}</td>` : ''}
+          ${showFirst  ? '<td style="background:#eff6ff">' + (r.first_term_score ?? '-') + '</td>' : ''}
+          ${showSecond ? '<td style="background:#f0fdf4">' + (r.second_term_score ?? '-') + '</td>' : ''}
           <td>${r.testScore}</td><td>${r.examScore}</td>
           <td style="font-weight:700;color:${total >= 50 ? '#166534' : '#dc2626'}">${total}</td>
           <td style="background:#f5f3ff;font-weight:600">${r.cumulative ?? total}</td>
@@ -184,34 +227,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
       .map(([g,r,d,c]) => '<div class="sc-item"><span class="c" style="background:' + c + '">' + g + '</span><div class="r">' + r + '</div><div class="d">' + d + '</div></div>').join('')}
   </div>
 
-  ${data.trait ? `
-  <div class="traits-section">
-    <div class="traits-title">Affective Traits</div>
-    <div class="traits-grid">
-      <div class="trait-item"><span class="trait-label">Punctuality</span><span class="trait-score">${data.trait.punctuality}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Perseverance</span><span class="trait-score">${data.trait.perseverance}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Responsibility</span><span class="trait-score">${data.trait.responsibility}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Diligence</span><span class="trait-score">${data.trait.diligence}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Self Control</span><span class="trait-score">${data.trait.selfControl}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Honesty</span><span class="trait-score">${data.trait.honesty}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Attendance</span><span class="trait-score">${data.trait.attendance}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Attentiveness</span><span class="trait-score">${data.trait.attentiveness}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Creativity</span><span class="trait-score">${data.trait.creativity}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Curiosity</span><span class="trait-score">${data.trait.curiosity}/5</span></div>
-    </div>
-  </div>
-
-  <div class="traits-section">
-    <div class="traits-title">Psychomotor Traits</div>
-    <div class="traits-grid">
-      <div class="trait-item"><span class="trait-label">Drawing</span><span class="trait-score">${data.trait.drawing}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Physical Activity</span><span class="trait-score">${data.trait.physicalActivity}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Accuracy</span><span class="trait-score">${data.trait.accuracy}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Handling of Tools</span><span class="trait-score">${data.trait.handlingOfTools}/5</span></div>
-      <div class="trait-item"><span class="trait-label">Mental Skills</span><span class="trait-score">${data.trait.mentalSkills}/5</span></div>
-    </div>
-  </div>
-  ` : ''}
+  ${traitsHtml}
 
   <div class="cmts">
     <div class="cmt t"><div class="ttl">Teacher's Comment</div><div class="txt">"${data.attendance?.teacherComment || '—'}"</div></div>
@@ -224,15 +240,21 @@ async function printResultSheet(data: any, results: any[], session: string, term
       <div class="date-val">${data.teacher?.name || '___________________________'}</div>
     </div>
     <div class="sig">
-      ${sigB64 ? `<img src="${sigB64}" class="sig-img" alt="Signature">` : ''}
+      ${sigB64 ? '<img src="' + sigB64 + '" class="sig-img" alt="Signature">' : ''}
       <div class="date-val">${data.principal?.name || '___________________________'}</div>
       <div class="ttl">Principal</div>
     </div>
   </div>
-</div></body></html>`);
+</div></body></html>`;
+
+  // Write the fully-assembled HTML (all images already embedded as base64)
+  // then trigger print once the new window finishes loading
+  win.document.open();
+  win.document.write(html);
   win.document.close();
   win.focus();
-  win.print();
+  // Small delay lets the browser render before print dialog opens
+  setTimeout(() => win.print(), 500);
 }
 
 const TERMS = ['FIRST', 'SECOND', 'THIRD'];
