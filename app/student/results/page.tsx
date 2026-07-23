@@ -108,7 +108,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   }
 
   const html = `<!DOCTYPE html><html><head>
-  <title>Result — ${user?.firstname} ${user?.lastname}</title>
+  <title>Result — ${data.student?.firstname || user?.firstName || user?.firstname} ${data.student?.lastname || user?.lastName || user?.lastname}</title>
   <style>
     @page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:10px;background:#fff}
@@ -167,8 +167,8 @@ async function printResultSheet(data: any, results: any[], session: string, term
   <div class="info-bar">
     ${photoB64 ? '<img src="' + photoB64 + '" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ' + primary + ';margin-right:10px">' : ''}
     <div style="display:flex;gap:15px">
-      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${user?.firstname} ${user?.lastname}</div></div>
-      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${user?.uniqueId || ''}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${data.student?.firstname || user?.firstName || user?.firstname} ${data.student?.lastname || user?.lastName || user?.lastname}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${data.student?.student_id || ''}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class</div><div style="font-weight:600;font-size:10px">${data.student?.class || data.class || 'N/A'}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class Size</div><div style="font-weight:600;font-size:10px">${data.class_size || 'N/A'}</div></div>
     </div>
