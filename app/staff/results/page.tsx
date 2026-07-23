@@ -1218,7 +1218,8 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
   useEffect(() => {
     if (!studentId) { setLoading(false); return; }
     setLoading(true);
-    api.get<any>(endpoints.admin.resultStudent(studentId), {
+    api.get<any>(endpoints.staff.results, {
+      student_id: studentId,
       session: session || undefined,
       term: term || undefined,
     })
