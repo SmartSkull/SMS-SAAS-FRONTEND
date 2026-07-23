@@ -260,7 +260,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
 const TERMS = ['FIRST', 'SECOND', 'THIRD'];
 
 export default function StudentResults() {
-  const { school } = useSelectedSchool();
+  const { school, loading: schoolLoading } = useSelectedSchool();
   const [data, setData]       = useState<any>(null);
   const [sessions, setSessions] = useState<{ name: string }[]>([]);
   const [session, setSession] = useState('');
@@ -270,6 +270,7 @@ export default function StudentResults() {
   const toast = useToast();
 
   useEffect(() => {
+    if (schoolLoading) return; // wait until localStorage has been read
     const params = school?.slug ? { school: school.slug } : undefined;
     Promise.all([
       api.get<ApiResponse<any[]>>(endpoints.public.sessions, params),
@@ -302,7 +303,7 @@ export default function StudentResults() {
         setTrendData(points);
       });
     }).catch(() => toast.error('Failed to load filters'));
-  }, []);
+  }, [school, schoolLoading]);
 
   useEffect(() => {
     if (!session || !term) return;

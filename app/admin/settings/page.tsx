@@ -184,14 +184,17 @@ export default function SettingsPage() {
           <div className="h-11 bg-gray-100 rounded-xl animate-pulse" />
         ) : (
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Principal's Full Name</label>
-            <input
-              type="text"
+            <label className="block text-xs font-medium text-gray-600 mb-1">Select Principal</label>
+            <select
               value={principal}
               onChange={(e) => setPrincipal(e.target.value)}
-              placeholder="e.g. Mr. John Adewale"
-              className="w-full max-w-md px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-green-500"
-            />
+              className="w-full max-w-md px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-green-500 bg-white"
+            >
+              <option value="">— No principal assigned —</option>
+              {(config?.staff ?? []).map((s) => (
+                <option key={s.uniqueId} value={s.name}>{s.name}</option>
+              ))}
+            </select>
           </div>
         )}
       </div>
