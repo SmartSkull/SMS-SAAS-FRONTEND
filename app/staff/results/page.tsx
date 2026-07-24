@@ -513,6 +513,8 @@ export default function StaffResults() {
     try {
       await api.post(endpoints.staff.results, {
         course: uploadCourse,
+        session: uploadSession || undefined,
+        term: uploadTerm || undefined,
         results: validRows,
       });
       toast.success('Results uploaded');
