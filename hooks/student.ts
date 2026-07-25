@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { useMessagesSocket } from '@/hooks/useMessagesSocket';
@@ -135,6 +135,8 @@ export function useMessages() {
   const [convos, setConvos] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [active, setActive] = useState<string | null>(null);
+  const activeRef = useRef<string | null>(null);
+  useEffect(() => { activeRef.current = active; }, [active]);
   const [activeInfo, setActiveInfo] = useState<{ name?: string; image?: string | null } | null>(null);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,9 +156,17 @@ export function useMessages() {
 
   useEffect(() => { loadConvos(); }, []);
 
-  useMessagesSocket(() => {
-    loadConvos(true);
-  });
+  useMessagesSocket(
+    () => { loadConvos(true); },
+    (msg) => {
+      setMessages((prev) => {
+        const exists = prev.some((m) => String(m.id) === String(msg.id));
+        if (exists) return prev;
+        return [...prev, msg];
+      });
+    },
+    activeRef,
+  );
 
   const openConvo = async (userId: string, name?: string, image?: string | null) => {
     setActive(userId);
@@ -173,7 +183,11 @@ export function useMessages() {
     const optimistic: Message = { id: `tmp-${Date.now()}` as any, isMe: true, message: text, deleted: false, edited: false, createdAt: new Date().toISOString() } as any;
     setMessages(p => [...p, optimistic]);
     try {
-      await api.post(endpoints.student.messages, { receiver_id: active, message: text });
+      const res = await api.post<ApiResponse<any>>(endpoints.student.messages, { receiver_id: active, message: text });
+      const serverId = res.data?.data?.id;
+      if (serverId) {
+        setMessages(p => p.map(m => (m as any).id === optimistic.id ? { ...m, id: serverId } : m));
+      }
       loadConvos(true);
     } catch {
       setMessages(p => p.filter(m => (m as any).id !== optimistic.id));
