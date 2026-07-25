@@ -41,6 +41,7 @@ export default function AdminMessages() {
   const [classes, setClasses] = useState<string[]>([]);
   const [userList, setUserList] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [threadLoading, setThreadLoading] = useState(false);
   const [editingMsg, setEditingMsg] = useState<{ id: string; text: string } | null>(null);
   const [showAttach, setShowAttach] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -90,6 +91,8 @@ export default function AdminMessages() {
     setActive(userId);
     setPartnerOnline(null);
     activePartnerDbId.current = null;
+    setThreadLoading(true);
+    setMessages([]);
     try {
       const r = await api.get<ApiResponse<any>>(`${MESSAGES_EP}/thread`, { uid: userId });
       setMessages(r.data?.messages ?? r.data ?? []);
@@ -101,6 +104,7 @@ export default function AdminMessages() {
       }
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch { toast.error('Failed to load conversation'); }
+    finally { setThreadLoading(false); }
   };
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -363,7 +367,17 @@ export default function AdminMessages() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
-              {messages.map((m: any) => (
+              {threadLoading ? (
+                <div className="space-y-4 py-2">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className={`flex items-end gap-2 ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                      {i % 2 === 0 && <div className="w-7 h-7 rounded-full bg-gray-200 animate-pulse shrink-0" />}
+                      <div className="rounded-2xl animate-pulse bg-gray-200"
+                        style={{ width: `${120 + (i * 37) % 100}px`, height: '36px' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : messages.map((m: any) => (
                 <div key={m.id} className={`flex items-end gap-2 group ${m.isMe ? 'justify-end' : 'justify-start'}`}>
                   {m.isMe && !m.deleted && (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mb-1">

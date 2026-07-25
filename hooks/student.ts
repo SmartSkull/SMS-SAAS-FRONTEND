@@ -142,6 +142,7 @@ export function useMessages() {
   const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
   const activePartnerDbId = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [threadLoading, setThreadLoading] = useState(false);
   const toast = useToast();
 
   const loadConvos = async (quiet = false) => {
@@ -177,6 +178,8 @@ export function useMessages() {
     setActive(userId);
     setPartnerOnline(null);
     activePartnerDbId.current = null;
+    setThreadLoading(true);
+    setMessages([]);
     if (name || image !== undefined) setActiveInfo({ name, image });
     try {
       const r = await api.get<ApiResponse<any>>(`${endpoints.student.messages}/thread`, { uid: userId });
@@ -188,6 +191,7 @@ export function useMessages() {
         checkPresence(String(partnerDbId));
       }
     } catch { toast.error('Failed to load conversation'); }
+    finally { setThreadLoading(false); }
   };
 
   const sendMessage = async (text: string) => {
@@ -259,7 +263,7 @@ export function useMessages() {
     ];
   }, [convos, active, activeInfo]);
 
-  return { convos: mergedConvos, messages, active, loading, openConvo, sendMessage, sendFile, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin, partnerOnline };
+  return { convos: mergedConvos, messages, active, loading, threadLoading, openConvo, sendMessage, sendFile, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin, partnerOnline };
 }
 
 /* ── Timetable ─────────────────────────────────────────────────────────── */

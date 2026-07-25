@@ -21,7 +21,7 @@ function Avatar({ name, image, size = 10 }: { name?: string; image?: string | nu
 }
 
 export default function StudentMessages() {
-  const { convos, messages, active, loading, openConvo, sendMessage, sendFile, clearActive, partnerLastLogin, partnerOnline } = useMessages();
+  const { convos, messages, active, loading, threadLoading, openConvo, sendMessage, sendFile, clearActive, partnerLastLogin, partnerOnline } = useMessages();
   const searchParams = useSearchParams();
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
@@ -312,7 +312,17 @@ export default function StudentMessages() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50">
-              {localMessages.map((m: any) => (
+              {threadLoading ? (
+                <div className="space-y-4 py-2">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className={`flex items-end gap-2 ${i % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                      {i % 2 === 0 && <div className="w-7 h-7 rounded-full bg-gray-200 animate-pulse shrink-0" />}
+                      <div className="rounded-2xl animate-pulse bg-gray-200"
+                        style={{ width: `${120 + (i * 37) % 100}px`, height: '36px' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : localMessages.map((m: any) => (
                 <div key={m.id} className={`flex items-end gap-2 group ${m.isMe ? 'justify-end' : 'justify-start'}`}>
                   {/* Edit/delete controls — only for own non-deleted messages */}
                   {m.isMe && !m.deleted && (
