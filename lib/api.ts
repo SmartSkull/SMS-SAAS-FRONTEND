@@ -258,6 +258,7 @@ export const endpoints = {
     staff: '/admin/staff',
     staffMember: (id: string) => `/admin/staff/${encodeURIComponent(id)}`,
     staffVerify: (id: string) => `/admin/staff/${encodeURIComponent(id)}/verify`,
+    staffUnverify: (id: string) => `/admin/staff/${encodeURIComponent(id)}/unverify`,
     sessions: '/admin/sessions',
     sessionCurrent: (s: string) => `/admin/sessions/${s}/current`,
     terms: '/admin/terms',
