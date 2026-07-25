@@ -425,24 +425,24 @@ export default function StaffMessages() {
             </div>
             <div className="bg-white border-t border-gray-100">
               {showAttach && (
-                <div className="px-4 py-3 flex gap-3">
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <div className="px-5 py-4 flex gap-4 border-b border-gray-100 bg-gray-50">
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                    <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center">
                       <ImageIcon size={20} className="text-blue-600" />
                     </div>
-                    <span className="text-[10px] text-gray-500 font-medium">Photo / Video</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Photo / Video</span>
                   </button>
-                  <button type="button" onClick={() => docInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
-                    <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
+                  <button type="button" onClick={() => docInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                    <div className="w-11 h-11 rounded-xl bg-yellow-50 flex items-center justify-center">
                       <File size={20} className="text-yellow-600" />
                     </div>
-                    <span className="text-[10px] text-gray-500 font-medium">Document</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Document</span>
                   </button>
-                  <button type="button" onClick={() => audioInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
-                    <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
+                  <button type="button" onClick={() => audioInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                    <div className="w-11 h-11 rounded-xl bg-pink-50 flex items-center justify-center">
                       <Music size={20} className="text-pink-600" />
                     </div>
-                    <span className="text-[10px] text-gray-500 font-medium">Audio</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Audio</span>
                   </button>
                 </div>
               )}
