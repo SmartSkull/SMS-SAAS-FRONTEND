@@ -45,6 +45,7 @@ export default function AdminMessages() {
   const [threadLoading, setThreadLoading] = useState(false);
   const [editingMsg, setEditingMsg] = useState<{ id: string; text: string } | null>(null);
   const [showAttach, setShowAttach] = useState(false);
+  const [voiceActive, setVoiceActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -462,15 +463,21 @@ export default function AdminMessages() {
                 </div>
               )}
               <form onSubmit={sendMessage} className="px-4 py-3 flex gap-2">
-                <button type="button" onClick={() => setShowAttach(v => !v)} className="p-2.5 text-gray-400 hover:text-gray-600 rounded-xl">
-                  {uploading ? <Loader2 size={18} className="animate-spin text-gray-400" /> : <Paperclip size={18} color={showAttach ? '#9333ea' : '#64748b'} />}
-                </button>
-                <input value={text} onChange={e => setText(e.target.value)} placeholder="Type a message…"
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-400 focus:bg-white transition-colors" />
-                <VoiceRecorder onSend={(file) => sendFile(file)} accentColor="bg-purple-600" />
-                <button type="submit" disabled={!text.trim()} className="p-2.5 bg-purple-600 text-white rounded-xl disabled:opacity-40 hover:bg-purple-700">
-                  <Send size={16} />
-                </button>
+                {!voiceActive && (
+                  <button type="button" onClick={() => setShowAttach(v => !v)} className="p-2.5 text-gray-400 hover:text-gray-600 rounded-xl">
+                    {uploading ? <Loader2 size={18} className="animate-spin text-gray-400" /> : <Paperclip size={18} color={showAttach ? '#9333ea' : '#64748b'} />}
+                  </button>
+                )}
+                {!voiceActive && (
+                  <input value={text} onChange={e => setText(e.target.value)} placeholder="Type a message…"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-400 focus:bg-white transition-colors" />
+                )}
+                <VoiceRecorder onSend={(file) => sendFile(file)} onStateChange={setVoiceActive} accentColor="bg-purple-600" />
+                {!voiceActive && (
+                  <button type="submit" disabled={!text.trim()} className="p-2.5 bg-purple-600 text-white rounded-xl disabled:opacity-40 hover:bg-purple-700">
+                    <Send size={16} />
+                  </button>
+                )}
               </form>
             </div>
 
