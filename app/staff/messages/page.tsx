@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRight, ChevronLeft, Pencil, Trash2, Check, Paperclip, ImageIcon, File, Music, Loader2 } from 'lucide-react';
+import VoiceRecorder from '@/components/ui/VoiceRecorder';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { guessType } from '@/lib/messages';
 import { readSelectedSchool } from '@/hooks/useSelectedSchool';
@@ -417,10 +418,7 @@ export default function StaffMessages() {
                             );
                           } else if (ftype === 'audio') {
                             return (
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
-                                <Music size={16} className="shrink-0" />
-                                <span className="truncate text-sm">{m.message || 'Audio'}</span>
-                              </a>
+                              <audio src={fileUrl} controls className="max-w-[220px] h-9 my-1 mx-3" />
                             );
                           } else {
                             return (
@@ -470,6 +468,7 @@ export default function StaffMessages() {
                 </button>
                 <input value={text} onChange={e => setText(e.target.value)} placeholder="Type a message…"
                   className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-colors" />
+                <VoiceRecorder onSend={(file) => sendFile(file)} accentColor="bg-blue-600" />
                 <button type="submit" disabled={!text.trim()} className="p-2.5 bg-blue-600 text-white rounded-xl disabled:opacity-40 hover:bg-blue-700">
                   <Send size={16} />
                 </button>
