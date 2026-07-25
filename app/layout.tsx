@@ -10,23 +10,39 @@ const geist = Geist({ subsets: ['latin'], variable: '--font-geist' });
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' });
 
 export const metadata: Metadata = {
-  title: 'Smart Campus',
+  title: {
+    default: 'Smart Campus',
+    template: '%s — Smart Campus',
+  },
   description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
   icons: {
-    icon: '/images/logo.png',
+    icon: [
+      { url: '/images/logo.png', type: 'image/png' },
+    ],
     apple: '/images/logo2.png',
+    shortcut: '/images/logo.png',
   },
   openGraph: {
     title: 'Smart Campus',
     description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
-    images: [{ url: '/images/logo2.png' }],
+    images: [{ url: '/images/logo2.png', width: 512, height: 512, alt: 'Smart Campus' }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Smart Campus',
+    description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
+    images: ['/images/logo2.png'],
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <head />
+      <head>
+        <link rel="icon" type="image/png" href="/images/logo.png" />
+        <link rel="apple-touch-icon" href="/images/logo2.png" />
+      </head>
       <body className={`${geist.variable} ${geistMono.variable} font-[family-name:var(--font-geist)] h-full antialiased`}>
         <Script id="brand-colors" strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
