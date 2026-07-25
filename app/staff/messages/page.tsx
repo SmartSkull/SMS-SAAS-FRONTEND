@@ -319,7 +319,7 @@ export default function StaffMessages() {
                   </p>
                   {loadingUsers ? <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded-xl animate-pulse" />)}</div>
                     : userList.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No users found</p>
-                    : <UserList users={userList} onSelect={startChat} />}
+                    : <div className="max-h-[360px] overflow-y-auto -mx-1 px-1"><UserList users={userList} onSelect={startChat} /></div>}
                 </div>
               )}
             </div>
