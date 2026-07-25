@@ -195,6 +195,39 @@ export function useMessages() {
     }
   };
 
+  const sendFile = async (file: File, caption = '') => {
+    if (!active) return;
+    const tmpId = `tmp-${Date.now()}`;
+    const localUrl = URL.createObjectURL(file);
+    const isImage = file.type.startsWith('image/');
+    const optimistic: any = {
+      id: tmpId,
+      isMe: true,
+      message: caption || file.name,
+      file_url: isImage ? localUrl : undefined,
+      deleted: false,
+      edited: false,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages(p => [...p, optimistic]);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await api.upload<ApiResponse<{ url: string }>>(endpoints.student.messagesUpload, form);
+      const fileUrl = res.data?.url ?? '';
+      setMessages(p => p.map(m => (m as any).id === tmpId ? { ...m, file_url: fileUrl || localUrl } : m));
+      await api.post(endpoints.student.messages, {
+        receiver_id: active,
+        message: caption || file.name,
+        file_url: fileUrl,
+      });
+      loadConvos(true);
+    } catch {
+      setMessages(p => p.filter(m => (m as any).id !== tmpId));
+      toast.error('Failed to send file');
+    }
+  };
+
   // Merge activeInfo into convos so the header shows the correct name even
   // before the server-side convo list has the new entry
   const mergedConvos = useMemo(() => {
@@ -214,7 +247,7 @@ export function useMessages() {
     ];
   }, [convos, active, activeInfo]);
 
-  return { convos: mergedConvos, messages, active, loading, openConvo, sendMessage, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin };
+  return { convos: mergedConvos, messages, active, loading, openConvo, sendMessage, sendFile, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin };
 }
 
 /* ── Timetable ─────────────────────────────────────────────────────────── */

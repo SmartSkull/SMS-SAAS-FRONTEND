@@ -1,7 +1,8 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRight, ChevronLeft, Pencil, Trash2, Check } from 'lucide-react';
+import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRight, ChevronLeft, Pencil, Trash2, Check, Paperclip, ImageIcon, File, Music, Loader2 } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
+import { guessType } from '@/lib/messages';
 import type { ApiResponse } from '@/types';
 import { useToast } from '@/components/ui/Toast';
 import { useMessagesSocket } from '@/hooks/useMessagesSocket';
@@ -68,7 +69,13 @@ export default function StaffMessages() {
   const [userList, setUserList] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [editingMsg, setEditingMsg] = useState<{ id: string; text: string } | null>(null);
+  const [showAttach, setShowAttach] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   const activeConvo = convos.find(c => c.user_id === active);
@@ -113,6 +120,40 @@ export default function StaffMessages() {
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     try { await api.post(endpoints.staff.messages, { receiver_id: active, message: optimistic.message }); }
     catch { setMessages(p => p.filter(m => m.id !== optimistic.id)); toast.error('Failed to send'); }
+  };
+
+  const sendFile = async (file: File, caption = '') => {
+    if (!active) return;
+    setUploading(true);
+    setShowAttach(false);
+    const tmpId = `tmp-${Date.now()}`;
+    const localUrl = URL.createObjectURL(file);
+    const isImage = file.type.startsWith('image/');
+    const optimistic = { id: tmpId, isMe: true, message: caption || file.name, file_url: isImage ? localUrl : undefined, deleted: false, edited: false, createdAt: new Date().toISOString() };
+    setMessages(p => [...p, optimistic]);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await api.upload<ApiResponse<{ url: string }>>(endpoints.staff.messagesUpload, form);
+      const fileUrl = res.data?.url ?? '';
+      setMessages(p => p.map(m => m.id === tmpId ? { ...m, file_url: fileUrl || localUrl } : m));
+      await api.post(endpoints.staff.messages, { receiver_id: active, message: caption || file.name, file_url: fileUrl });
+      openConvo(active);
+      loadConvos(true);
+    } catch {
+      setMessages(p => p.filter(m => m.id !== tmpId));
+      toast.error('Failed to send file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await sendFile(file);
+    e.target.value = '';
   };
 
   const deleteMsg = async (id: string) => {
@@ -308,8 +349,36 @@ export default function StaffMessages() {
                     ) : m.deleted ? (
                       <p className="px-4 py-2.5 italic opacity-50 text-xs">This message was deleted</p>
                     ) : (
-                      <div className="px-4 py-2.5">
-                        <p>{m.message}</p>
+                      <div>
+                        {m.file_url ? (() => {
+                          const ftype = guessType(m.file_url);
+                          const fileUrl = getImageUrl(m.file_url) ?? m.file_url;
+                          if (ftype === 'image') {
+                            return (
+                              <img src={fileUrl} alt="" className="rounded-lg max-w-[200px] cursor-pointer" onClick={() => setPreviewImage(fileUrl)} />
+                            );
+                          } else if (ftype === 'video') {
+                            return (
+                              <video src={fileUrl} controls className="rounded-lg max-w-[200px]" />
+                            );
+                          } else if (ftype === 'audio') {
+                            return (
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
+                                <Music size={16} />
+                                <span className="truncate">{m.message || 'Audio'}</span>
+                              </a>
+                            );
+                          } else {
+                            return (
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
+                                <File size={16} />
+                                <span className="truncate">{m.message || 'Document'}</span>
+                              </a>
+                            );
+                          }
+                        })() : (
+                          <p>{m.message}</p>
+                        )}
                         {m.edited && <p className="text-[10px] opacity-50 mt-0.5">edited</p>}
                       </div>
                     )}
@@ -318,13 +387,53 @@ export default function StaffMessages() {
               ))}
               <div ref={bottomRef} />
             </div>
-            <form onSubmit={sendMessage} className="px-4 py-3 border-t border-gray-100 flex gap-2 bg-white">
-              <input value={text} onChange={e => setText(e.target.value)} placeholder="Type a message…"
-                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-colors" />
-              <button type="submit" disabled={!text.trim()} className="p-2.5 bg-blue-600 text-white rounded-xl disabled:opacity-40 hover:bg-blue-700">
-                <Send size={16} />
-              </button>
-            </form>
+            <div className="bg-white border-t border-gray-100">
+              {showAttach && (
+                <div className="px-4 py-3 flex gap-3">
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <ImageIcon size={20} className="text-blue-600" />
+                    </div>
+                    <span className="text-[10px] text-gray-500 font-medium">Photo / Video</span>
+                  </button>
+                  <button type="button" onClick={() => docInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
+                    <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
+                      <File size={20} className="text-yellow-600" />
+                    </div>
+                    <span className="text-[10px] text-gray-500 font-medium">Document</span>
+                  </button>
+                  <button type="button" onClick={() => audioInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
+                    <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
+                      <Music size={20} className="text-pink-600" />
+                    </div>
+                    <span className="text-[10px] text-gray-500 font-medium">Audio</span>
+                  </button>
+                </div>
+              )}
+              <form onSubmit={sendMessage} className="px-4 py-3 flex gap-2">
+                <button type="button" onClick={() => setShowAttach(v => !v)} className="p-2.5 text-gray-400 hover:text-gray-600 rounded-xl">
+                  {uploading ? <Loader2 size={18} className="animate-spin text-gray-400" /> : <Paperclip size={18} color={showAttach ? '#2563eb' : '#64748b'} />}
+                </button>
+                <input value={text} onChange={e => setText(e.target.value)} placeholder="Type a message…"
+                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-colors" />
+                <button type="submit" disabled={!text.trim()} className="p-2.5 bg-blue-600 text-white rounded-xl disabled:opacity-40 hover:bg-blue-700">
+                  <Send size={16} />
+                </button>
+              </form>
+            </div>
+
+            <input ref={fileInputRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileSelect} />
+            <input ref={docInputRef} type="file" accept="*/*" className="hidden" onChange={handleFileSelect} />
+            <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileSelect} />
+
+            {previewImage && (
+              <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setPreviewImage(null)}>
+                <img src={previewImage} alt="" className="max-w-full max-h-full" />
+                <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 text-white p-2">
+                  <X size={24} />
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
