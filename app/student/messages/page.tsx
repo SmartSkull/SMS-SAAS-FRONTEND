@@ -5,6 +5,7 @@ import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRigh
 import { useMessages } from '@/hooks/student';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { guessType } from '@/lib/messages';
+import { readSelectedSchool } from '@/hooks/useSelectedSchool';
 import type { ApiResponse } from '@/types';
 import clsx from 'clsx';
 
@@ -70,7 +71,10 @@ export default function StudentMessages() {
   // Load classes when student role selected
   useEffect(() => {
     if (newRole !== 'student') return;
-    api.get<ApiResponse<{ id: string; name: string }[]>>(endpoints.public.classes)
+    const school = readSelectedSchool();
+    const params: Record<string, string> = {};
+    if (school?.slug) params.school = school.slug;
+    api.get<ApiResponse<{ id: string; name: string }[]>>(endpoints.public.classes, params)
       .then((r) => setClasses(r.data.map((c: any) => c.name)))
       .catch(() => {});
   }, [newRole]);

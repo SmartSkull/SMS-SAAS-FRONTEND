@@ -18,7 +18,10 @@ export const auth = {
   },
 
   setSession(token: string, refreshToken: string, user: User, role: Role) {
-    const opts = { expires: 7, sameSite: 'lax' as const }; // 7 days — matches refresh token lifespan
+    // 30 days — session stays active until explicit logout.
+    // The refresh token rotates on every silent refresh, so this window
+    // keeps resetting as long as the user is active.
+    const opts = { expires: 30, sameSite: 'lax' as const };
     Cookies.set(KEYS.TOKEN, token, opts);
     Cookies.set(KEYS.REFRESH, refreshToken, opts);
     Cookies.set(KEYS.USER, JSON.stringify(user), opts);
