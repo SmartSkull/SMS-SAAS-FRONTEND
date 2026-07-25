@@ -403,16 +403,16 @@ export default function StaffMessages() {
                             );
                           } else if (ftype === 'audio') {
                             return (
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
-                                <Music size={16} />
-                                <span className="truncate">{m.message || 'Audio'}</span>
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
+                                <Music size={16} className="shrink-0" />
+                                <span className="truncate text-sm">{m.message || 'Audio'}</span>
                               </a>
                             );
                           } else {
                             return (
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
-                                <File size={16} />
-                                <span className="truncate">{m.message || 'Document'}</span>
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
+                                <File size={16} className="shrink-0" />
+                                <span className="truncate text-sm">{m.message || 'Document'}</span>
                               </a>
                             );
                           }
