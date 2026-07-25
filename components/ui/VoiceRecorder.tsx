@@ -125,15 +125,15 @@ export default function VoiceRecorder({ onSend, accentColor = 'bg-blue-600' }: P
 
   // ── PREVIEW ────────────────────────────────────────────────────────────
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-xl">
-      <audio src={audioUrl ?? ''} controls className="h-8 max-w-[160px] sm:max-w-[200px]" />
+    <div className="flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-xl min-w-0">
       {/* discard */}
-      <button type="button" onClick={cancel} title="Discard" className="p-1 text-gray-400 hover:text-red-500 rounded-lg transition-colors">
+      <button type="button" onClick={cancel} title="Discard" className="p-1 text-gray-400 hover:text-red-500 rounded-lg transition-colors shrink-0">
         <X size={15} />
       </button>
+      <audio src={audioUrl ?? ''} controls className="h-8 w-[140px] shrink-0" />
       {/* send */}
       <button type="button" onClick={send} title="Send voice note"
-        className={`p-1.5 ${accentColor} text-white rounded-lg hover:opacity-90 transition-opacity`}>
+        className={`p-1.5 ${accentColor} text-white rounded-lg hover:opacity-90 transition-opacity shrink-0`}>
         <Send size={13} />
       </button>
     </div>
