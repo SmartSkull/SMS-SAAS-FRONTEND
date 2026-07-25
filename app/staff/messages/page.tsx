@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRight, ChevronLeft, Pencil, Trash2, Check, Paperclip, ImageIcon, File, Music, Loader2 } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { guessType } from '@/lib/messages';
+import { readSelectedSchool } from '@/hooks/useSelectedSchool';
 import type { ApiResponse } from '@/types';
 import { useToast } from '@/components/ui/Toast';
 import { useMessagesSocket } from '@/hooks/useMessagesSocket';
@@ -197,7 +198,10 @@ export default function StaffMessages() {
 
   useEffect(() => {
     if (newRole !== 'student') return;
-    api.get<ApiResponse<{ name: string }[]>>(endpoints.public.classes)
+    const school = readSelectedSchool();
+    const params: any = {};
+    if (school?.slug) params.school = school.slug;
+    api.get<ApiResponse<{ name: string }[]>>(endpoints.public.classes, params)
       .then(r => setClasses((r.data ?? []).map((c: any) => c.name)))
       .catch(() => {});
   }, [newRole]);
