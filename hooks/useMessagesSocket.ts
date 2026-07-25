@@ -37,7 +37,7 @@ export function useMessagesSocket(
     });
 
     socket.on('new:message', (msg: any) => {
-      const myUniqueId = user.uniqueId ?? user.unique_id;
+      const myUniqueId = user.uniqueId;
       const partnerId = activeConvoIdRef?.current;
 
       // If this message belongs to the currently open conversation, append it directly

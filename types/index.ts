@@ -9,6 +9,7 @@ export interface User {
   image?: string;
   role: Role;
   isDriver?: boolean;
+  uniqueId?: string;
 }
 
 export interface Student extends User {
