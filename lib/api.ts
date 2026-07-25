@@ -210,6 +210,8 @@ export const endpoints = {
     cbtBulkDeleteQuestions: '/staff/cbt/questions/bulk',
     cbtResults: '/staff/cbt/results',
     cbtResult: (id: string) => `/staff/cbt/results/${id}`,
+    cbtResultsManual: '/staff/cbt/results/manual',
+    cbtResultsManual: '/staff/cbt/results/manual',
     cbtExtract: '/staff/cbt/extract-questions',
     cbtBulkCreate: '/staff/cbt/bulk-create',
     cbtUploadImage: '/staff/cbt/upload-image',

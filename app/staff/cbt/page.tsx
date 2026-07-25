@@ -84,7 +84,7 @@ function loadDraft(): { meta: typeof EMPTY_META; qs: ManualQ[]; step: string } |
 }
 
 export default function StaffCbt() {
-  const [tab, setTab] = useState<'questions' | 'results' | 'tests' | 'schedules' | 'omr'>('questions');
+  const [tab, setTab] = useState<'questions' | 'results' | 'tests' | 'schedules' | 'omr' | 'manual'>('questions');
   const [questions, setQuestions] = useState<CbtQuestion[]>([]);
   const [results, setResults] = useState<CbtResult[]>([]);
   const [tests, setTests] = useState<CbtTest[]>([]);
@@ -145,6 +145,78 @@ export default function StaffCbt() {
   const [manualQs, setManualQs] = useState<ManualQ[]>([]);
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [hasDraft, setHasDraft] = useState<boolean>(() => !!loadDraft()); // true when a saved draft exists but hasn't been resumed yet
+
+  // ── Manual Results state ──────────────────────────────────────────────────
+  const MANUAL_DRAFT_KEY = 'cbt_manual_results_draft';
+  const [manualResultsMeta, setManualResultsMeta] = useState({ class: '', course: '', session: '', term: '', totalQuestions: '40' });
+  const [manualResultsStudents, setManualResultsStudents] = useState<{ studentUniqueId: string; firstname: string; lastname: string; score: string }[]>([]);
+  const [manualResultsLoading, setManualResultsLoading] = useState(false);
+  const [manualResultsSaving, setManualResultsSaving] = useState(false);
+
+  // Load draft on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(MANUAL_DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.meta) setManualResultsMeta(draft.meta);
+        if (draft.students?.length) setManualResultsStudents(draft.students);
+      }
+    } catch {}
+  }, []);
+
+  // Autosave whenever meta or scores change
+  useEffect(() => {
+    if (!manualResultsMeta.class && !manualResultsStudents.length) return;
+    try { localStorage.setItem(MANUAL_DRAFT_KEY, JSON.stringify({ meta: manualResultsMeta, students: manualResultsStudents })); } catch {}
+  }, [manualResultsMeta, manualResultsStudents]);
+
+  const loadManualStudents = useCallback(async (meta: typeof manualResultsMeta) => {
+    if (!meta.class) return;
+    setManualResultsLoading(true);
+    try {
+      const r = await api.get<any>(endpoints.staff.students, { class: meta.class, limit: 200 });
+      const list: any[] = r.data ?? [];
+      // Preserve any scores already entered for students that were already loaded
+      setManualResultsStudents(prev => {
+        const prevMap = new Map(prev.map(s => [s.studentUniqueId, s.score]));
+        return list.map(s => ({
+          studentUniqueId: String(s.student_id),
+          firstname: s.firstname ?? '',
+          lastname: s.lastname ?? '',
+          score: prevMap.get(String(s.student_id)) ?? '',
+        }));
+      });
+    } catch { toast.error('Failed to load students'); }
+    finally { setManualResultsLoading(false); }
+  }, [toast]);
+
+  const handleManualResultsSave = async () => {
+    if (!manualResultsMeta.class || !manualResultsMeta.course || !manualResultsMeta.session || !manualResultsMeta.term) {
+      toast.error('Please fill in all fields'); return;
+    }
+    const filled = manualResultsStudents.filter(s => s.score !== '' && s.score !== null && s.score !== undefined);
+    if (!filled.length) { toast.error('Enter at least one score'); return; }
+    setManualResultsSaving(true);
+    try {
+      const res = await api.post<any>(endpoints.staff.cbtResultsManual, {
+        class: manualResultsMeta.class,
+        course: manualResultsMeta.course,
+        session: manualResultsMeta.session,
+        term: manualResultsMeta.term,
+        results: filled.map(s => ({
+          studentUniqueId: s.studentUniqueId,
+          score: Number(s.score),
+          totalQuestions: Number(manualResultsMeta.totalQuestions) || 0,
+        })),
+      });
+      const { saved, skipped } = res?.data ?? {};
+      toast.success(`Saved ${saved ?? filled.length} result${saved !== 1 ? 's' : ''}${skipped ? `, ${skipped} skipped` : ''}`);
+      // Clear draft after successful save
+      try { localStorage.removeItem(MANUAL_DRAFT_KEY); } catch {}
+    } catch (e: any) { toast.error(e?.message ?? 'Failed to save'); }
+    finally { setManualResultsSaving(false); }
+  };
 
   // OCR / Bulk upload state
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -1685,6 +1757,12 @@ export default function StaffCbt() {
           }`}>
           <span className="flex items-center gap-1.5"><Printer size={14} /> OMR Sheet</span>
         </button>
+        <button onClick={() => setTab('manual')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium capitalize transition-colors shrink-0 whitespace-nowrap ${
+            tab === 'manual' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+          }`}>
+          <span className="flex items-center gap-1.5"><FileText size={14} /> Manual Results</span>
+        </button>
       </div>
 
       {tab === 'questions' && (
@@ -2879,6 +2957,197 @@ export default function StaffCbt() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Manual Results Tab ──────────────────────────────────────────── */}
+      {tab === 'manual' && (
+        <div className="space-y-4">
+          {/* Header info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl px-5 py-4 flex items-start gap-3 no-print">
+            <AlertCircle size={16} className="text-blue-600 mt-0.5 shrink-0" />
+            <p className="text-sm text-blue-800">
+              Enter scores manually for students who took the test on paper or offline.
+              Progress is <strong>automatically saved</strong> to your browser — you can close this page and return later without losing scores.
+            </p>
+          </div>
+
+          {/* Meta filters */}
+          <div className="bg-white rounded-2xl card shadow-sm p-5">
+            <h2 className="text-sm font-semibold text-gray-700 mb-4">Test Details</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="col-span-2 sm:col-span-1 lg:col-span-1">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class <span className="text-red-500">*</span></label>
+                <select
+                  value={manualResultsMeta.class}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setManualResultsMeta(p => ({ ...p, class: val }));
+                    loadManualStudents({ ...manualResultsMeta, class: val });
+                  }}
+                  className={`w-full ${SEL_CLS}`}
+                >
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Subject <span className="text-red-500">*</span></label>
+                <select
+                  value={manualResultsMeta.course}
+                  onChange={e => setManualResultsMeta(p => ({ ...p, course: e.target.value }))}
+                  className={`w-full ${SEL_CLS}`}
+                >
+                  <option value="">Select subject</option>
+                  {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Session <span className="text-red-500">*</span></label>
+                <select
+                  value={manualResultsMeta.session}
+                  onChange={e => setManualResultsMeta(p => ({ ...p, session: e.target.value }))}
+                  className={`w-full ${SEL_CLS}`}
+                >
+                  <option value="">Select session</option>
+                  {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Term <span className="text-red-500">*</span></label>
+                <select
+                  value={manualResultsMeta.term}
+                  onChange={e => setManualResultsMeta(p => ({ ...p, term: e.target.value }))}
+                  className={`w-full ${SEL_CLS}`}
+                >
+                  <option value="">Select term</option>
+                  {terms.map(t => <option key={t} value={t}>{t} Term</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Total Questions</label>
+                <input
+                  type="number" min="1" max="200"
+                  value={manualResultsMeta.totalQuestions}
+                  onChange={e => setManualResultsMeta(p => ({ ...p, totalQuestions: e.target.value }))}
+                  className={`w-full ${SEL_CLS}`}
+                  placeholder="e.g. 40"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => loadManualStudents(manualResultsMeta)}
+                  disabled={!manualResultsMeta.class || manualResultsLoading}
+                  className="w-full px-3 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium disabled:opacity-50 hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  {manualResultsLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Search size={14} />}
+                  Load Students
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Autosave indicator */}
+          {manualResultsStudents.length > 0 && (
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <CheckCircle2 size={12} className="text-green-500" />
+                Progress auto-saved — {manualResultsStudents.filter(s => s.score !== '').length} of {manualResultsStudents.length} scored
+              </p>
+              <button
+                onClick={() => {
+                  try { localStorage.removeItem('cbt_manual_results_draft'); } catch {}
+                  setManualResultsStudents(prev => prev.map(s => ({ ...s, score: '' })));
+                  toast.success('Scores cleared');
+                }}
+                className="text-xs text-red-500 hover:text-red-700 font-medium"
+              >
+                Clear all scores
+              </button>
+            </div>
+          )}
+
+          {/* Student score table */}
+          {manualResultsStudents.length > 0 && (
+            <div className="bg-white rounded-2xl card shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase w-10">#</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase w-28">Student ID</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase w-36">
+                        Score {manualResultsMeta.totalQuestions ? `(out of ${manualResultsMeta.totalQuestions})` : ''}
+                      </th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase w-24">%</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {manualResultsStudents.map((s, i) => {
+                      const total = Number(manualResultsMeta.totalQuestions) || 0;
+                      const score = Number(s.score);
+                      const pct = s.score !== '' && total > 0 ? ((score / total) * 100).toFixed(1) : s.score !== '' ? s.score : '';
+                      const pctNum = Number(pct);
+                      const pctColor = pct === '' ? '' : pctNum >= 70 ? 'text-green-600' : pctNum >= 50 ? 'text-amber-600' : 'text-red-500';
+                      return (
+                        <tr key={s.studentUniqueId} className="hover:bg-gray-50">
+                          <td className="p-3 text-gray-400 text-xs">{i + 1}</td>
+                          <td className="p-3">
+                            <p className="font-medium text-gray-900">{s.firstname} {s.lastname}</p>
+                          </td>
+                          <td className="p-3 text-gray-500 font-mono text-xs">{s.studentUniqueId}</td>
+                          <td className="p-3">
+                            <input
+                              type="number"
+                              min="0"
+                              max={manualResultsMeta.totalQuestions || undefined}
+                              value={s.score}
+                              onChange={e => {
+                                const val = e.target.value;
+                                setManualResultsStudents(prev =>
+                                  prev.map((st, idx) => idx === i ? { ...st, score: val } : st)
+                                );
+                              }}
+                              placeholder="—"
+                              className="w-24 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className={`p-3 font-semibold text-sm ${pctColor}`}>
+                            {pct !== '' ? `${pct}%` : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Save footer */}
+              <div className="p-4 border-t border-gray-100 flex items-center justify-between gap-4">
+                <p className="text-xs text-gray-500">
+                  {manualResultsStudents.filter(s => s.score !== '').length} score{manualResultsStudents.filter(s => s.score !== '').length !== 1 ? 's' : ''} entered
+                  {' '}· {manualResultsStudents.filter(s => s.score === '').length} blank (will be skipped)
+                </p>
+                <button
+                  onClick={handleManualResultsSave}
+                  disabled={manualResultsSaving || manualResultsStudents.filter(s => s.score !== '').length === 0}
+                  className="flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {manualResultsSaving
+                    ? <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
+                    : <><CheckCircle2 size={15} /> Save Results</>
+                  }
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!manualResultsStudents.length && !manualResultsLoading && manualResultsMeta.class && (
+            <div className="bg-white rounded-2xl card shadow-sm p-8">
+              <EmptyState icon={UserCircle2} message="No students found for the selected class." card={false} />
+            </div>
+          )}
         </div>
       )}
     </div>
