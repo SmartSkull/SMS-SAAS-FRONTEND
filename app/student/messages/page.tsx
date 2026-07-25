@@ -21,7 +21,7 @@ function Avatar({ name, image, size = 10 }: { name?: string; image?: string | nu
 }
 
 export default function StudentMessages() {
-  const { convos, messages, active, loading, openConvo, sendMessage, sendFile, clearActive, partnerLastLogin } = useMessages();
+  const { convos, messages, active, loading, openConvo, sendMessage, sendFile, clearActive, partnerLastLogin, partnerOnline } = useMessages();
   const searchParams = useSearchParams();
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
@@ -288,6 +288,17 @@ export default function StudentMessages() {
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{activeConvo?.name}</p>
                 {(() => {
+                  if (partnerOnline === true) return <p className="text-xs text-green-500 font-medium">Online</p>;
+                  if (partnerOnline === false) {
+                    if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
+                    const diff = Date.now() - new Date(partnerLastLogin).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
+                    const hrs = Math.floor(mins / 60);
+                    if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
+                    return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
+                  }
+                  // null = waiting for socket, fall back to last login heuristic
                   if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
                   const diff = Date.now() - new Date(partnerLastLogin).getTime();
                   const mins = Math.floor(diff / 60000);

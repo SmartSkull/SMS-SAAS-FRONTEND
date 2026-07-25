@@ -139,6 +139,8 @@ export function useMessages() {
   useEffect(() => { activeRef.current = active; }, [active]);
   const [activeInfo, setActiveInfo] = useState<{ name?: string; image?: string | null } | null>(null);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
+  const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
+  const activePartnerDbId = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
@@ -156,7 +158,7 @@ export function useMessages() {
 
   useEffect(() => { loadConvos(); }, []);
 
-  useMessagesSocket(
+  const { checkPresence } = useMessagesSocket(
     () => { loadConvos(true); },
     (msg) => {
       setMessages((prev) => {
@@ -166,15 +168,25 @@ export function useMessages() {
       });
     },
     activeRef,
+    (userId, online) => {
+      if (userId === activePartnerDbId.current) setPartnerOnline(online);
+    },
   );
 
   const openConvo = async (userId: string, name?: string, image?: string | null) => {
     setActive(userId);
+    setPartnerOnline(null);
+    activePartnerDbId.current = null;
     if (name || image !== undefined) setActiveInfo({ name, image });
     try {
       const r = await api.get<ApiResponse<any>>(`${endpoints.student.messages}/thread`, { uid: userId });
       setMessages(r.data?.messages ?? r.data);
       setPartnerLastLogin(r.data?.partner_last_login_at ?? null);
+      const partnerDbId = r.data?.partner_id ?? null;
+      if (partnerDbId) {
+        activePartnerDbId.current = String(partnerDbId);
+        checkPresence(String(partnerDbId));
+      }
     } catch { toast.error('Failed to load conversation'); }
   };
 
@@ -247,7 +259,7 @@ export function useMessages() {
     ];
   }, [convos, active, activeInfo]);
 
-  return { convos: mergedConvos, messages, active, loading, openConvo, sendMessage, sendFile, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin };
+  return { convos: mergedConvos, messages, active, loading, openConvo, sendMessage, sendFile, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin, partnerOnline };
 }
 
 /* ── Timetable ─────────────────────────────────────────────────────────── */

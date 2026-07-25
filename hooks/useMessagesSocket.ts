@@ -6,12 +6,19 @@ export function useMessagesSocket(
   onNewMessage?: () => void,
   onIncomingMessage?: (msg: any) => void,
   activeConvoIdRef?: React.MutableRefObject<string | null>,
+  onPresenceChange?: (userId: string, online: boolean) => void,
 ) {
   const socketRef = useRef<Socket | null>(null);
   const onNewMessageRef = useRef(onNewMessage);
   const onIncomingMessageRef = useRef(onIncomingMessage);
+  const onPresenceChangeRef = useRef(onPresenceChange);
   onNewMessageRef.current = onNewMessage;
   onIncomingMessageRef.current = onIncomingMessage;
+  onPresenceChangeRef.current = onPresenceChange;
+
+  const checkPresence = useCallback((userId: string) => {
+    socketRef.current?.emit('user:status', { userId });
+  }, []);
 
   useEffect(() => {
     const user = auth.getUser();
@@ -40,7 +47,7 @@ export function useMessagesSocket(
       const myUniqueId = user.uniqueId;
       const partnerId = activeConvoIdRef?.current;
 
-      // If this message belongs to the currently open conversation, append it directly
+      // Append to open conversation immediately
       if (
         partnerId &&
         (msg.senderUniqueId === partnerId || msg.receiverUniqueId === partnerId)
@@ -59,9 +66,25 @@ export function useMessagesSocket(
       onNewMessageRef.current?.();
     });
 
+    // Presence events — broadcast to whoever is listening
+    socket.on('user:online', ({ userId }: { userId: string }) => {
+      onPresenceChangeRef.current?.(userId, true);
+    });
+
+    socket.on('user:offline', ({ userId }: { userId: string }) => {
+      onPresenceChangeRef.current?.(userId, false);
+    });
+
+    // user:status is the response to a point-in-time query
+    socket.on('user:status', ({ userId, online }: { userId: string; online: boolean }) => {
+      onPresenceChangeRef.current?.(userId, online);
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
   }, []);
+
+  return { checkPresence };
 }

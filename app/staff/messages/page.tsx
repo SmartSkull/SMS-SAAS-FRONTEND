@@ -61,6 +61,9 @@ export default function StaffMessages() {
   const activeRef = useRef<string | null>(null);
   useEffect(() => { activeRef.current = active; }, [active]);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
+  const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
+  // Track active partner's db id so we can match presence events
+  const activePartnerDbId = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
@@ -99,7 +102,7 @@ export default function StaffMessages() {
     loadConvos();
   }, [loadConvos]);
 
-  useMessagesSocket(
+  const { checkPresence } = useMessagesSocket(
     () => { loadConvos(true); },
     (msg) => {
       setMessages((prev) => {
@@ -110,14 +113,25 @@ export default function StaffMessages() {
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     },
     activeRef,
+    (userId, online) => {
+      if (userId === activePartnerDbId.current) setPartnerOnline(online);
+    },
   );
 
   const openConvo = async (userId: string) => {
     setActive(userId);
+    setPartnerOnline(null); // reset until we get socket response
+    activePartnerDbId.current = null;
     try {
       const r = await api.get<ApiResponse<any>>(`${endpoints.staff.messages}/thread`, { uid: userId });
       setMessages(r.data?.messages ?? r.data ?? []);
       setPartnerLastLogin(r.data?.partner_last_login_at ?? null);
+      // Store the partner's db id (numeric) so we can match presence events
+      const partnerDbId = r.data?.partner_id ?? null;
+      if (partnerDbId) {
+        activePartnerDbId.current = String(partnerDbId);
+        checkPresence(String(partnerDbId));
+      }
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch { toast.error('Failed to load conversation'); }
   };
@@ -324,6 +338,17 @@ export default function StaffMessages() {
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{activeConvo?.name}</p>
                 {(() => {
+                  if (partnerOnline === true) return <p className="text-xs text-green-500 font-medium">Online</p>;
+                  if (partnerOnline === false) {
+                    if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
+                    const diff = Date.now() - new Date(partnerLastLogin).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
+                    const hrs = Math.floor(mins / 60);
+                    if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
+                    return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
+                  }
+                  // null = still waiting for socket response, fall back to last login
                   if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
                   const diff = Date.now() - new Date(partnerLastLogin).getTime();
                   const mins = Math.floor(diff / 60000);
