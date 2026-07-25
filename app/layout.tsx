@@ -1,6 +1,7 @@
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator';
 import PageLoader from '@/components/ui/PageLoader';
 import { ToastProvider } from '@/components/ui/Toast';
+import RegisterSW from '@/components/RegisterSW';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Script from 'next/script';
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </ToastProvider>
         <OfflineIndicator />
+        <RegisterSW />
       </body>
     </html>
   );

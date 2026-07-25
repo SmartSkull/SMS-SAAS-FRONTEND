@@ -129,6 +129,8 @@ export const endpoints = {
     refresh: '/auth/refresh',
     me: '/auth/me',
     logout: '/auth/logout',
+    webPushKey: '/auth/web-push-key',
+    webPushSubscription: '/auth/web-push-subscription',
   },
   student: {
     dashboard: '/student/dashboard',
