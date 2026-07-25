@@ -58,6 +58,8 @@ export default function StaffMessages() {
   const [convos, setConvos] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [active, setActive] = useState<string | null>(null);
+  const activeRef = useRef<string | null>(null);
+  useEffect(() => { activeRef.current = active; }, [active]);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
@@ -97,9 +99,18 @@ export default function StaffMessages() {
     loadConvos();
   }, [loadConvos]);
 
-  useMessagesSocket(() => {
-    loadConvos(true);
-  });
+  useMessagesSocket(
+    () => { loadConvos(true); },
+    (msg) => {
+      setMessages((prev) => {
+        const exists = prev.some((m) => String(m.id) === String(msg.id));
+        if (exists) return prev;
+        return [...prev, msg];
+      });
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    },
+    activeRef,
+  );
 
   const openConvo = async (userId: string) => {
     setActive(userId);
