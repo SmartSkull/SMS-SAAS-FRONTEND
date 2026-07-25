@@ -377,8 +377,8 @@ export default function AdminMessages() {
                               </a>
                             );
                           }
-                        })() : (
-                          <p>{m.message}</p>
+                        })(                        ) : (
+                          <p className="px-4 py-2.5">{m.message}</p>
                         )}
                         {m.edited && <p className="text-[10px] opacity-50 mt-0.5">edited</p>}
                       </div>
