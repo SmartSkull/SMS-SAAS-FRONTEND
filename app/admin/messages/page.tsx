@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRight, ChevronLeft, Pencil, Trash2, Check, Paperclip, ImageIcon, File, Music, Loader2 } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { guessType } from '@/lib/messages';
+import { readSelectedSchool } from '@/hooks/useSelectedSchool';
 import type { ApiResponse } from '@/types';
 import { useToast } from '@/components/ui/Toast';
 import { useMessagesSocket } from '@/hooks/useMessagesSocket';
@@ -26,7 +27,11 @@ export default function AdminMessages() {
   const [convos, setConvos] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [active, setActive] = useState<string | null>(null);
+  const activeRef = useRef<string | null>(null);
+  useEffect(() => { activeRef.current = active; }, [active]);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
+  const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
+  const activePartnerDbId = useRef<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
@@ -65,16 +70,35 @@ export default function AdminMessages() {
     loadConvos();
   }, [loadConvos]);
 
-  useMessagesSocket(() => {
-    loadConvos(true);
-  });
+  const { checkPresence } = useMessagesSocket(
+    () => { loadConvos(true); },
+    (msg) => {
+      setMessages((prev) => {
+        const exists = prev.some((m) => String(m.id) === String(msg.id));
+        if (exists) return prev;
+        return [...prev, msg];
+      });
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    },
+    activeRef,
+    (userId, online) => {
+      if (userId === activePartnerDbId.current) setPartnerOnline(online);
+    },
+  );
 
   const openConvo = async (userId: string) => {
     setActive(userId);
+    setPartnerOnline(null);
+    activePartnerDbId.current = null;
     try {
       const r = await api.get<ApiResponse<any>>(`${MESSAGES_EP}/thread`, { uid: userId });
       setMessages(r.data?.messages ?? r.data ?? []);
       setPartnerLastLogin(r.data?.partner_last_login_at ?? null);
+      const partnerDbId = r.data?.partner_id ?? null;
+      if (partnerDbId) {
+        activePartnerDbId.current = String(partnerDbId);
+        checkPresence(String(partnerDbId));
+      }
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch { toast.error('Failed to load conversation'); }
   };
@@ -147,7 +171,10 @@ export default function AdminMessages() {
   // Load classes when student role selected
   useEffect(() => {
     if (newRole !== 'student') return;
-    api.get<ApiResponse<{ name: string }[]>>(endpoints.public.classes)
+    const school = readSelectedSchool();
+    const params: any = {};
+    if (school?.slug) params.school = school.slug;
+    api.get<ApiResponse<{ name: string }[]>>(endpoints.public.classes, params)
       .then(r => setClasses((r.data ?? []).map((c: any) => c.name)))
       .catch(() => {});
   }, [newRole]);
@@ -313,6 +340,16 @@ export default function AdminMessages() {
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{activeConvo?.name}</p>
                 {(() => {
+                  if (partnerOnline === true) return <p className="text-xs text-green-500 font-medium">Online</p>;
+                  if (partnerOnline === false) {
+                    if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
+                    const diff = Date.now() - new Date(partnerLastLogin).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
+                    const hrs = Math.floor(mins / 60);
+                    if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
+                    return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
+                  }
                   if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
                   const diff = Date.now() - new Date(partnerLastLogin).getTime();
                   const mins = Math.floor(diff / 60000);
@@ -364,16 +401,16 @@ export default function AdminMessages() {
                             );
                           } else if (ftype === 'audio') {
                             return (
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
-                                <Music size={16} />
-                                <span className="truncate">{m.message || 'Audio'}</span>
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
+                                <Music size={16} className="shrink-0" />
+                                <span className="truncate text-sm">{m.message || 'Audio'}</span>
                               </a>
                             );
                           } else {
                             return (
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline">
-                                <File size={16} />
-                                <span className="truncate">{m.message || 'Document'}</span>
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
+                                <File size={16} className="shrink-0" />
+                                <span className="truncate text-sm">{m.message || 'Document'}</span>
                               </a>
                             );
                           }
@@ -391,24 +428,24 @@ export default function AdminMessages() {
 
             <div className="bg-white border-t border-gray-100">
               {showAttach && (
-                <div className="px-4 py-3 flex gap-3">
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                <div className="px-5 py-4 flex gap-4 border-b border-gray-100 bg-gray-50">
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                    <div className="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center">
                       <ImageIcon size={20} className="text-purple-600" />
                     </div>
-                    <span className="text-[10px] text-gray-500 font-medium">Photo / Video</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Photo / Video</span>
                   </button>
-                  <button type="button" onClick={() => docInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
-                    <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
+                  <button type="button" onClick={() => docInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                    <div className="w-11 h-11 rounded-xl bg-yellow-50 flex items-center justify-center">
                       <File size={20} className="text-yellow-600" />
                     </div>
-                    <span className="text-[10px] text-gray-500 font-medium">Document</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Document</span>
                   </button>
-                  <button type="button" onClick={() => audioInputRef.current?.click()} className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50">
-                    <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
+                  <button type="button" onClick={() => audioInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
+                    <div className="w-11 h-11 rounded-xl bg-pink-50 flex items-center justify-center">
                       <Music size={20} className="text-pink-600" />
                     </div>
-                    <span className="text-[10px] text-gray-500 font-medium">Audio</span>
+                    <span className="text-[11px] text-gray-500 font-medium">Audio</span>
                   </button>
                 </div>
               )}
