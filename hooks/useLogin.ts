@@ -63,6 +63,16 @@ export function useLogin() {
       const res = await api.post<ApiResponse<{ token: string; refresh_token: string; user: any }>>(ep, body);
       if (res.success) {
         auth.setSession(res.data.token, res.data.refresh_token, res.data.user, tab);
+
+        // Show a browser notification immediately after login (permission may already be granted)
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const firstName = res.data.user?.firstname || res.data.user?.firstName || 'User';
+          new Notification('Login Successful', {
+            body: `Welcome back, ${firstName}! You've signed in to Smart Campus.`,
+            icon: '/favicon.png',
+          });
+        }
+
         const destination = res.data.user?.isDriver ? '/staff/transport' : `/${tab}/dashboard`;
         router.push(destination);
       }
