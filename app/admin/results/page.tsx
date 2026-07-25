@@ -230,6 +230,62 @@ export default function AdminResults() {
         </div>
       )}
 
+      {/* Table */}
+      <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
+          <thead className="bg-gray-50 border-b border-gray-100">
+            <tr>
+              <th className="p-3 w-10"><input type="checkbox"
+                checked={selected.length === students.length && students.length > 0}
+                onChange={() => setSelected(selected.length === students.length ? [] : students.map(s => s.student_id))} /></th>
+              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
+              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
+              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {students.length === 0 ? (
+              <tr><td colSpan={5}>
+                <EmptyState
+                  icon={selectedClass ? FileBarChart2 : Search}
+                  message={selectedClass ? 'No results found for this filter.' : 'Select a class and click Search.'}
+                  card={false}
+                />
+              </td></tr>
+            ) : students.map((s) => (
+              <tr key={s.student_id} className="hover:bg-gray-50">
+                <td className="p-3"><input type="checkbox" checked={selected.includes(s.student_id)} onChange={() => toggleSelect(s.student_id)} /></td>
+                <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
+                <td className="p-3 text-gray-500 font-mono text-xs">{s.student_id}</td>
+                <td className="p-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.approved == 1 || s.approved === true || s.approved === '1' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {s.approved == 1 || s.approved === true || s.approved === '1' ? 'Approved' : 'Pending'}
+                  </span>
+                </td>
+                <td className="p-3">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setViewingStudent(s.student_id)}
+                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg" title="View Result">
+                      <Eye size={18} />
+                    </button>
+                    {s.approved == 1 || s.approved === true || s.approved === '1' ? (
+                      <span className="text-green-500" title="Verified"><BadgeCheck size={18} /></span>
+                    ) : (
+                      <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Verify">
+                        {approving[s.student_id] ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        </div>
+      </div>
+
       {students.length > 0 && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -358,61 +414,6 @@ export default function AdminResults() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[500px]">
-          <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>
-              <th className="p-3 w-10"><input type="checkbox"
-                checked={selected.length === students.length && students.length > 0}
-                onChange={() => setSelected(selected.length === students.length ? [] : students.map(s => s.student_id))} /></th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">ID</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-              <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {students.length === 0 ? (
-              <tr><td colSpan={5}>
-                <EmptyState
-                  icon={selectedClass ? FileBarChart2 : Search}
-                  message={selectedClass ? 'No results found for this filter.' : 'Select a class and click Search.'}
-                  card={false}
-                />
-              </td></tr>
-            ) : students.map((s) => (
-              <tr key={s.student_id} className="hover:bg-gray-50">
-                <td className="p-3"><input type="checkbox" checked={selected.includes(s.student_id)} onChange={() => toggleSelect(s.student_id)} /></td>
-                <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
-                <td className="p-3 text-gray-500 font-mono text-xs">{s.student_id}</td>
-                <td className="p-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.approved == 1 || s.approved === true || s.approved === '1' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                    {s.approved == 1 || s.approved === true || s.approved === '1' ? 'Approved' : 'Pending'}
-                  </span>
-                </td>
-                <td className="p-3">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setViewingStudent(s.student_id)}
-                      className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg" title="View Result">
-                      <Eye size={18} />
-                    </button>
-                    {s.approved == 1 || s.approved === true || s.approved === '1' ? (
-                      <span className="text-green-500" title="Verified"><BadgeCheck size={18} /></span>
-                    ) : (
-                      <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Verify">
-                        {approving[s.student_id] ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-      </div>
       {viewingStudent && (
         <StudentResultModal
           studentId={viewingStudent}
