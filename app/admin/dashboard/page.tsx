@@ -7,18 +7,18 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import Link from 'next/link';
 
 const QUICK_ACTIONS = [
-  { label: 'Add Student',    href: '/admin/students',     icon: UserPlus,      color: 'bg-blue-50 text-blue-600 hover:bg-blue-100' },
-  { label: 'Add Staff',      href: '/admin/staff',        icon: Users,         color: 'bg-purple-50 text-purple-600 hover:bg-purple-100' },
-  { label: 'Results',        href: '/admin/results',      icon: ClipboardList, color: 'bg-green-50 text-green-600 hover:bg-green-100' },
-  { label: 'Payments',       href: '/admin/payments',     icon: CreditCard,    color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' },
-  { label: 'Messages',       href: '/admin/messages',     icon: MessageSquare, color: 'bg-pink-50 text-pink-600 hover:bg-pink-100' },
-  { label: 'Attendance',     href: '/admin/attendance',   icon: CheckSquare,   color: 'bg-teal-50 text-teal-600 hover:bg-teal-100' },
-  { label: 'Classes',        href: '/admin/classes',      icon: GraduationCap, color: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100' },
-  { label: 'Sessions',       href: '/admin/sessions',     icon: CalendarDays,  color: 'bg-orange-50 text-orange-600 hover:bg-orange-100' },
-  { label: 'Library',        href: '/admin/library',      icon: Library,       color: 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100' },
-  { label: 'CBT',            href: '/admin/cbt',          icon: BookOpen,      color: 'bg-rose-50 text-rose-600 hover:bg-rose-100' },
-  { label: 'Notifications',  href: '/admin/notifications',icon: Bell,          color: 'bg-amber-50 text-amber-600 hover:bg-amber-100' },
-  { label: 'Settings',       href: '/admin/settings',     icon: Settings,      color: 'bg-gray-100 text-gray-600 hover:bg-gray-200' },
+  { label: 'Add Student',    href: '/admin/students',     icon: UserPlus,      color: 'bg-blue-600 hover:bg-blue-700 text-white' },
+  { label: 'Add Staff',      href: '/admin/staff',        icon: Users,         color: 'bg-purple-600 hover:bg-purple-700 text-white' },
+  { label: 'Results',        href: '/admin/results',      icon: ClipboardList, color: 'bg-green-600 hover:bg-green-700 text-white' },
+  { label: 'Payments',       href: '/admin/payments',     icon: CreditCard,    color: 'bg-yellow-500 hover:bg-yellow-600 text-white' },
+  { label: 'Messages',       href: '/admin/messages',     icon: MessageSquare, color: 'bg-pink-600 hover:bg-pink-700 text-white' },
+  { label: 'Attendance',     href: '/admin/attendance',   icon: CheckSquare,   color: 'bg-teal-600 hover:bg-teal-700 text-white' },
+  { label: 'Classes',        href: '/admin/classes',      icon: GraduationCap, color: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
+  { label: 'Sessions',       href: '/admin/sessions',     icon: CalendarDays,  color: 'bg-orange-500 hover:bg-orange-600 text-white' },
+  { label: 'Library',        href: '/admin/library',      icon: Library,       color: 'bg-cyan-600 hover:bg-cyan-700 text-white' },
+  { label: 'CBT',            href: '/admin/cbt',          icon: BookOpen,      color: 'bg-rose-600 hover:bg-rose-700 text-white' },
+  { label: 'Notifications',  href: '/admin/notifications',icon: Bell,          color: 'bg-amber-500 hover:bg-amber-600 text-white' },
+  { label: 'Settings',       href: '/admin/settings',     icon: Settings,      color: 'bg-gray-700 hover:bg-gray-800 text-white' },
 ];
 
 export default function AdminDashboard() {
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
             {QUICK_ACTIONS.map(({ label, href, icon: Icon, color }) => (
               <Link key={label} href={href}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-colors ${color}`}>
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-colors shadow-sm ${color}`}>
                 <Icon size={22} />
                 <span className="text-xs font-medium text-center leading-tight">{label}</span>
               </Link>
