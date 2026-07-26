@@ -348,7 +348,7 @@ export default function TransportPage() {
   useEffect(() => {
     if (!driverStaffSearch.trim()) { setDriverStaffOptions([]); return; }
     setDriverStaffLoading(true);
-    api.get<any>(endpoints.admin.staff, { search: driverStaffSearch, per_page: 20, verified: '1' })
+    api.get<any>(endpoints.admin.staff, { search: driverStaffSearch, per_page: 20 })
       .then(r => setDriverStaffOptions((r.data ?? []).map((s: any) => ({ uniqueId: s.unique_id, firstName: s.firstname, lastName: s.lastname }))))
       .catch(() => {}).finally(() => setDriverStaffLoading(false));
   }, [driverStaffSearch]);
