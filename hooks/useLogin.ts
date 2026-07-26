@@ -64,13 +64,26 @@ export function useLogin() {
       if (res.success) {
         auth.setSession(res.data.token, res.data.refresh_token, res.data.user, tab);
 
-        // Show a browser notification immediately after login (permission may already be granted)
+        // Show a browser notification immediately after login (permission may already be granted).
+        // iOS Safari and Android Chrome do not allow `new Notification()` from a page context —
+        // they require ServiceWorkerRegistration.showNotification() instead.
         if ('Notification' in window && Notification.permission === 'granted') {
           const firstName = res.data.user?.firstname || res.data.user?.firstName || 'User';
-          new Notification('Login Successful', {
+          const notifOptions: NotificationOptions = {
             body: `Welcome back, ${firstName}! You've signed in to Smart Campus.`,
             icon: '/favicon.png',
-          });
+          };
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready
+              .then((reg) => reg.showNotification('Login Successful', notifOptions))
+              .catch(() => {
+                // Fallback for desktop browsers that still support direct construction
+                try { new Notification('Login Successful', notifOptions); } catch { /* ignore */ }
+              });
+          } else {
+            // Desktop-only fallback (no service worker available)
+            try { new Notification('Login Successful', notifOptions); } catch { /* ignore */ }
+          }
         }
 
         const destination = res.data.user?.isDriver ? '/staff/transport' : `/${tab}/dashboard`;
