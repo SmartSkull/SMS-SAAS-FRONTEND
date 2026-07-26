@@ -1,9 +1,25 @@
 'use client';
-import { Users, UserCheck, Activity, User } from 'lucide-react';
+import { Users, UserCheck, Activity, User, UserPlus, BookOpen, ClipboardList, CreditCard, MessageSquare, Settings, GraduationCap, Bell, BarChart2, CheckSquare, CalendarDays, Library } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks/admin';
 import { useAuth } from '@/hooks/useAuth';
 import { getImageUrl } from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import Link from 'next/link';
+
+const QUICK_ACTIONS = [
+  { label: 'Add Student',    href: '/admin/students',     icon: UserPlus,      color: 'bg-blue-50 text-blue-600 hover:bg-blue-100' },
+  { label: 'Add Staff',      href: '/admin/staff',        icon: Users,         color: 'bg-purple-50 text-purple-600 hover:bg-purple-100' },
+  { label: 'Results',        href: '/admin/results',      icon: ClipboardList, color: 'bg-green-50 text-green-600 hover:bg-green-100' },
+  { label: 'Payments',       href: '/admin/payments',     icon: CreditCard,    color: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100' },
+  { label: 'Messages',       href: '/admin/messages',     icon: MessageSquare, color: 'bg-pink-50 text-pink-600 hover:bg-pink-100' },
+  { label: 'Attendance',     href: '/admin/attendance',   icon: CheckSquare,   color: 'bg-teal-50 text-teal-600 hover:bg-teal-100' },
+  { label: 'Classes',        href: '/admin/classes',      icon: GraduationCap, color: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100' },
+  { label: 'Sessions',       href: '/admin/sessions',     icon: CalendarDays,  color: 'bg-orange-50 text-orange-600 hover:bg-orange-100' },
+  { label: 'Library',        href: '/admin/library',      icon: Library,       color: 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100' },
+  { label: 'CBT',            href: '/admin/cbt',          icon: BookOpen,      color: 'bg-rose-50 text-rose-600 hover:bg-rose-100' },
+  { label: 'Notifications',  href: '/admin/notifications',icon: Bell,          color: 'bg-amber-50 text-amber-600 hover:bg-amber-100' },
+  { label: 'Settings',       href: '/admin/settings',     icon: Settings,      color: 'bg-gray-100 text-gray-600 hover:bg-gray-200' },
+];
 
 export default function AdminDashboard() {
   const { data, loading } = useAdminDashboard();
@@ -50,6 +66,20 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
+        {/* Quick Actions */}
+        <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5 lg:col-span-2">
+          <h2 className="font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            {QUICK_ACTIONS.map(({ label, href, icon: Icon, color }) => (
+              <Link key={label} href={href}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-colors ${color}`}>
+                <Icon size={22} />
+                <span className="text-xs font-medium text-center leading-tight">{label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* Students by class */}
         <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5">
           <h2 className="font-semibold text-gray-900 mb-4">Students by Class</h2>
