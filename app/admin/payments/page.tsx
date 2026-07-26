@@ -105,25 +105,120 @@ export default function PaymentsPage() {
       </div>
       </div>
 
-      {summary.length > 0 && (
-        <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Payments by Class</h2>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={summary} margin={{ top: 4, right: 8, left: -16, bottom: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis dataKey="class" tick={{ fontSize: 9, fill: '#6b7280' }} angle={-45} textAnchor="end" interval={0} />
-              <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}
-                cursor={{ fill: '#f3f4f6' }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-              <Bar dataKey="paid_count" name="Paid" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={36} />
-              <Bar dataKey="unpaid_count" name="Unpaid" fill="#e5e7eb" radius={[4, 4, 0, 0]} maxBarSize={36} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      {summary.length > 0 && (() => {
+        const totalPaid    = summary.reduce((s, c) => s + (c.paid_count ?? 0), 0);
+        const totalUnpaid  = summary.reduce((s, c) => s + (c.unpaid_count ?? 0), 0);
+        const totalAmount  = summary.reduce((s, c) => s + Number(c.total_amount ?? 0), 0);
+        const totalStudents = totalPaid + totalUnpaid;
+        const paidPct = totalStudents > 0 ? Math.round((totalPaid / totalStudents) * 100) : 0;
+
+        return (
+          <>
+            {/* ── Summary cards ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-4">
+                <p className="text-xs font-medium text-gray-500 uppercase">Total Collected</p>
+                <p className="mt-1 text-2xl font-bold text-green-700">₦{totalAmount.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">across all classes</p>
+              </div>
+              <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-4">
+                <p className="text-xs font-medium text-gray-500 uppercase">Paid</p>
+                <p className="mt-1 text-2xl font-bold text-purple-700">{totalPaid.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{paidPct}% of students</p>
+              </div>
+              <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-4">
+                <p className="text-xs font-medium text-gray-500 uppercase">Outstanding</p>
+                <p className="mt-1 text-2xl font-bold text-yellow-600">{totalUnpaid.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">yet to pay</p>
+              </div>
+              <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-4">
+                <p className="text-xs font-medium text-gray-500 uppercase">Collection Rate</p>
+                <p className="mt-1 text-2xl font-bold text-blue-700">{paidPct}%</p>
+                <div className="mt-1.5 w-full bg-gray-100 rounded-full h-1.5">
+                  <div className="bg-blue-600 h-1.5 rounded-full transition-all" style={{ width: `${paidPct}%` }} />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Per-class breakdown table ── */}
+            <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-5 pb-3">
+                <h2 className="font-semibold text-gray-900">Breakdown by Class</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Class</th>
+                      <th className="p-3 text-right text-xs font-semibold text-gray-500 uppercase">Paid</th>
+                      <th className="p-3 text-right text-xs font-semibold text-gray-500 uppercase">Unpaid</th>
+                      <th className="p-3 text-right text-xs font-semibold text-gray-500 uppercase">Total Collected</th>
+                      <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {summary.map((row) => {
+                      const total = (row.paid_count ?? 0) + (row.unpaid_count ?? 0);
+                      const pct   = total > 0 ? Math.round(((row.paid_count ?? 0) / total) * 100) : 0;
+                      return (
+                        <tr key={row.class} className="hover:bg-gray-50">
+                          <td className="p-3 font-medium text-gray-900">{row.class}</td>
+                          <td className="p-3 text-right text-green-700 font-semibold">{row.paid_count ?? 0}</td>
+                          <td className="p-3 text-right text-yellow-600 font-semibold">{row.unpaid_count ?? 0}</td>
+                          <td className="p-3 text-right font-bold text-gray-900">₦{Number(row.total_amount ?? 0).toLocaleString()}</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2 min-w-[90px]">
+                              <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                                <div className="bg-purple-600 h-1.5 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-xs text-gray-500 w-9 text-right">{pct}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="border-t-2 border-gray-200 bg-gray-50">
+                    <tr>
+                      <td className="p-3 font-bold text-gray-700">Total</td>
+                      <td className="p-3 text-right font-bold text-green-700">{totalPaid}</td>
+                      <td className="p-3 text-right font-bold text-yellow-600">{totalUnpaid}</td>
+                      <td className="p-3 text-right font-bold text-gray-900">₦{totalAmount.toLocaleString()}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2 min-w-[90px]">
+                          <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                            <div className="bg-purple-600 h-1.5 rounded-full" style={{ width: `${paidPct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-500 w-9 text-right">{paidPct}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* ── Bar chart ── */}
+            <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5">
+              <h2 className="font-semibold text-gray-900 mb-4">Payments by Class</h2>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={summary} margin={{ top: 4, right: 8, left: -16, bottom: 50 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                  <XAxis dataKey="class" tick={{ fontSize: 9, fill: '#6b7280' }} angle={-45} textAnchor="end" interval={0} />
+                  <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', fontSize: 13 }}
+                    cursor={{ fill: '#f3f4f6' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  <Bar dataKey="paid_count" name="Paid" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                  <Bar dataKey="unpaid_count" name="Unpaid" fill="#e5e7eb" radius={[4, 4, 0, 0]} maxBarSize={36} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </>
+        );
+      })()}
 
       <div className="bg-white rounded-2xl card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
