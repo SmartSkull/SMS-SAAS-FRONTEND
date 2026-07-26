@@ -40,7 +40,7 @@ export default function ClassesPage() {
     setModal({ open: true, cls });
     if (!cls && staff.length === 0) {
       try {
-        const r = await api.get<{ success: boolean; data: Staff[] }>(endpoints.admin.staff, { per_page: '50' });
+        const r = await api.get<{ success: boolean; data: Staff[] }>(endpoints.admin.staff, { per_page: '50', verified: '1' });
         setStaff((r.data ?? []).filter(s => s.staffNo));
       } catch { toast.error('Failed to load teachers'); }
     }
