@@ -857,7 +857,22 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                         </p>
                       )}
                       {key === 'principalComment' && (
-                        <div className="mt-2 flex justify-end">
+                        <div className="mt-2 flex items-end justify-between gap-4">
+                          {getImageUrl(data.signature) ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <img
+                                src={getImageUrl(data.signature)!}
+                                alt="Principal Signature"
+                                className="h-10 w-auto object-contain border-b border-gray-400 pb-1"
+                              />
+                              <p className="text-xs text-gray-500 uppercase tracking-wide">Signature</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="h-10 w-32 border-b border-gray-400" />
+                              <p className="text-xs text-gray-500 uppercase tracking-wide">Signature</p>
+                            </div>
+                          )}
                           <button
                             onClick={savePrincipalComment}
                             disabled={savingComment}
