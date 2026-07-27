@@ -739,25 +739,6 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                 </div>
               )}
 
-              {/* Attendance */}
-              {data.attendance && (
-                <div className="grid grid-cols-4 gap-3">
-                  {[
-                    { label: 'Days Present', value: data.attendance.present ?? 0, color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
-                    { label: 'Days Absent',  value: data.attendance.absent  ?? 0, color: 'text-red-700',   bg: 'bg-red-50 border-red-200' },
-                    { label: 'Total Days',   value: (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0)), color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
-                    { label: 'Attendance',   value: (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0)) > 0
-                        ? `${((Number(data.attendance.present ?? 0) / (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0))) * 100).toFixed(1)}%`
-                        : '0%',
-                      color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
-                  ].map(({ label, value, color, bg }) => (
-                    <div key={label} className={`rounded-xl border p-3 text-center ${bg}`}>
-                      <p className={`text-xl font-bold ${color}`}>{value}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               <div className="overflow-x-auto rounded-xl border border-gray-100">
                 <table className="w-full text-sm">
