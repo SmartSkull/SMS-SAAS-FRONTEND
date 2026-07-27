@@ -702,11 +702,15 @@ export default function StaffResults() {
   };
 
   const getGrade = (total: number) => {
-    if (total >= 70) return { g: 'A', cls: 'bg-green-100 text-green-700' };
-    if (total >= 60) return { g: 'B', cls: 'bg-blue-100 text-blue-700' };
-    if (total >= 50) return { g: 'C', cls: 'bg-yellow-100 text-yellow-700' };
-    if (total >= 40) return { g: 'D', cls: 'bg-orange-100 text-orange-700' };
-    return { g: 'F', cls: 'bg-red-100 text-red-700' };
+    if (total >= 75) return { g: 'A1', cls: 'bg-green-100 text-green-700' };
+    if (total >= 70) return { g: 'B2', cls: 'bg-green-100 text-green-600' };
+    if (total >= 65) return { g: 'B3', cls: 'bg-blue-100 text-blue-700' };
+    if (total >= 60) return { g: 'C4', cls: 'bg-yellow-100 text-yellow-700' };
+    if (total >= 55) return { g: 'C5', cls: 'bg-yellow-100 text-yellow-600' };
+    if (total >= 50) return { g: 'C6', cls: 'bg-yellow-100 text-yellow-500' };
+    if (total >= 45) return { g: 'D7', cls: 'bg-orange-100 text-orange-700' };
+    if (total >= 40) return { g: 'E8', cls: 'bg-gray-100 text-gray-600' };
+    return { g: 'F9', cls: 'bg-red-100 text-red-700' };
   };
 
   return (
@@ -1364,10 +1368,14 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
     : '0';
 
   const gradeColor = (total: number) => {
-    if (total >= 70) return 'bg-green-100 text-green-700';
-    if (total >= 60) return 'bg-blue-100 text-blue-700';
-    if (total >= 50) return 'bg-yellow-100 text-yellow-700';
-    if (total >= 40) return 'bg-orange-100 text-orange-700';
+    if (total >= 75) return 'bg-green-100 text-green-700';
+    if (total >= 70) return 'bg-green-100 text-green-600';
+    if (total >= 65) return 'bg-blue-100 text-blue-700';
+    if (total >= 60) return 'bg-yellow-100 text-yellow-700';
+    if (total >= 55) return 'bg-yellow-100 text-yellow-600';
+    if (total >= 50) return 'bg-yellow-100 text-yellow-500';
+    if (total >= 45) return 'bg-orange-100 text-orange-700';
+    if (total >= 40) return 'bg-gray-100 text-gray-600';
     return 'bg-red-100 text-red-700';
   };
 
