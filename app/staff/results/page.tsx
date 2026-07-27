@@ -358,6 +358,9 @@ export default function StaffResults() {
         // Only set if not already populated by a restored draft
         setUploadSession(prev => prev || session);
         setUploadTerm(prev => prev || term);
+        // Also use as fallback for the filter dropdowns (needed for comment saving)
+        if (session) setSessionFilter(prev => prev || session);
+        if (term) setTermFilter(prev => prev || term);
         // Fetch admin-configured school days for this session/term
         if (session && term) {
           try {
@@ -597,6 +600,18 @@ export default function StaffResults() {
 
   const handleComment = async () => {
     if (!commentModal) return;
+    
+    // Validate that session and term are selected
+    if (!sessionFilter || !termFilter) {
+      toast.error('Please select session and term first');
+      return;
+    }
+    
+    if (!commentModal.comment.trim()) {
+      toast.error('Comment cannot be empty');
+      return;
+    }
+    
     try {
       await api.post(endpoints.staff.comment, {
         student_id: commentModal.student_id,
@@ -605,7 +620,9 @@ export default function StaffResults() {
         term: termFilter,
       });
       toast.success('Comment saved'); setCommentModal(null);
-    } catch { toast.error('Failed to save comment'); }
+    } catch (e: any) { 
+      toast.error(e?.message || 'Failed to save comment'); 
+    }
   };
 
   const handleAttendance = async (e: React.FormEvent) => {
@@ -1001,12 +1018,39 @@ export default function StaffResults() {
       {commentModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl card p-6 w-full max-w-md space-y-4">
-            <h3 className="font-semibold text-gray-900">Teacher Comment</h3>
+            <div>
+              <h3 className="font-semibold text-gray-900">Teacher Comment</h3>
+              {sessionFilter && termFilter
+                ? <p className="text-xs text-gray-400 mt-0.5">{sessionFilter} — {termFilter} Term</p>
+                : <p className="text-xs text-red-500 mt-0.5 font-medium">⚠ Select a session and term from the filters before saving.</p>
+              }
+            </div>
+            {(!sessionFilter || !termFilter) && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Session</label>
+                  <select value={sessionFilter} onChange={e => setSessionFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-red-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
+                    <option value="">Select session</option>
+                    {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Term</label>
+                  <select value={termFilter} onChange={e => setTermFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-red-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
+                    <option value="">Select term</option>
+                    {terms.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
             <textarea value={commentModal.comment} onChange={e => setCommentModal(p => p ? { ...p, comment: e.target.value } : null)}
               rows={4} placeholder="Enter comment…"
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             <div className="flex gap-3">
-              <button onClick={handleComment} className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">Save</button>
+              <button onClick={handleComment} disabled={!sessionFilter || !termFilter}
+                className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 disabled:opacity-50">Save</button>
               <button onClick={() => setCommentModal(null)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
             </div>
           </div>
