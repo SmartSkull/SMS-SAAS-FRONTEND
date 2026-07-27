@@ -204,7 +204,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
           ${showFirst  ? '<td style="background:#eff6ff">' + (r.first_term_score ?? '-') + '</td>' : ''}
           ${showSecond ? '<td style="background:#f0fdf4">' + (r.second_term_score ?? '-') + '</td>' : ''}
           <td>${r.testScore}</td><td>${r.examScore}</td>
-          <td style="font-weight:700;color:${total >= 50 ? '#166534' : '#dc2626'}">${total}</td>
+          <td style="font-weight:700;color:${total >= 40 ? '#166534' : '#dc2626'}">${total}</td>
           <td style="background:#f5f3ff;font-weight:600">${r.cumulative ?? total}</td>
           <td style="background:#fffbeb;font-weight:600">${r.average ?? total}</td>
           <td><span class="badge" style="background:${gc}">${r.grade}</span></td>

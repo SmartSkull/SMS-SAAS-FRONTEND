@@ -133,13 +133,13 @@ export default function AdminResults() {
     : 0;
   const performanceBands = useMemo(() => {
     const bands = [
-      { name: 'Excellent', value: 0 }, { name: 'Good', value: 0 }, { name: 'Credit', value: 0 },
-      { name: 'Pass', value: 0 }, { name: 'Needs Support', value: 0 },
+      { name: 'Excellent (A1)', value: 0 }, { name: 'Good (B)', value: 0 }, { name: 'Credit (C)', value: 0 },
+      { name: 'Pass (D7/E8)', value: 0 }, { name: 'Fail (F9)', value: 0 },
     ];
     students.forEach((student) => {
       const avg = Number(student.average) || 0;
-      if (avg >= 70) bands[0].value += 1;
-      else if (avg >= 60) bands[1].value += 1;
+      if (avg >= 75) bands[0].value += 1;
+      else if (avg >= 65) bands[1].value += 1;
       else if (avg >= 50) bands[2].value += 1;
       else if (avg >= 40) bands[3].value += 1;
       else bands[4].value += 1;
