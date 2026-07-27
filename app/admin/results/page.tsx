@@ -1,10 +1,211 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, Check, CheckCircle, Eye, FileBarChart2, Loader2, Search, User, X, XCircle } from 'lucide-react';
+import { BadgeCheck, Check, CheckCircle, Eye, FileBarChart2, Loader2, Printer, Search, User, X, XCircle } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
+import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
+import type { SchoolProfile } from '@/types';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+async function toBase64(url: string): Promise<string> {
+  if (!url) return '';
+  try {
+    const absUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+    const res = await fetch(absUrl, { headers: { 'ngrok-skip-browser-warning': '1' } });
+    if (!res.ok) return '';
+    const blob = await res.blob();
+    return await new Promise<string>((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = () => resolve('');
+      r.readAsDataURL(blob);
+    });
+  } catch { return ''; }
+}
+
+function gradeColorHex(g?: string) {
+  if (g === 'A1') return '#16a34a';
+  if (g === 'B2') return '#22c55e';
+  if (g === 'B3') return '#3b82f6';
+  if (g && ['C4', 'C5', 'C6'].includes(g)) return '#d97706';
+  if (g === 'D7') return '#a855f7';
+  if (g === 'E8') return '#6b7280';
+  return '#dc2626';
+}
+
+async function printResultSheet(data: any, results: any[], session: string, term: string, school?: SchoolProfile | null) {
+  const showFirst  = term.toLowerCase() === 'second' || term.toLowerCase() === 'third';
+  const showSecond = term.toLowerCase() === 'third';
+
+  const traitsHtml = data.trait ? (
+    '<div class="traits-section"><div class="traits-title">Affective Traits</div><div class="traits-grid">' +
+      ['Punctuality','Perseverance','Responsibility','Diligence','Self Control','Honesty','Attendance','Attentiveness','Creativity','Curiosity']
+        .map(k => '<div class="trait-item"><span class="trait-label">' + k + '</span><span class="trait-score">' + (data.trait[k.replace(/ ./g, c => c.trim().toUpperCase())[0].toLowerCase() + k.slice(1).replace(/ ./g, c => c.trim().toUpperCase())] ?? data.trait[k.toLowerCase().replace(/ /g,'')]) + '/5</span></div>').join('') +
+    '</div></div>' +
+    '<div class="traits-section"><div class="traits-title">Psychomotor Traits</div><div class="traits-grid">' +
+      [['Drawing', data.trait.drawing],['Physical Activity', data.trait.physicalActivity],['Accuracy', data.trait.accuracy],['Handling of Tools', data.trait.handlingOfTools],['Mental Skills', data.trait.mentalSkills]]
+        .map(([l,v]) => '<div class="trait-item"><span class="trait-label">' + l + '</span><span class="trait-score">' + v + '/5</span></div>').join('') +
+    '</div></div>'
+  ) : '';
+
+  const totalScore = results.reduce((s: number, r: any) => s + Number(r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score))), 0);
+  const avg = results.length ? (totalScore / results.length).toFixed(1) : '0';
+
+  const photoUrl          = getImageUrl(data.student?.image) ?? '';
+  const teacherPhotoUrl   = getImageUrl(data.teacher?.image) ?? '';
+  const principalPhotoUrl = getImageUrl(data.principal?.image) ?? '';
+  const signatureUrl      = getImageUrl(data.signature) ?? '';
+  const logoUrl = normalizeSchoolLogo(school?.logo) || '';
+  const primary = school?.primaryColor || '#1d4ed8';
+  const schoolName = school?.name || 'School Portal';
+  const schoolSlogan = school?.slogan || school?.motto || '';
+
+  const [logoB64, photoB64, sigB64, teacherB64, principalB64] = await Promise.all([
+    toBase64(logoUrl), toBase64(photoUrl), toBase64(signatureUrl),
+    toBase64(teacherPhotoUrl), toBase64(principalPhotoUrl),
+  ]);
+
+  const present = Number(data.attendance?.present || 0);
+  const absent  = Number(data.attendance?.absent  || 0);
+  const totalDays = present + absent;
+  const attendanceRate = totalDays > 0 ? ((present / totalDays) * 100).toFixed(1) : '0';
+
+  const win = window.open('', '_blank');
+  if (!win) { alert('Pop-up blocked. Please allow pop-ups and try again.'); return; }
+
+  const html = `<!DOCTYPE html><html><head>
+  <title>Result — ${data.student?.firstName} ${data.student?.lastName}</title>
+  <style>
+    @page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:10px;background:#fff}
+    .hdr{text-align:center;margin-bottom:6px;padding-bottom:4px;border-bottom:2px solid ${primary}}
+    .info-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:6px 10px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe}
+    .stats{display:flex;gap:8px}.stat{text-align:center;padding:3px 8px;background:#fff;border-radius:4px;border:1px solid #e2e8f0}
+    .stat .n{font-size:12px;font-weight:700;color:${primary}}.stat .l{font-size:6px;color:#666;text-transform:uppercase}
+    table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:6px}
+    th{background:${primary};color:#fff;padding:4px 3px;font-size:8px;text-transform:uppercase}
+    td{padding:4px 3px;text-align:center;border-bottom:1px solid #e5e7eb}tr:nth-child(even){background:#f9fafb}
+    .sn{text-align:left!important;font-weight:500}.badge{display:inline-block;padding:2px 6px;border-radius:4px;font-weight:700;font-size:8px;color:#fff}
+    .att{display:flex;gap:20px;margin-bottom:6px;padding:6px 10px;background:#eff6ff;border-radius:4px;border:1px solid #bfdbfe}
+    .att-item{text-align:center}.att-item .n{font-size:12px;font-weight:700}.att-item .l{font-size:7px;color:#666;text-transform:uppercase}
+    .cmts{display:flex;gap:10px;margin-bottom:8px}.cmt{flex:1;padding:6px;border-radius:4px;border:1px solid #e5e7eb}
+    .cmt.t{background:#fefce8;border-color:#fde047}.cmt.p{background:#eef2ff;border-color:#a5b4fc}
+    .cmt .ttl{font-size:8px;font-weight:700;text-transform:uppercase;margin-bottom:3px}.cmt .txt{font-size:9px;color:#555;font-style:italic}
+    .scale{display:flex;justify-content:center;gap:4px;margin-bottom:8px;padding:6px;background:#f9fafb;border-radius:4px;border:1px solid #e5e7eb}
+    .sc-item{text-align:center}.sc-item .c{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font-weight:700;font-size:6px;color:#fff}
+    .sc-item .r{font-size:6px;color:#666;margin-top:1px}.sc-item .d{font-size:5px;color:#888}
+    .foot{margin-top:10px;padding-top:8px;border-top:1px solid #e5e7eb;display:flex;justify-content:center;gap:60px}
+    .sig .ttl{font-size:8px;color:#666;text-transform:uppercase;margin-top:3px;text-align:center}
+    .sig-img{height:35px;width:auto;display:block;margin:0 auto}
+    .date-val{font-size:11px;font-weight:600;color:#333;padding:5px 0;border-bottom:1px solid #333;min-width:120px;text-align:center}
+    .sum td{font-weight:700;border-top:2px solid ${primary};background:#eff6ff!important}
+    .traits-section{margin:8px 0;font-size:8px}
+    .traits-title{font-weight:700;padding:4px 6px;background:#f3f4f6;border-radius:4px;margin-bottom:3px;text-transform:uppercase}
+    .traits-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+    .trait-item{padding:3px;background:#fafafa;border:1px solid #e5e7eb;border-radius:2px;text-align:center}
+    .trait-label{font-weight:600;color:#374151;font-size:6px;display:block;margin-bottom:1px}
+    .trait-score{font-weight:700;color:${primary};font-size:9px}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body><div>
+  <div class="hdr">
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:4px">
+      ${logoB64 ? `<img src="${logoB64}" style="width:56px;height:56px;object-fit:contain">` : ''}
+      <div style="text-align:left"><div style="color:${primary};font-size:17px;font-weight:700">${schoolName}</div><div style="color:#555;font-size:9px">${schoolSlogan}</div></div>
+    </div>
+    <div style="margin-top:5px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb;padding:3px 12px;display:inline-block"><p style="color:#374151;font-weight:500;font-size:10px">Comprehensive Analysis of Assessment</p></div>
+    <div style="margin-top:5px;display:flex;justify-content:center;gap:15px;font-size:9px"><span><strong>Session:</strong> ${session}</span><span><strong>Term:</strong> ${term} Term</span></div>
+  </div>
+  <div class="info-bar">
+    ${photoB64 ? `<img src="${photoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ${primary};margin-right:10px">` : ''}
+    <div style="display:flex;gap:15px">
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${data.student?.firstName} ${data.student?.lastName}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${data.student?.uniqueId || ''}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class</div><div style="font-weight:600;font-size:10px">${data.class || 'N/A'}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class Size</div><div style="font-weight:600;font-size:10px">${data.class_size || 'N/A'}</div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="n">${results.length}</div><div class="l">Subjects</div></div>
+      <div class="stat"><div class="n">${totalScore}</div><div class="l">Total</div></div>
+      <div class="stat"><div class="n">${avg}%</div><div class="l">Average</div></div>
+    </div>
+  </div>
+  <div class="att">
+    <div class="att-item"><div class="n" style="color:#16a34a">${present}</div><div class="l">Days Present</div></div>
+    <div class="att-item"><div class="n" style="color:#dc2626">${absent}</div><div class="l">Days Absent</div></div>
+    <div class="att-item"><div class="n" style="color:#2563eb">${totalDays}</div><div class="l">Total Days</div></div>
+    <div class="att-item"><div class="n" style="color:#7c3aed">${attendanceRate}%</div><div class="l">Attendance</div></div>
+  </div>
+  <table><thead><tr>
+    <th style="width:20px">S/N</th><th style="text-align:left">Subject</th>
+    ${showFirst  ? '<th style="background:#3b82f6">1st Term</th>' : ''}
+    ${showSecond ? '<th style="background:#22c55e">2nd Term</th>' : ''}
+    <th>CA (40)</th><th>Exam (60)</th><th>Total</th>
+    <th style="background:#7c3aed">Cumulative</th><th style="background:#d97706">Average</th>
+    <th>Grade</th><th>Remark</th>
+  </tr></thead><tbody>
+    ${results.map((r: any, i: number) => {
+      const total = Number(r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score)));
+      const gc = gradeColorHex(r.grade);
+      return `<tr>
+        <td>${i + 1}</td><td class="sn">${r.course ?? r.subject?.name}</td>
+        ${showFirst  ? `<td style="background:#eff6ff">${r.first_term_score ?? '-'}</td>` : ''}
+        ${showSecond ? `<td style="background:#f0fdf4">${r.second_term_score ?? '-'}</td>` : ''}
+        <td>${r.testScore ?? r.test_score}</td><td>${r.examScore ?? r.exam_score}</td>
+        <td style="font-weight:700;color:${total >= 40 ? '#166534' : '#dc2626'}">${total}</td>
+        <td style="background:#f5f3ff;font-weight:600">${r.cumulative ?? total}</td>
+        <td style="background:#fffbeb;font-weight:600">${r.average ?? total}</td>
+        <td><span class="badge" style="background:${gc}">${r.grade}</span></td>
+        <td><span style="font-size:7px;padding:2px 5px;border-radius:6px;background:${r.grade==='F9'?'#fee2e2':'#dcfce7'};color:${r.grade==='F9'?'#dc2626':'#166534'}">${r.remark ?? ''}</span></td>
+      </tr>`;
+    }).join('')}
+    <tr class="sum"><td colspan="2" style="text-align:left">TOTAL / AVG</td>
+      ${showFirst ? '<td>-</td>' : ''}${showSecond ? '<td>-</td>' : ''}
+      <td>-</td><td>-</td><td>${totalScore}/${results.length * 100}</td>
+      <td>-</td><td style="font-weight:700">${avg}%</td><td>-</td><td>-</td>
+    </tr>
+  </tbody></table>
+  <div class="scale">
+    ${[['A1','75-100','Excellent','#16a34a'],['B2','70-74','V.Good','#22c55e'],['B3','65-69','Good','#3b82f6'],
+       ['C4','60-64','Credit','#60a5fa'],['C5','55-59','Credit','#eab308'],['C6','50-54','Credit','#d97706'],
+       ['D7','45-49','Pass','#a855f7'],['E8','40-44','Pass','#6b7280'],['F9','0-39','Fail','#dc2626']]
+      .map(([g,r,d,c]) => `<div class="sc-item"><span class="c" style="background:${c}">${g}</span><div class="r">${r}</div><div class="d">${d}</div></div>`).join('')}
+  </div>
+  ${traitsHtml}
+  <div class="cmts">
+    <div class="cmt t">
+      <div class="ttl">Teacher's Comment</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid #fde047">
+        ${teacherB64 ? `<img src="${teacherB64}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : ''}
+        <div><div style="font-size:9px;font-weight:700">${data.teacher?.name || 'Class Teacher'}</div><div style="font-size:6px;color:#666;text-transform:uppercase">Form Teacher</div></div>
+      </div>
+      <div class="txt">${data.attendance?.teacherComment || 'No comment provided'}</div>
+    </div>
+    <div class="cmt p">
+      <div class="ttl">Principal's Comment</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid #a5b4fc">
+        ${principalB64 ? `<img src="${principalB64}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : ''}
+        <div><div style="font-size:9px;font-weight:700">${data.principal?.name || 'The Principal'}</div><div style="font-size:6px;color:#666;text-transform:uppercase">School Head</div></div>
+      </div>
+      <div class="txt">${data.attendance?.principalComment || 'No comment provided'}</div>
+    </div>
+  </div>
+  <div class="foot">
+    <div class="sig"><div class="date-val">${data.teacher?.name || '___________________________'}</div><div class="ttl">Class Teacher</div></div>
+    <div class="sig">
+      ${sigB64 ? `<img src="${sigB64}" class="sig-img" alt="Signature">` : ''}
+      <div class="date-val">${data.principal?.name || '___________________________'}</div>
+      <div class="ttl">Principal</div>
+    </div>
+  </div>
+</div></body></html>`;
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 500);
+}
 
 interface ClassItem { id: string; class: string; }
 interface SessionItem { id: string; session: string; current: boolean; }
@@ -427,6 +628,7 @@ export default function AdminResults() {
 }
 
 function StudentResultModal({ studentId, session, term, onClose }: { studentId: string; session: string; term: string; onClose: () => void }) {
+  const { school } = useSelectedSchool();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [savingComment, setSavingComment] = useState(false);
@@ -464,11 +666,13 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
     ? (results.reduce((sum: number, r: any) => sum + Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score), 0) / results.length).toFixed(1)
     : '0';
 
-  const gradeColor = (total: number) => {
-    if (total >= 70) return 'bg-green-100 text-green-700';
-    if (total >= 60) return 'bg-blue-100 text-blue-700';
-    if (total >= 50) return 'bg-yellow-100 text-yellow-700';
-    if (total >= 40) return 'bg-orange-100 text-orange-700';
+  const gradeColor = (grade: string) => {
+    if (grade === 'A1') return 'bg-green-100 text-green-700';
+    if (grade === 'B2') return 'bg-green-100 text-green-600';
+    if (grade === 'B3') return 'bg-blue-100 text-blue-700';
+    if (['C4','C5','C6'].includes(grade)) return 'bg-yellow-100 text-yellow-700';
+    if (grade === 'D7') return 'bg-purple-100 text-purple-700';
+    if (grade === 'E8') return 'bg-gray-100 text-gray-600';
     return 'bg-red-100 text-red-700';
   };
 
@@ -480,7 +684,17 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
             <h2 className="font-semibold text-gray-900">Result Sheet</h2>
             <p className="text-xs text-gray-500 font-mono">{studentId} - {session} · {term} Term</p>
           </div>
-          <button onClick={onClose}><X size={20} className="text-gray-400" /></button>
+          <div className="flex items-center gap-2">
+            {data && results.length > 0 && (
+              <button
+                onClick={() => printResultSheet(data, results, session, term, school)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-medium hover:bg-gray-700 transition-colors"
+              >
+                <Printer size={14} /> Print
+              </button>
+            )}
+            <button onClick={onClose}><X size={20} className="text-gray-400" /></button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -504,6 +718,44 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                     <p className="text-xs text-gray-500 font-mono">{data.student.uniqueId}</p>
                     {data.class && <p className="text-xs text-blue-600 font-medium mt-0.5">{data.class}</p>}
                   </div>
+                </div>
+              )}
+
+              {data.attendance && (
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: 'Days Present', value: data.attendance.present ?? 0, color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
+                    { label: 'Days Absent',  value: data.attendance.absent  ?? 0, color: 'text-red-700',   bg: 'bg-red-50 border-red-200' },
+                    { label: 'Total Days',   value: Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0), color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+                    { label: 'Attendance %', value: (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0)) > 0
+                        ? `${((Number(data.attendance.present ?? 0) / (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0))) * 100).toFixed(1)}%`
+                        : '0%', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+                  ].map(({ label, value, color, bg }) => (
+                    <div key={label} className={`rounded-xl border p-3 text-center ${bg}`}>
+                      <p className={`text-xl font-bold ${color}`}>{value}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Attendance */}
+              {data.attendance && (
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: 'Days Present', value: data.attendance.present ?? 0, color: 'text-green-700', bg: 'bg-green-50 border-green-200' },
+                    { label: 'Days Absent',  value: data.attendance.absent  ?? 0, color: 'text-red-700',   bg: 'bg-red-50 border-red-200' },
+                    { label: 'Total Days',   value: (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0)), color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+                    { label: 'Attendance',   value: (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0)) > 0
+                        ? `${((Number(data.attendance.present ?? 0) / (Number(data.attendance.present ?? 0) + Number(data.attendance.absent ?? 0))) * 100).toFixed(1)}%`
+                        : '0%',
+                      color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+                  ].map(({ label, value, color, bg }) => (
+                    <div key={label} className={`rounded-xl border p-3 text-center ${bg}`}>
+                      <p className={`text-xl font-bold ${color}`}>{value}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                    </div>
+                  ))}
                 </div>
               )}
 
@@ -539,7 +791,7 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                           <td className="px-3 py-2.5 text-center text-purple-700 bg-purple-50">{cumulative}</td>
                           <td className="px-3 py-2.5 text-center text-amber-700 bg-amber-50">{average}</td>
                           <td className="px-3 py-2.5 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(average)}`}>{r.grade}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${gradeColor(r.grade)}`}>{r.grade}</span>
                           </td>
                           <td className="px-3 py-2.5 text-center text-gray-500 text-xs">{r.remark}</td>
                         </tr>
