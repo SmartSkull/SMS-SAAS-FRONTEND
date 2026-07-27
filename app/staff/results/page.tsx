@@ -711,57 +711,59 @@ export default function StaffResults() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Results</h1>
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Results</h1>
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => setAttendanceModal(true)}
-            className="flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-50">
-            <Upload size={16} /> Attendance
+            className="flex items-center justify-center gap-1.5 border border-blue-600 text-blue-600 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-50 flex-1 sm:flex-initial min-w-[110px]">
+            <Upload size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Attendance</span><span className="xs:hidden">Attend.</span>
           </button>
           <button onClick={() => setTraitsModal(true)}
-            className="flex items-center gap-2 border border-purple-600 text-purple-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-purple-50">
-            <Plus size={16} /> Traits
+            className="flex items-center justify-center gap-1.5 border border-purple-600 text-purple-600 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium hover:bg-purple-50 flex-1 sm:flex-initial min-w-[110px]">
+            <Plus size={14} className="sm:w-4 sm:h-4" /> Traits
           </button>
           <button onClick={() => setShowUpload(true)}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-700">
-            <Plus size={16} /> Upload Results
+            className="flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium hover:bg-blue-700 flex-1 sm:flex-initial min-w-[110px]">
+            <Plus size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Upload Results</span><span className="xs:hidden">Upload</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl card shadow-sm p-4 flex flex-wrap gap-3">
-        <select value={classFilter} onChange={e => setClassFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
-          <option value="">Select Class</option>
-          {classes.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
-          <option value="">All Subjects</option>
-          {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select value={sessionFilter} onChange={e => setSessionFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
-          <option value="">Current Session</option>
-          {sessions.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select value={termFilter} onChange={e => setTermFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
-          <option value="">Current Term</option>
-          {terms.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-        <select value={approvalFilter} onChange={e => setApprovalFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-white">
-          <option value="">All Results</option>
-          <option value="approved">Approved</option>
-          <option value="pending">Not Verified</option>
-        </select>
+      <div className="bg-white rounded-2xl card shadow-sm p-3 sm:p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+          <select value={classFilter} onChange={e => setClassFilter(e.target.value)}
+            className="px-2 sm:px-3 py-2 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-500 bg-white">
+            <option value="">Select Class</option>
+            {classes.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)}
+            className="px-2 sm:px-3 py-2 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-500 bg-white">
+            <option value="">All Subjects</option>
+            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={sessionFilter} onChange={e => setSessionFilter(e.target.value)}
+            className="px-2 sm:px-3 py-2 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-500 bg-white">
+            <option value="">Current Session</option>
+            {sessions.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={termFilter} onChange={e => setTermFilter(e.target.value)}
+            className="px-2 sm:px-3 py-2 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-500 bg-white">
+            <option value="">Current Term</option>
+            {terms.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={approvalFilter} onChange={e => setApprovalFilter(e.target.value)}
+            className="px-2 sm:px-3 py-2 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-blue-500 bg-white col-span-2 sm:col-span-1">
+            <option value="">All Results</option>
+            <option value="approved">Approved</option>
+            <option value="pending">Not Verified</option>
+          </select>
+        </div>
         {bulkDeleteSelected.size > 0 && (
           <button
             onClick={handleBulkDelete}
             disabled={bulkDeleteLoading}
-            className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+            className="mt-3 w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
           >
             {bulkDeleteLoading ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
             Delete Selected ({bulkDeleteSelected.size})
@@ -771,7 +773,8 @@ export default function StaffResults() {
 
       {/* Results Table */}
       <div className="bg-white rounded-2xl card shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View - Hidden on mobile */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
@@ -864,6 +867,85 @@ export default function StaffResults() {
               })()}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View - Visible on small screens */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {!classFilter ? (
+            <div className="p-6"><EmptyState icon={Search} message="Select a class to view results." card={false} /></div>
+          ) : loading ? (
+            <div className="p-4 space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="p-4 bg-gray-50 rounded-xl space-y-2">
+                  <div className="h-5 bg-gray-200 rounded animate-pulse w-3/4" />
+                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : results.length === 0 ? (
+            <div className="p-6"><EmptyState icon={FileBarChart2} message="No results found." card={false} /></div>
+          ) : (() => {
+            const grouped = new Map<string, any>();
+            for (const r of results) {
+              if (!grouped.has(r.student_id)) {
+                grouped.set(r.student_id, { ...r, _rows: [] });
+              }
+              grouped.get(r.student_id)._rows.push(r);
+            }
+            return [...grouped.values()].map((s) => {
+              const avg = s._rows.length
+                ? Math.round(s._rows.reduce((sum: number, r: any) => sum + Number(r.test_score) + Number(r.exam_score), 0) / s._rows.length)
+                : 0;
+              const { g, cls } = getGrade(avg);
+              const approved = s._rows.every((r: any) => r.approvedAt);
+              return (
+                <div key={s.student_id} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={bulkDeleteSelected.has(s.student_id)}
+                      onChange={(e) => {
+                        const next = new Set(bulkDeleteSelected);
+                        if (e.target.checked) next.add(s.student_id);
+                        else next.delete(s.student_id);
+                        setBulkDeleteSelected(next);
+                      }}
+                      className="rounded border-gray-300 mt-1"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">{s.firstname} {s.lastname}</p>
+                          <p className="text-xs text-gray-400 font-mono">{s.student_id}</p>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${cls}`}>{avg}% · {g}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
+                        <span>{s._rows.length} subject{s._rows.length !== 1 ? 's' : ''}</span>
+                        <span className={`px-2 py-0.5 rounded-full font-medium ${approved ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {approved ? 'Approved' : 'Pending'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => { setViewingStudent(s.student_id); }}
+                          disabled={!!rowLoading[s.student_id]}
+                          className="flex-1 flex items-center justify-center gap-1.5 p-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-medium disabled:opacity-50">
+                          {viewingStudent === s.student_id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                          View
+                        </button>
+                        <button onClick={() => openCommentModal(s.student_id)}
+                          disabled={!!rowLoading[s.student_id]}
+                          className="flex-1 flex items-center justify-center gap-1.5 p-2 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg text-xs font-medium disabled:opacity-50">
+                          {rowLoading[s.student_id] === 'comment' ? <Loader2 size={14} className="animate-spin text-blue-600" /> : <MessageSquare size={14} />}
+                          Comment
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
 
