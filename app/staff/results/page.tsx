@@ -778,7 +778,7 @@ export default function StaffResults() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase w-10">
+                <th className="sticky left-0 z-10 bg-gray-50 p-3 text-left text-xs font-semibold text-gray-500 uppercase w-10 border-r border-gray-200">
                   <input
                     type="checkbox"
                     checked={results.length > 0 && bulkDeleteSelected.size === results.length}
@@ -792,7 +792,7 @@ export default function StaffResults() {
                     className="rounded border-gray-300"
                   />
                 </th>
-                <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
+                <th className="sticky left-10 z-10 bg-gray-50 p-3 text-left text-xs font-semibold text-gray-500 uppercase min-w-[180px] border-r border-gray-200">Student</th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Subjects</th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Average</th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
@@ -822,8 +822,8 @@ export default function StaffResults() {
                   const { g, cls } = getGrade(avg);
                   const approved = s._rows.every((r: any) => r.approvedAt);
                   return (
-                    <tr key={s.student_id} className="hover:bg-gray-50">
-                      <td className="p-3">
+                    <tr key={s.student_id} className="group hover:bg-gray-50">
+                      <td className="sticky left-0 z-10 bg-white group-hover:bg-gray-50 p-3 border-r border-gray-100">
                         <input
                           type="checkbox"
                           checked={bulkDeleteSelected.has(s.student_id)}
@@ -836,8 +836,8 @@ export default function StaffResults() {
                           className="rounded border-gray-300"
                         />
                       </td>
-                      <td className="p-3">
-                        <p className="font-medium text-gray-900">{s.firstname} {s.lastname}</p>
+                      <td className="sticky left-10 z-10 bg-white group-hover:bg-gray-50 p-3 border-r border-gray-100">
+                        <p className="font-medium text-gray-900 whitespace-nowrap">{s.firstname} {s.lastname}</p>
                         <p className="text-xs text-gray-400 font-mono">{s.student_id}</p>
                       </td>
                       <td className="p-3 text-gray-500 text-xs">{s._rows.length} subject{s._rows.length !== 1 ? 's' : ''}</td>
