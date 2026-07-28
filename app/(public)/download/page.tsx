@@ -63,7 +63,7 @@ export default function DownloadPage() {
       setTotal(totalBytes);
 
       const reader = res.body!.getReader();
-      const chunks: Uint8Array[] = [];
+      const chunks: Uint8Array<ArrayBuffer>[] = [];
       let loaded = 0;
       let lastLoaded = 0;
       let lastTime = Date.now();
