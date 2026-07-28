@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [],
       afterFiles: [
-        // Skip /api/uploads/* — handled by app/api/uploads/[...path]/route.ts
-        { source: '/api/:path((?!uploads).*)', destination: `${API_URL}/:path*` },
+        // Skip /api/download* and /api/uploads/* — handled by local route.ts files
+        { source: '/api/:path((?!download|uploads).*)', destination: `${API_URL}/:path*` },
       ],
       fallback: [],
     };

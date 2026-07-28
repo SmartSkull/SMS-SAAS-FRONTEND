@@ -12,7 +12,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-const DRIVE_URL = 'https://drive.google.com/uc?export=download&id=1UVJwIdUYA0kF7QUAsRqCfab3383-FZIm';
+const DRIVE_URL = '/api/download?id=1UVJwIdUYA0kF7QUAsRqCfab3383-FZIm';
 
 export default function DownloadPage() {
 
@@ -73,8 +73,6 @@ export default function DownloadPage() {
           <div className="max-w-md mx-auto bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
             <a
               href={DRIVE_URL}
-              target="_blank"
-              rel="noreferrer"
               className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-lg transition-all duration-200 shadow-lg shadow-violet-900/50 hover:shadow-violet-900/70 hover:-translate-y-0.5 active:translate-y-0"
             >
               <Download size={22} />
