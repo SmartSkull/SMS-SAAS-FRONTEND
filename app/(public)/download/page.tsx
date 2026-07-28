@@ -1,13 +1,8 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
 import {
   Download,
   Smartphone,
   ShieldCheck,
-  Wifi,
   CheckCircle2,
-  AlertCircle,
   Zap,
   BookOpen,
   Bus,
@@ -17,93 +12,9 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-const APK_FILENAME = 'application-9a662a56-94c7-4afc-a6c5-af32bebc8240.apk';
-const APK_SAVE_AS  = 'Florieren-School-App.apk';
-
-type DownloadState = 'idle' | 'downloading' | 'done' | 'error';
-
-function formatBytes(bytes: number) {
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatSpeed(bps: number) {
-  if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(0)} KB/s`;
-  return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`;
-}
+const DRIVE_URL = 'https://drive.google.com/uc?export=download&id=1UVJwIdUYA0kF7QUAsRqCfab3383-FZIm';
 
 export default function DownloadPage() {
-  const [state, setState]       = useState<DownloadState>('idle');
-  const [percent, setPercent]   = useState(0);
-  const [received, setReceived] = useState(0);
-  const [total, setTotal]       = useState(0);
-  const [speed, setSpeed]       = useState('');
-  const [error, setError]       = useState('');
-  const abortRef = useRef<AbortController | null>(null);
-
-  // Cleanup on unmount
-  useEffect(() => () => abortRef.current?.abort(), []);
-
-  async function startDownload() {
-    setState('downloading');
-    setPercent(0);
-    setReceived(0);
-    setTotal(0);
-    setSpeed('');
-    setError('');
-
-    abortRef.current = new AbortController();
-
-    try {
-      const res = await fetch(`/${APK_FILENAME}`, { signal: abortRef.current.signal });
-      if (!res.ok) throw new Error(`Server returned ${res.status}`);
-
-      const contentLength = res.headers.get('Content-Length');
-      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-      setTotal(totalBytes);
-
-      const reader = res.body!.getReader();
-      const chunks: Uint8Array<ArrayBuffer>[] = [];
-      let loaded = 0;
-      let lastLoaded = 0;
-      let lastTime = Date.now();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-        loaded += value.length;
-        setReceived(loaded);
-
-        const now = Date.now();
-        const elapsed = (now - lastTime) / 1000;
-        if (elapsed >= 0.4) {
-          setSpeed(formatSpeed((loaded - lastLoaded) / elapsed));
-          lastLoaded = loaded;
-          lastTime = now;
-        }
-
-        if (totalBytes > 0) {
-          setPercent(Math.min(Math.round((loaded / totalBytes) * 100), 99));
-        }
-      }
-
-      // Trigger browser save
-      const blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url; a.download = APK_SAVE_AS;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 15000);
-
-      setPercent(100);
-      setState('done');
-    } catch (err: any) {
-      if (err?.name === 'AbortError') return;
-      setError(err?.message || 'Download failed. Please try again.');
-      setState('error');
-    }
-  }
 
   const features = [
     { icon: BookOpen,  label: 'Academic Results',  desc: 'View term results, grade reports and performance trends' },
@@ -160,84 +71,18 @@ export default function DownloadPage() {
 
           {/* ── Download card ── */}
           <div className="max-w-md mx-auto bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
-
-            {/* Idle */}
-            {state === 'idle' && (
-              <button
-                onClick={startDownload}
-                className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-lg transition-all duration-200 shadow-lg shadow-violet-900/50 hover:shadow-violet-900/70 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <Download size={22} />
-                Download APK
-              </button>
-            )}
-
-            {/* Downloading */}
-            {state === 'downloading' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-violet-400">
-                    <Wifi size={16} className="animate-pulse" />
-                    <span className="text-sm font-semibold">Downloading…</span>
-                  </div>
-                  <span className="text-2xl font-black text-white tabular-nums">{percent}%</span>
-                </div>
-
-                {/* Track */}
-                <div className="h-3 rounded-full bg-white/10 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 via-indigo-400 to-violet-500 bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite] transition-all duration-300"
-                    style={{ width: `${percent}%` }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>{formatBytes(received)}{total > 0 ? ` / ${formatBytes(total)}` : ''}</span>
-                  <span>{speed}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Done */}
-            {state === 'done' && (
-              <div className="flex flex-col items-center gap-3 py-2">
-                <div className="w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center animate-[bounceIn_0.5s_cubic-bezier(0.175,0.885,0.32,1.275)_both]">
-                  <CheckCircle2 size={32} className="text-emerald-400" />
-                </div>
-                <p className="font-bold text-emerald-400 text-lg">Download Complete!</p>
-                <p className="text-sm text-gray-500 text-center">Check your Downloads folder and open the APK to install.</p>
-                <button
-                  onClick={() => setState('idle')}
-                  className="mt-2 text-xs text-gray-600 hover:text-gray-400 underline underline-offset-4"
-                >
-                  Download again
-                </button>
-              </div>
-            )}
-
-            {/* Error */}
-            {state === 'error' && (
-              <div className="flex flex-col items-center gap-3 py-2">
-                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                  <AlertCircle size={32} className="text-red-400" />
-                </div>
-                <p className="font-bold text-red-400">Download Failed</p>
-                <p className="text-xs text-gray-500 text-center">{error}</p>
-                <button
-                  onClick={startDownload}
-                  className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition-colors"
-                >
-                  <Download size={15} /> Retry
-                </button>
-              </div>
-            )}
-
-            {/* Install note */}
-            {state !== 'done' && (
-              <p className="mt-5 text-xs text-gray-600 text-center leading-5">
-                Enable <span className="text-gray-400 font-semibold">Install from unknown sources</span> in Android Settings before installing.
-              </p>
-            )}
+            <a
+              href={DRIVE_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full flex items-center justify-center gap-3 py-4 px-6 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-lg transition-all duration-200 shadow-lg shadow-violet-900/50 hover:shadow-violet-900/70 hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Download size={22} />
+              Download APK
+            </a>
+            <p className="mt-5 text-xs text-gray-600 text-center leading-5">
+              Enable <span className="text-gray-400 font-semibold">Install from unknown sources</span> in Android Settings before installing.
+            </p>
           </div>
         </div>
       </section>
