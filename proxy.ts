@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = ['/', '/login', '/school', '/school/register', '/about', '/history', '/contact', '/admissions',
   '/gallery', '/our-staff', '/policy', '/classrooms', '/principal-speech', '/forgot-password', '/reset-password',
-  '/features', '/how-it-works', '/get-a-demo', '/reach-us'];
+  '/features', '/how-it-works', '/get-a-demo', '/reach-us', '/download'];
 
 const VALID_ROLES = new Set(['student', 'staff', 'admin']);
 
