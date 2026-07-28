@@ -14,22 +14,24 @@ export async function GET(request: NextRequest) {
   }
 
   // Step 1 — initial request to Google Drive
-  const driveUrl = `${DRIVE_BASE}?export=download&id=${fileId}`;
-  const res = await fetch(driveUrl, { redirect: 'follow' });
+  const res = await fetch(`${DRIVE_BASE}?export=download&id=${fileId}`, { redirect: 'follow' });
 
   const contentType = res.headers.get('content-type') || '';
 
-  // Step 2 — if Drive returned a virus-scan warning page, extract the confirm token
+  // Step 2 — if Drive returned a virus-scan warning page, extract confirm + uuid
   if (contentType.includes('text/html')) {
     const html = await res.text();
-    const match = html.match(/confirm=([a-zA-Z0-9_-]+)/);
-    if (!match) {
+    const confirmMatch = html.match(/name="confirm" value="([^"]+)"/);
+    const uuidMatch    = html.match(/name="uuid" value="([^"]+)"/);
+    if (!confirmMatch) {
       return new Response('Failed to bypass Google Drive virus scan warning.', { status: 502 });
     }
-    const confirmToken = match[1];
 
-    // Step 3 — re-fetch with the confirm token to get the actual file
-    const finalRes = await fetch(`${driveUrl}&confirm=${confirmToken}`, { redirect: 'follow' });
+    // Step 3 — re-fetch with all the hidden fields the form would submit
+    const params = new URLSearchParams({ export: 'download', id: fileId, confirm: confirmMatch[1] });
+    if (uuidMatch) params.set('uuid', uuidMatch[1]);
+
+    const finalRes = await fetch(`${DRIVE_BASE}?${params}`, { redirect: 'follow' });
 
     return new Response(finalRes.body, {
       headers: {
