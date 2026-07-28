@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #6d28d9;
+      --primary-light: #8b5cf6;
+      --primary-dark: #4c1d95;
+      --success: #10b981;
+      --bg: #0f0a1e;
+      --card: #1a1030;
+      --border: rgba(139,92,246,0.25);
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+    }
+
+    /* ── Animated background ── */
+    .bg-orbs {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    }
+    .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(80px); opacity: 0.18; animation: float 8s ease-in-out infinite;
+    }
+    .orb-1 { width: 400px; height: 400px; background: #6d28d9; top: -100px; left: -100px; animation-delay: 0s; }
+    .orb-2 { width: 300px; height: 300px; background: #7c3aed; bottom: -80px; right: -80px; animation-delay: -3s; }
+    .orb-3 { width: 200px; height: 200px; background: #a78bfa; top: 50%; left: 50%; animation-delay: -5s; }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50%       { transform: translateY(-30px) scale(1.05); }
+    }
+
+    /* ── Card ── */
+    .card {
+      position: relative; z-index: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 48px 40px;
+      width: min(460px, 94vw);
+      text-align: center;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+      animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── App icon ── */
+    .app-icon-wrap {
+      width: 96px; height: 96px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      box-shadow: 0 8px 32px rgba(109,40,217,0.5);
+      animation: iconPulse 3s ease-in-out infinite;
+    }
+    @keyframes iconPulse {
+      0%, 100% { box-shadow: 0 8px 32px rgba(109,40,217,0.5); }
+      50%       { box-shadow: 0 8px 48px rgba(109,40,217,0.8), 0 0 0 8px rgba(109,40,217,0.1); }
+    }
+    .app-icon-wrap svg { width: 48px; height: 48px; }
+
+    .app-name {
+      font-size: 24px; font-weight: 800;
+      color: #fff; letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    .app-sub {
+      font-size: 14px; color: #a78bfa; font-weight: 500;
+      margin-bottom: 32px;
+    }
+
+    /* ── Info pills ── */
+    .info-row {
+      display: flex; justify-content: center; gap: 12px;
+      margin-bottom: 32px; flex-wrap: wrap;
+    }
+    .pill {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(139,92,246,0.12);
+      border: 1px solid rgba(139,92,246,0.2);
+      border-radius: 99px; padding: 6px 14px;
+      font-size: 12px; color: #c4b5fd; font-weight: 600;
+    }
+    .pill svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* ── Download button ── */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 18px 24px;
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      border: none; border-radius: 16px;
+      color: #fff; font-size: 16px; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.2px;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      box-shadow: 0 8px 24px rgba(109,40,217,0.4);
+      position: relative; overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(109,40,217,0.6); }
+    .btn:hover::before { opacity: 1; }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+    /* ── Progress area ── */
+    .progress-area {
+      margin-top: 28px;
+      display: none;
+      animation: fadeIn 0.4s ease both;
+    }
+    .progress-area.visible { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+
+    .progress-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .progress-label { font-size: 13px; color: #c4b5fd; font-weight: 600; }
+    .progress-pct   { font-size: 20px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+
+    .progress-track {
+      width: 100%; height: 10px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 99px; overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #7c3aed, #a78bfa, #7c3aed);
+      background-size: 200% 100%;
+      border-radius: 99px;
+      transition: width 0.4s ease;
+      animation: shimmer 1.8s linear infinite;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .progress-speed {
+      margin-top: 8px; font-size: 12px; color: #7c6fa0;
+      text-align: right; font-weight: 500;
+    }
+
+    /* ── Done state ── */
+    .done-area {
+      display: none; margin-top: 28px;
+      animation: fadeIn 0.5s ease both;
+    }
+    .done-area.visible { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+    .done-icon {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: rgba(16,185,129,0.15);
+      border: 2px solid rgba(16,185,129,0.4);
+      display: flex; align-items: center; justify-content: center;
+      animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both;
+    }
+    @keyframes popIn {
+      from { opacity:0; transform: scale(0.5); }
+      to   { opacity:1; transform: scale(1); }
+    }
+    .done-icon svg { width: 28px; height: 28px; color: #10b981; }
+    .done-text { font-size: 15px; font-weight: 700; color: #10b981; }
+    .done-sub  { font-size: 12px; color: #6b7280; }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 28px; padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px; color: #4b4566; line-height: 1.6;
+    }
+    .footer a { color: #7c6fa0; text-decoration: none; }
+    .footer a:hover { color: #a78bfa; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="card">
+
+    <!-- App icon -->
+    <div class="app-icon-wrap">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="48" height="48" rx="12" fill="url(#g1)"/>
+        <path d="M14 34 L24 14 L34 34" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M17 28 H31" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#7c3aed"/>
+            <stop offset="1" stop-color="#4f46e5"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="app-name">Florieren School App</div>
+    <div class="app-sub">Student · Staff · Admin Portal</div>
+
+    <!-- Info pills -->
+    <div class="info-row">
+      <div class="pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>
+        </svg>
+        Android
+      </div>
+      <div class="pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Version 1.0.0
+      </div>
+      <div class="pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Verified
+      </div>
+    </div>
+
+    <!-- Button -->
+    <button class="btn" id="downloadBtn" onclick="startDownload()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download APK
+    </button>
+
+    <!-- Progress -->
+    <div class="progress-area" id="progressArea">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Downloading…</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-speed" id="progressSpeed"></div>
+    </div>
+
+    <!-- Done -->
+    <div class="done-area" id="doneArea">
+      <div class="done-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <div class="done-text">Download Complete!</div>
+      <div class="done-sub">Check your Downloads folder and install the APK.</div>
+    </div>
+
+    <div class="footer">
+      Enable <strong style="color:#a78bfa">Install from unknown sources</strong> in your Android settings before installing.<br/>
+      <a href="#">Need help?</a> · <a href="#">Privacy Policy</a>
+    </div>
+
+  </div>
+
+  <script>
+    const APK_URL  = 'application-9a662a56-94c7-4afc-a6c5-af32bebc8240.apk';
+    const APK_NAME = 'Florieren-School-App.apk';
+
+    async function startDownload() {
+      const btn          = document.getElementById('downloadBtn');
+      const progressArea = document.getElementById('progressArea');
+      const doneArea     = document.getElementById('doneArea');
+      const bar          = document.getElementById('progressBar');
+      const pct          = document.getElementById('progressPct');
+      const label        = document.getElementById('progressLabel');
+      const speed        = document.getElementById('progressSpeed');
+
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;animation:spin 1s linear infinite">
+          <path d="M21 12a9 9 0 11-6.219-8.56"/>
+        </svg>
+        Preparing…
+      `;
+
+      // Add spin keyframe dynamically
+      if (!document.getElementById('spin-style')) {
+        const s = document.createElement('style');
+        s.id = 'spin-style';
+        s.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+        document.head.appendChild(s);
+      }
+
+      progressArea.classList.add('visible');
+
+      try {
+        const response = await fetch(APK_URL);
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const contentLength = response.headers.get('Content-Length');
+        const total = contentLength ? parseInt(contentLength, 10) : 0;
+        const reader = response.body.getReader();
+        const chunks = [];
+        let received = 0;
+        let startTime = Date.now();
+        let lastReceived = 0;
+        let lastTime = startTime;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          chunks.push(value);
+          received += value.length;
+
+          const now = Date.now();
+          const elapsed = (now - lastTime) / 1000;
+
+          if (elapsed > 0.3) {
+            const bytesPerSec = (received - lastReceived) / elapsed;
+            const mb = (bytesPerSec / 1048576).toFixed(1);
+            speed.textContent = `${mb} MB/s`;
+            lastReceived = received;
+            lastTime = now;
+          }
+
+          if (total > 0) {
+            const percent = Math.min(Math.round((received / total) * 100), 99);
+            bar.style.width = percent + '%';
+            pct.textContent  = percent + '%';
+          } else {
+            // Unknown size — animate indeterminate
+            const fake = Math.min(99, Math.round((received / 80000000) * 100));
+            bar.style.width = fake + '%';
+            pct.textContent  = `${(received / 1048576).toFixed(1)} MB`;
+          }
+        }
+
+        // Assemble blob and trigger download
+        const blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = APK_NAME;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+        // Complete
+        bar.style.width  = '100%';
+        pct.textContent  = '100%';
+        label.textContent = 'Done!';
+        speed.textContent = '';
+        setTimeout(() => {
+          progressArea.classList.remove('visible');
+          doneArea.classList.add('visible');
+        }, 600);
+
+      } catch (err) {
+        console.error(err);
+        label.textContent = 'Download failed. Try again.';
+        label.style.color = '#f87171';
+        pct.textContent   = '';
+        bar.style.background = '#ef4444';
+        btn.disabled = false;
+        btn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Retry Download
+        `;
+      }
+    }
+  </script>
+
+</body>
+</html>
