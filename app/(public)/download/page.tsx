@@ -49,7 +49,7 @@ export default function DownloadPage() {
 
           <p className="text-violet-400 text-xs font-bold uppercase tracking-widest mb-3">Mobile App · Android</p>
           <h1 className="text-4xl md:text-5xl font-black mb-4 leading-tight">
-            Florieren School App
+            Smart Campus
           </h1>
           <p className="text-gray-400 text-lg max-w-xl mx-auto mb-10 leading-relaxed">
             The all-in-one school companion for students, parents and staff — results, attendance, transport and more in your pocket.
