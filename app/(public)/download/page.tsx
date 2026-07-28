@@ -12,7 +12,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-const DRIVE_URL = '/api/download?id=1UVJwIdUYA0kF7QUAsRqCfab3383-FZIm';
+const DRIVE_URL = '/api/download?id=1sRUp2wt5vf3HygLnuwVp7fCKlW5stA5w';
 
 export default function DownloadPage() {
 

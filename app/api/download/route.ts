@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
   if (!fileId) {
     // Fall back to the env variable or the hardcoded default
-    fileId = process.env.NEXT_PUBLIC_APK_FILE_ID ?? '1UVJwIdUYA0kF7QUAsRqCfab3383-FZIm';
+    fileId = process.env.NEXT_PUBLIC_APK_FILE_ID ?? '1sRUp2wt5vf3HygLnuwVp7fCKlW5stA5w';
   }
 
   // Step 1 — initial request to Google Drive
