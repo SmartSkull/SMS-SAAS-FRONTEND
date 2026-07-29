@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, X, GraduationCap } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, Lock, Eye, EyeOff } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -69,6 +69,42 @@ export default function StudentsPage() {
   };
 
   const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  // Change password modal
+  const [pwModal, setPwModal] = useState<{ open: boolean; student?: Student }>({ open: false });
+  const [pwForm, setPwForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+
+  const changePassword = async () => {
+    if (!pwForm.newPassword || !pwForm.confirmPassword) {
+      toast.error('All password fields are required');
+      return;
+    }
+    if (pwForm.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await api.post(endpoints.admin.studentChangePassword, {
+        student_id: pwModal.student?.student_id,
+        newPassword: pwForm.newPassword,
+      });
+      toast.success('Password changed successfully');
+      setPwModal({ open: false });
+      setPwForm({ newPassword: '', confirmPassword: '' });
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to change password');
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   const remove = async () => {
     if (!confirmId) return;
@@ -165,6 +201,7 @@ export default function StudentsPage() {
                       <button onClick={() => unverify(s.student_id)} title="Unverify" className="text-orange-600 hover:text-orange-800"><XCircle size={16} /></button>
                     )}
                     <button onClick={() => { setForm({ firstName: s.firstname, lastName: s.lastname, email: s.email, telephone: '', class: s.class, session: '', password: '' }); setModal({ open: true, student: s }); }} className="text-blue-600 hover:text-blue-800"><Edit2 size={16} /></button>
+                    <button onClick={() => { setPwForm({ newPassword: '', confirmPassword: '' }); setPwModal({ open: true, student: s }); }} className="text-indigo-600 hover:text-indigo-800" title="Change Password"><Lock size={16} /></button>
                     <button onClick={() => setConfirmId(s.student_id)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
                   </div>
                 </td>
@@ -222,6 +259,64 @@ export default function StudentsPage() {
               <button onClick={() => setModal({ open: false })} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
               <button onClick={save} disabled={saving} className="flex-1 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
                 {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pwModal.open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Change Password — {pwModal.student?.firstname} {pwModal.student?.lastname}</h2>
+              <button onClick={() => setPwModal({ open: false })}><X size={20} className="text-gray-400" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    value={pwForm.newPassword}
+                    onChange={e => setPwForm(p => ({ ...p, newPassword: e.target.value }))}
+                    placeholder="Minimum 6 characters"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  />
+                  <button type="button" onClick={() => setShowPw(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPw ? 'text' : 'password'}
+                    value={pwForm.confirmPassword}
+                    onChange={e => setPwForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                    placeholder="Repeat new password"
+                    className={`w-full border rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 ${
+                      pwForm.confirmPassword && pwForm.newPassword !== pwForm.confirmPassword
+                        ? 'border-red-300 focus:border-red-400 focus:ring-red-400'
+                        : 'border-gray-300'
+                    }`}
+                  />
+                  <button type="button" onClick={() => setShowConfirmPw(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showConfirmPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {pwForm.confirmPassword && pwForm.newPassword !== pwForm.confirmPassword && (
+                  <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-gray-100">
+              <button onClick={() => setPwModal({ open: false })} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
+              <button onClick={changePassword} disabled={pwSaving} className="flex-1 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
+                {pwSaving ? 'Changing…' : 'Change Password'}
               </button>
             </div>
           </div>
