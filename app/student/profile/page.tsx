@@ -11,14 +11,13 @@ export default function StudentProfile() {
   const toast = useToast();
 
   // Password change state
-  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwForm, setPwForm] = useState({ newPassword: '', confirmPassword: '' });
   const [pwSaving, setPwSaving] = useState(false);
-  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const changePassword = async () => {
-    if (!pwForm.currentPassword || !pwForm.newPassword || !pwForm.confirmPassword) {
+    if (!pwForm.newPassword || !pwForm.confirmPassword) {
       toast.error('All password fields are required');
       return;
     }
@@ -33,11 +32,10 @@ export default function StudentProfile() {
     setPwSaving(true);
     try {
       await api.post(endpoints.student.changePassword, {
-        currentPassword: pwForm.currentPassword,
         newPassword: pwForm.newPassword,
       });
       toast.success('Password changed successfully');
-      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPwForm({ newPassword: '', confirmPassword: '' });
     } catch (e: any) {
       toast.error(e?.message ?? 'Failed to change password');
     } finally {
@@ -177,23 +175,6 @@ export default function StudentProfile() {
         </div>
 
         <div className="space-y-4 max-w-lg">
-          {/* Current Password */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-            <div className="relative">
-              <input
-                type={showCurrent ? 'text' : 'password'}
-                value={pwForm.currentPassword}
-                onChange={e => setPwForm(p => ({ ...p, currentPassword: e.target.value }))}
-                placeholder="Enter current password"
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-              />
-              <button type="button" onClick={() => setShowCurrent(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-          </div>
 
           {/* New Password */}
           <div>
