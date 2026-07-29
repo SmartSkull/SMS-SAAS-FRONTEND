@@ -1,12 +1,49 @@
 'use client';
-import { useRef } from 'react';
-import { getImageUrl } from '@/lib/api';
+import { useRef, useState } from 'react';
+import { getImageUrl, api, endpoints } from '@/lib/api';
 import { useProfile } from '@/hooks/student';
-import { User, Save, Mail, Phone, Hash, GraduationCap, Camera } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { User, Save, Mail, Phone, Hash, GraduationCap, Camera, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function StudentProfile() {
   const { profile, setProfile, loading, saving, uploading, save, uploadImage } = useProfile();
   const fileRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+
+  // Password change state
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const changePassword = async () => {
+    if (!pwForm.currentPassword || !pwForm.newPassword || !pwForm.confirmPassword) {
+      toast.error('All password fields are required');
+      return;
+    }
+    if (pwForm.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters');
+      return;
+    }
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await api.post(endpoints.student.changePassword, {
+        currentPassword: pwForm.currentPassword,
+        newPassword: pwForm.newPassword,
+      });
+      toast.success('Password changed successfully');
+      setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to change password');
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   const handleSave = (e: React.FormEvent) => { e.preventDefault(); save(); };
 
@@ -130,6 +167,82 @@ export default function StudentProfile() {
           </form>
         </div>
 
+      </div>
+
+      {/* ── Change Password ── */}
+      <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Lock size={18} className="text-gray-500" />
+          <h2 className="text-base font-semibold text-gray-900">Change Password</h2>
+        </div>
+
+        <div className="space-y-4 max-w-lg">
+          {/* Current Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <div className="relative">
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                value={pwForm.currentPassword}
+                onChange={e => setPwForm(p => ({ ...p, currentPassword: e.target.value }))}
+                placeholder="Enter current password"
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              />
+              <button type="button" onClick={() => setShowCurrent(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+
+          {/* New Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <div className="relative">
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={pwForm.newPassword}
+                onChange={e => setPwForm(p => ({ ...p, newPassword: e.target.value }))}
+                placeholder="Minimum 6 characters"
+                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              />
+              <button type="button" onClick={() => setShowNew(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Confirm New Password */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={pwForm.confirmPassword}
+                onChange={e => setPwForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                placeholder="Repeat new password"
+                className={`w-full border rounded-xl px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors ${
+                  pwForm.confirmPassword && pwForm.newPassword !== pwForm.confirmPassword
+                    ? 'border-red-300 focus:border-red-400 focus:ring-red-400'
+                    : 'border-gray-300'
+                }`}
+              />
+              <button type="button" onClick={() => setShowConfirm(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+            {pwForm.confirmPassword && pwForm.newPassword !== pwForm.confirmPassword && (
+              <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
+            )}
+          </div>
+        </div>
+
+        <button onClick={changePassword} disabled={pwSaving}
+          className="mt-6 flex items-center gap-2 px-6 py-2.5 btn-brand text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-60">
+          <Lock size={15} /> {pwSaving ? 'Changing…' : 'Change Password'}
+        </button>
       </div>
     </div>
   );

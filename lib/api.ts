@@ -174,6 +174,7 @@ export const endpoints = {
     transportRouteChat: (routeId: string) => `/student/transport/routes/${routeId}/chat`,
     transportRouteBroadcasts: (routeId: string) => `/student/transport/routes/${routeId}/broadcasts`,
     transportParentTrackingLink: (studentUniqueId: string) => `/student/transport/parent/tracking-link/${studentUniqueId}`,
+    changePassword: '/student/profile/change-password',
     attendanceClockIn: '/attendance/student/clock-in',
     attendanceClockOut: '/attendance/student/clock-out',
     attendanceToday: '/attendance/student/today',
