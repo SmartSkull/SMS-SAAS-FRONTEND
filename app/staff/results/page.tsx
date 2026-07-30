@@ -821,7 +821,7 @@ export default function StaffResults() {
                 }
                 return [...grouped.values()].map((s) => {
                   const avg = s._rows.length
-                    ? Math.round(s._rows.reduce((sum: number, r: any) => sum + Number(r.test_score) + Number(r.exam_score), 0) / s._rows.length)
+                    ? Math.round(s._rows.reduce((sum: number, r: any) => sum + Number(r.average ?? Number(r.test_score) + Number(r.exam_score)), 0) / s._rows.length)
                     : 0;
                   const { g, cls } = getGrade(avg);
                   const approved = s._rows.every((r: any) => r.approvedAt);
@@ -898,7 +898,7 @@ export default function StaffResults() {
             }
             return [...grouped.values()].map((s) => {
               const avg = s._rows.length
-                ? Math.round(s._rows.reduce((sum: number, r: any) => sum + Number(r.test_score) + Number(r.exam_score), 0) / s._rows.length)
+                ? Math.round(s._rows.reduce((sum: number, r: any) => sum + Number(r.average ?? Number(r.test_score) + Number(r.exam_score)), 0) / s._rows.length)
                 : 0;
               const { g, cls } = getGrade(avg);
               const approved = s._rows.every((r: any) => r.approvedAt);
