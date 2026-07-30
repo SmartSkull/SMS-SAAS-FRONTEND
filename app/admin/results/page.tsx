@@ -663,7 +663,7 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
   const showFirst = termLower === 'second' || termLower === 'third';
   const showSecond = termLower === 'third';
   const avg = results.length
-    ? (results.reduce((sum: number, r: any) => sum + Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score), 0) / results.length).toFixed(1)
+    ? (results.reduce((sum: number, r: any) => sum + Number(r.average ?? Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score)), 0) / results.length).toFixed(1)
     : '0';
 
   const gradeColor = (grade: string) => {
