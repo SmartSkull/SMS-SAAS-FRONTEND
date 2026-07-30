@@ -77,7 +77,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
     '</div>'
   ) : '';
 
-  const totalScore = results.reduce((s: number, r: any) => s + Number(r.totalScore), 0);
+  const totalScore = results.reduce((s: number, r: any) => s + Number(r.average ?? r.totalScore), 0);
   const avg = results.length ? (totalScore / results.length).toFixed(1) : '0';
 
   // Use getImageUrl() which handles http URLs, null/empty, and the /api/uploads proxy path
@@ -295,7 +295,7 @@ export default function StudentResults() {
           .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value.results.length > 0)
           .map((r) => {
             const { session: sess, term: t, results } = r.value;
-            const avg = Math.round(results.reduce((s: number, x: any) => s + Number(x.totalScore), 0) / results.length);
+            const avg = Math.round(results.reduce((s: number, x: any) => s + Number(x.average ?? x.totalScore), 0) / results.length);
             return { label: `${sess.slice(-4)} ${t.charAt(0)}`, avg, session: sess, term: t };
           })
           .sort((a, b) => a.session.localeCompare(b.session) || (TERM_ORDER[a.term] ?? 0) - (TERM_ORDER[b.term] ?? 0))
@@ -330,7 +330,7 @@ export default function StudentResults() {
   const showFirst        = termLower === 'second' || termLower === 'third';
   const showSecond       = termLower === 'third';
   const avg = results.length
-    ? Math.round(results.reduce((s: number, r: any) => s + Number(r.totalScore), 0) / results.length)
+    ? Math.round(results.reduce((s: number, r: any) => s + Number(r.average ?? r.totalScore), 0) / results.length)
     : 0;
 
   return (

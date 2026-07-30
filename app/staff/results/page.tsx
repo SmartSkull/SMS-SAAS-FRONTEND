@@ -93,7 +93,7 @@ function gradeColorHex(g: string) {
 async function printResultSheet(data: any, results: any[], session: string, term: string, student: any, school?: SchoolProfile | null) {
   const showFirst  = term.toLowerCase() === 'second' || term.toLowerCase() === 'third';
   const showSecond = term.toLowerCase() === 'third';
-  const totalScore = results.reduce((s: number, r: any) => s + Number(r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score))), 0);
+  const totalScore = results.reduce((s: number, r: any) => s + Number(r.average ?? r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score))), 0);
   const avg = results.length ? (totalScore / results.length).toFixed(1) : '0';
 
   const photoUrl          = getImageUrl(student?.image) ?? '';
@@ -1364,7 +1364,7 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
   const showFirst  = termLower === 'second' || termLower === 'third';
   const showSecond = termLower === 'third';
   const avg = results.length
-    ? (results.reduce((s: number, r: any) => s + Number(r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score))), 0) / results.length).toFixed(1)
+    ? (results.reduce((s: number, r: any) => s + Number(r.average ?? r.totalScore ?? (Number(r.testScore ?? r.test_score) + Number(r.examScore ?? r.exam_score))), 0) / results.length).toFixed(1)
     : '0';
 
   const gradeColor = (total: number) => {
