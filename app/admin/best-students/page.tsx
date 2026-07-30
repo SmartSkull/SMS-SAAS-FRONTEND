@@ -107,7 +107,7 @@ export default function BestStudentsPage() {
     <h1>🏆 Overall Best Students</h1>
     <p class="sub">${classFilter || 'All Classes'} · ${session || 'All Sessions'} · ${term || 'All Terms'}</p>
     <table><thead><tr>
-      <th style="text-align:center">Rank</th><th>Student</th><th>Class</th><th style="text-align:center">Subjects</th><th style="text-align:center">Cumulative Avg</th>
+      <th style="text-align:center">Rank</th><th>Student</th><th>Class</th><th style="text-align:center">Subjects</th><th style="text-align:center">Average</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <script>window.print();window.close()</script></body></html>`);
     win.document.close();
@@ -128,7 +128,7 @@ export default function BestStudentsPage() {
       return `
         <h2 style="font-size:16px;margin-top:20px;margin-bottom:8px;color:#444">${ps.subject}</h2>
         <table><thead><tr>
-          <th style="text-align:center">#</th><th>Student</th><th>Class</th><th style="text-align:center">Cumulative Avg</th>
+          <th style="text-align:center">#</th><th>Student</th><th>Class</th><th style="text-align:center">Score</th>
         </tr></thead><tbody>${rows}</tbody></table>`;
     }).join('');
     const win = window.open('', '_blank');
@@ -214,7 +214,7 @@ export default function BestStudentsPage() {
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Class</th>
                 <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Subjects</th>
-                <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Cumulative Avg</th>
+                <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Average</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -294,7 +294,7 @@ export default function BestStudentsPage() {
                         <th className="p-2 pl-4 text-center w-10 text-xs font-semibold text-gray-500 uppercase">#</th>
                         <th className="p-2 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
                         <th className="p-2 text-left text-xs font-semibold text-gray-500 uppercase">Class</th>
-                        <th className="p-2 text-center text-xs font-semibold text-gray-500 uppercase">Cumulative Avg</th>
+                        <th className="p-2 text-center text-xs font-semibold text-gray-500 uppercase">Score</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
