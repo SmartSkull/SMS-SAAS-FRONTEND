@@ -17,9 +17,14 @@ interface StudentRank {
   average: number;
 }
 
-interface PerSubjectRank extends StudentRank {
-  test: number;
-  exam: number;
+interface PerSubjectRank {
+  rank: number;
+  student_id: string;
+  firstname: string;
+  lastname: string;
+  image: string;
+  class: string;
+  total: number;
 }
 
 interface PerSubject {
@@ -84,7 +89,6 @@ export default function BestStudentsPage() {
         <td style="padding:6px 8px;border-bottom:1px solid #eee"><strong>${s.firstname} ${s.lastname}</strong><br><span style="font-size:11px;color:#888">${s.student_id}</span></td>
         <td style="padding:6px 8px;border-bottom:1px solid #eee">${s.class || '—'}</td>
         <td style="text-align:center;padding:6px 8px;border-bottom:1px solid #eee">${s.subject_count}</td>
-        <td style="text-align:center;padding:6px 8px;border-bottom:1px solid #eee">${s.total}</td>
         <td style="text-align:center;padding:6px 8px;border-bottom:1px solid #eee"><strong>${s.average}%</strong></td>
       </tr>
     `).join('');
@@ -98,13 +102,12 @@ export default function BestStudentsPage() {
       table{width:100%;border-collapse:collapse;font-size:13px}
       th{background:#f5f5f5;padding:8px;text-align:left;font-size:11px;text-transform:uppercase;color:#666;border-bottom:2px solid #ddd}
       td{padding:6px 8px;border-bottom:1px solid #eee}
-      .top3{background:#fffde7}
       @media print{body{padding:10mm}}
     </style></head><body>
     <h1>🏆 Overall Best Students</h1>
     <p class="sub">${classFilter || 'All Classes'} · ${session || 'All Sessions'} · ${term || 'All Terms'}</p>
     <table><thead><tr>
-      <th style="text-align:center">Rank</th><th>Student</th><th>Class</th><th style="text-align:center">Subjects</th><th style="text-align:center">Total</th><th style="text-align:center">Average</th>
+      <th style="text-align:center">Rank</th><th>Student</th><th>Class</th><th style="text-align:center">Subjects</th><th style="text-align:center">Cumulative Avg</th>
     </tr></thead><tbody>${rows}</tbody></table>
     <script>window.print();window.close()</script></body></html>`);
     win.document.close();
@@ -119,17 +122,14 @@ export default function BestStudentsPage() {
           <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee">${i + 1}</td>
           <td style="padding:5px 8px;border-bottom:1px solid #eee"><strong>${st.firstname} ${st.lastname}</strong><br><span style="font-size:11px;color:#888">${st.student_id}</span></td>
           <td style="padding:5px 8px;border-bottom:1px solid #eee">${st.class || '—'}</td>
-          <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee">${st.test}</td>
-          <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee">${st.exam}</td>
           <td style="text-align:center;padding:5px 8px;border-bottom:1px solid #eee"><strong>${st.total}</strong></td>
         </tr>
       `).join('');
       return `
         <h2 style="font-size:16px;margin-top:20px;margin-bottom:8px;color:#444">${ps.subject}</h2>
         <table><thead><tr>
-          <th style="text-align:center">#</th><th>Student</th><th>Class</th><th style="text-align:center">Test</th><th style="text-align:center">Exam</th><th style="text-align:center">Total</th>
-        </tr></thead><tbody>${rows}</tbody></table>
-      `;
+          <th style="text-align:center">#</th><th>Student</th><th>Class</th><th style="text-align:center">Cumulative Avg</th>
+        </tr></thead><tbody>${rows}</tbody></table>`;
     }).join('');
     const win = window.open('', '_blank');
     if (!win) { toast.error('Pop-up blocked. Please allow pop-ups.'); return; }
@@ -214,15 +214,14 @@ export default function BestStudentsPage() {
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
                 <th className="p-3 text-left text-xs font-semibold text-gray-500 uppercase">Class</th>
                 <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Subjects</th>
-                <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Total</th>
-                <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Average</th>
+                <th className="p-3 text-center text-xs font-semibold text-gray-500 uppercase">Cumulative Avg</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? [...Array(5)].map((_, i) => (
-                <tr key={i}><td colSpan={6} className="p-3"><div className="h-5 bg-gray-100 rounded animate-pulse" /></td></tr>
+                <tr key={i}><td colSpan={5} className="p-3"><div className="h-5 bg-gray-100 rounded animate-pulse" /></td></tr>
               )) : overall.length === 0 ? (
-                <tr><td colSpan={6} className="p-6 text-center text-gray-400">No results found for the selected filters.</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-gray-400">No results found for the selected filters.</td></tr>
               ) : overall.map((s) => (
                 <tr key={s.student_id} className="hover:bg-gray-50">
                   <td className="p-3 text-center"><RankBadge rank={s.rank} /></td>
@@ -237,7 +236,6 @@ export default function BestStudentsPage() {
                   </td>
                   <td className="p-3 text-gray-600">{s.class || '—'}</td>
                   <td className="p-3 text-center text-gray-600">{s.subject_count}</td>
-                  <td className="p-3 text-center font-semibold text-gray-900">{s.total}</td>
                   <td className="p-3 text-center">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                       s.average >= 75 ? 'bg-green-100 text-green-700' :
@@ -296,9 +294,7 @@ export default function BestStudentsPage() {
                         <th className="p-2 pl-4 text-center w-10 text-xs font-semibold text-gray-500 uppercase">#</th>
                         <th className="p-2 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
                         <th className="p-2 text-left text-xs font-semibold text-gray-500 uppercase">Class</th>
-                        <th className="p-2 text-center text-xs font-semibold text-gray-500 uppercase">Test</th>
-                        <th className="p-2 text-center text-xs font-semibold text-gray-500 uppercase">Exam</th>
-                        <th className="p-2 text-center text-xs font-semibold text-gray-500 uppercase">Total</th>
+                        <th className="p-2 text-center text-xs font-semibold text-gray-500 uppercase">Cumulative Avg</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -312,8 +308,6 @@ export default function BestStudentsPage() {
                             </div>
                           </td>
                           <td className="p-2 text-gray-600">{st.class || '—'}</td>
-                          <td className="p-2 text-center text-gray-700">{st.test}</td>
-                          <td className="p-2 text-center text-gray-700">{st.exam}</td>
                           <td className="p-2 text-center font-semibold text-gray-900">{st.total}</td>
                         </tr>
                       ))}
