@@ -258,6 +258,7 @@ export const endpoints = {
     studentsUnverify: '/admin/students/unverify',
     studentsBulkVerify: '/admin/students/bulk-verify',
     studentChangePassword: '/admin/students/change-password',
+    resultsBestStudents: '/admin/results/best',
     staff: '/admin/staff',
     staffMember: (id: string) => `/admin/staff/${encodeURIComponent(id)}`,
     staffVerify: (id: string) => `/admin/staff/${encodeURIComponent(id)}/verify`,
