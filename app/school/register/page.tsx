@@ -34,6 +34,7 @@ export default function RegisterSchoolPage() {
   const toast = useToast();
   const [form, setForm] = useState(EMPTY);
   const [logo, setLogo] = useState<File | null>(null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const logoName = useMemo(() => logo?.name ?? 'Choose logo image', [logo]);
 
@@ -49,6 +50,10 @@ export default function RegisterSchoolPage() {
     event.preventDefault();
     if (!logo) {
       toast.error('School logo is required');
+      return;
+    }
+    if (!acceptedTerms) {
+      toast.error('Please accept the Terms & Conditions to continue');
       return;
     }
 
@@ -153,6 +158,23 @@ export default function RegisterSchoolPage() {
                 <input required type="file" accept="image/*" onChange={(event) => setLogo(event.target.files?.[0] ?? null)} className="hidden" />
               </label>
             </div>
+
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                required
+                checked={acceptedTerms}
+                onChange={(event) => setAcceptedTerms(event.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-700 focus:ring-blue-500"
+              />
+              <span>
+                I have read and agree to the{' '}
+                <Link href="/terms" target="_blank" className="font-semibold text-blue-700 underline hover:text-blue-800">
+                  Terms & Conditions
+                </Link>{' '}
+                governing the use of the Smart Campus platform.
+              </span>
+            </label>
 
             <button type="submit" disabled={submitting} className="mt-6 w-full rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-50 transition-all shadow-lg shadow-blue-200">
               {submitting ? 'Submitting...' : 'Submit for approval'}
