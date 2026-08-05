@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { BadgeCheck, Check, CheckCircle, Eye, FileBarChart2, Loader2, Printer, Search, User, X, XCircle } from 'lucide-react';
+import { Check, CheckCircle, Eye, FileBarChart2, Loader2, Printer, Search, User, X, XCircle } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -281,6 +281,16 @@ export default function AdminResults() {
     finally { setApproving(p => { const n = { ...p }; delete n[studentId]; return n; }); }
   };
 
+  const unapprove = async (studentId: string) => {
+    setApproving(p => ({ ...p, [studentId]: true }));
+    try {
+      await api.put(endpoints.admin.resultUnapprove(studentId), { session: selectedSession, term: selectedTerm });
+      toast.success('Unapproved');
+      fetchResults();
+    } catch { toast.error('Failed to unapprove'); }
+    finally { setApproving(p => { const n = { ...p }; delete n[studentId]; return n; }); }
+  };
+
   const bulkApprove = async () => {
     if (!selected.length) return;
     setBulkApproving(true);
@@ -472,9 +482,11 @@ export default function AdminResults() {
                       <Eye size={18} />
                     </button>
                     {s.approved == 1 || s.approved === true || s.approved === '1' ? (
-                      <span className="text-green-500" title="Verified"><BadgeCheck size={18} /></span>
+                      <button onClick={() => unapprove(s.student_id)} disabled={approving[s.student_id]} className="text-orange-600 hover:text-orange-800 disabled:opacity-50" title="Unapprove">
+                        {approving[s.student_id] ? <Loader2 size={18} className="animate-spin" /> : <XCircle size={18} />}
+                      </button>
                     ) : (
-                      <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Verify">
+                      <button onClick={() => approve(s.student_id)} disabled={approving[s.student_id]} className="text-blue-600 hover:text-blue-800 disabled:opacity-50" title="Approve">
                         {approving[s.student_id] ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
                       </button>
                     )}
