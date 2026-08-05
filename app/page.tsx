@@ -6,6 +6,7 @@ import { TickerBar, StatsSection } from '@/components/landing/StatsSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { PhotoBreak, TrustSection, FinalCTA, Footer } from '@/components/landing/FooterSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { ShowcaseSection } from '@/components/landing/ShowcaseSection';
 import { TransportSection } from '@/components/landing/TransportSection';
 import { PaymentSection } from '@/components/landing/PaymentSection';
 import { FAQSection } from '@/components/landing/FAQSection';
@@ -16,7 +17,7 @@ export default function LandingPage() {
   const { menu, setMenu, scrolled, sent, form, setForm, heroRef, submit } = useLandingPage();
 
   return (
-    <div className="bg-[#e8f0fe] text-gray-900 overflow-x-hidden">
+    <div className="bg-white text-gray-900 overflow-x-hidden">
       <style>{`
         @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
         .ticker-t{display:flex;width:max-content;animation:ticker 32s linear infinite}
@@ -31,8 +32,8 @@ export default function LandingPage() {
       <HeroSection heroRef={heroRef} />
       <TickerBar />
       <StatsSection />
+      <ShowcaseSection />
       <FeaturesSection />
-      <PhotoBreak />
       <HowItWorksSection />
       <TransportSection />
       <PaymentSection />

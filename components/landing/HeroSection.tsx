@@ -9,93 +9,89 @@ interface HeroSectionProps {
 
 export function HeroSection({ heroRef }: HeroSectionProps) {
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden bg-gray-950">
-      <div className="absolute inset-0">
-        <img src="/images/studentgroup1.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-40 animate-[kenBurns_12s_ease-in-out_infinite_alternate]" />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-950/80 via-gray-900/60 to-gray-950/70" />
-      <div className="absolute top-0 right-0 w-[700px] h-[700px] rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
+    <section ref={heroRef} className="relative pt-[68px] bg-white overflow-hidden">
+      {/* soft gradient blobs */}
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full bg-blue-100/60 blur-3xl pointer-events-none" />
+      <div className="absolute top-40 -left-32 w-[400px] h-[400px] rounded-full bg-blue-50 blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 pt-[68px] w-full grid md:grid-cols-2 gap-16 items-center py-24">
-        <div className="flex flex-col gap-0">
-          <Reveal>
-            <h1 className="text-[clamp(3rem,6vw,5rem)] font-black leading-[1.04] tracking-tight text-white mb-6">
-              The <span className="text-blue-200">smartest</span> way to run your school.
-            </h1>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <p className="text-[17px] text-blue-100 leading-8 mb-10 max-w-lg">
-              Smart Campus handles academics, transport, payments, HR, library and more — all from one login.
-            </p>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <div className="flex flex-wrap gap-4">
-              <a href="#contact" className="flex items-center gap-2 px-7 py-4 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-2xl text-[15px] transition-all shadow-[0_8px_24px_rgba(0,0,0,.2)]">
-                Register your school <ArrowRight size={16} />
-              </a>
-              <Link href="/school" className="flex items-center gap-2 px-7 py-4 bg-blue-600 hover:bg-blue-700 border border-blue-500 text-white font-semibold rounded-2xl text-[15px] transition-all">
-                Log in to portal
-              </Link>
-            </div>
-          </Reveal>
-          <Reveal delay={0.3}>
-            <div className="flex gap-10 mt-12 pt-10 border-t border-white/20">
-              {[['1,200+', 'Students'], ['50+', 'Staff'], ['24/7', 'Support']].map(([n, l]) => (
-                <div key={l}>
-                  <p className="text-2xl font-black text-white">{n}</p>
-                  <p className="text-xs text-blue-200 mt-0.5">{l}</p>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-        </div>
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col items-center text-center">
+        <Reveal>
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-semibold text-blue-700 mb-8">
+            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            Trusted by schools across Nigeria
+          </div>
+        </Reveal>
 
-        {/* floating UI cards */}
-        <div className="hidden md:flex items-center justify-center relative h-[540px]">
-          <Reveal delay={0.4} className="relative w-72 rounded-3xl overflow-hidden shadow-[0_40px_80px_rgba(0,0,0,.35)] float">
-            <img src="/images/studentgroup2.jpg" alt="" className="w-full h-64 object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-blue-900/70 via-transparent to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-5">
-              <div className="flex items-center gap-2.5 bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-3">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs font-bold text-gray-900">All systems live</span>
+        <Reveal delay={0.05}>
+          <h1 className="text-[clamp(2.75rem,6vw,4.75rem)] font-black leading-[1.05] tracking-tight text-gray-900 max-w-4xl mx-auto mb-6">
+            The smartest way to run your school —{' '}
+            <span className="text-blue-600">all in one place</span>
+          </h1>
+        </Reveal>
+
+        <Reveal delay={0.1}>
+          <p className="text-[17px] md:text-lg text-gray-500 leading-8 max-w-2xl mx-auto mb-10">
+            Smart Campus handles academics, transport, payments, staff, library and more — from one secure login for your entire school.
+          </p>
+        </Reveal>
+
+        <Reveal delay={0.15}>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Link href="/school/register" className="flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-[15px] transition-all shadow-[0_12px_30px_rgba(37,99,235,.3)]">
+              Register your school <ArrowRight size={16} />
+            </Link>
+            <Link href="/school" className="flex items-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 font-semibold rounded-2xl text-[15px] transition-all">
+              Log in to portal
+            </Link>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.25} className="w-full mt-16">
+          <div className="relative mx-auto max-w-5xl">
+            <div className="absolute -inset-6 bg-gradient-to-b from-blue-100/80 to-transparent rounded-[3rem] blur-2xl pointer-events-none" />
+            <div className="relative bg-white rounded-[2rem] border border-gray-200 shadow-[0_40px_100px_rgba(37,99,235,.15)] overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50/80">
+                <span className="w-3 h-3 rounded-full bg-red-400" />
+                <span className="w-3 h-3 rounded-full bg-yellow-400" />
+                <span className="w-3 h-3 rounded-full bg-green-400" />
+                <span className="ml-3 text-xs text-gray-400 font-medium">smartcampus.com.ng — dashboard</span>
+              </div>
+              <img src="/images/studentgroup2.jpg" alt="Smart Campus dashboard" className="w-full h-64 md:h-[420px] object-cover" />
+            </div>
+
+            {/* floating cards */}
+            <div className="float absolute -left-4 top-24 hidden md:flex bg-white rounded-2xl shadow-xl border border-gray-100 px-4 py-3 items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
+                <MapPin size={15} className="text-blue-600" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-gray-900">Bus is 2 min away</p>
+                <p className="text-[10px] text-gray-400">Live GPS · Route A</p>
               </div>
             </div>
-          </Reveal>
 
-          <Reveal delay={0.55} variant="right" className="absolute top-8 -right-4 bg-white/95 backdrop-blur-sm rounded-2xl p-3 flex flex-col gap-2 shadow-xl">
-            {['/images/student1.jpg', '/images/student2.jpg', '/images/student3.jpg'].map((src, i) => (
-              <div key={i} className="w-11 h-11 rounded-xl overflow-hidden ring-2 ring-blue-100 hover:scale-110 transition-transform">
-                <img src={src} alt="" className="w-full h-full object-cover" />
+            <div className="float2 absolute -right-4 bottom-24 hidden md:flex bg-white rounded-2xl shadow-xl border border-gray-100 px-4 py-3 items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center">
+                <CheckCircle size={15} className="text-green-600" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-gray-900">Fees paid ✓</p>
+                <p className="text-[10px] text-gray-400">₦45,000 · Just now</p>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.35}>
+          <div className="flex flex-wrap justify-center gap-12 mt-16">
+            {[['1,200+', 'Students'], ['50+', 'Staff'], ['24/7', 'Support']].map(([n, l]) => (
+              <div key={l} className="text-center">
+                <p className="text-3xl font-black text-gray-900">{n}</p>
+                <p className="text-sm text-gray-400 mt-0.5">{l}</p>
               </div>
             ))}
-            <div className="text-center mt-1">
-              <p className="text-[11px] font-black text-blue-600">1,240+</p>
-              <p className="text-[9px] text-gray-400">Students</p>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.7} variant="left" className="float2 absolute bottom-24 -left-8 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
-              <MapPin size={15} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-gray-900">Bus is 2 min away</p>
-              <p className="text-[10px] text-gray-400">Live GPS · Route A</p>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.85} variant="fade" className="float absolute bottom-6 right-0 bg-white rounded-2xl shadow-xl px-4 py-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-green-100 flex items-center justify-center">
-              <CheckCircle size={15} className="text-green-600" />
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-gray-900">Fees paid ✓</p>
-              <p className="text-[10px] text-gray-400">₦45,000 · Just now</p>
-            </div>
-          </Reveal>
-        </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

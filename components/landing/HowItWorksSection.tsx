@@ -10,27 +10,28 @@ const STEPS = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-28 px-6 bg-blue-700">
+    <section id="how-it-works" className="py-24 md:py-32 px-6 bg-[#f7f9fc]">
       <div className="max-w-5xl mx-auto">
         <Reveal className="text-center mb-16">
-          <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-3">Simple setup</p>
-          <h2 className="text-[clamp(2rem,4vw,3.2rem)] font-black tracking-tight text-white">Up and running in minutes</h2>
+          <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-3">Simple setup</p>
+          <h2 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-tight text-gray-900">Up and running in minutes</h2>
+          <p className="text-gray-500 max-w-lg mx-auto text-[15px] leading-7 mt-4">Three simple steps to bring your whole school online.</p>
         </Reveal>
         <div className="grid md:grid-cols-3 gap-6 relative">
-          <div className="hidden md:block absolute top-12 left-[calc(16.66%+2rem)] right-[calc(16.66%+2rem)] h-px bg-gradient-to-r from-transparent via-blue-300/50 to-transparent" />
+          <div className="hidden md:block absolute top-12 left-[calc(16.66%+2rem)] right-[calc(16.66%+2rem)] h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent" />
           {STEPS.map(({ n, t, d, icon: Icon }, i) => (
             <Reveal key={n} delay={i * 0.12}>
-              <div className="group bg-white/10 backdrop-blur-sm border border-white/15 hover:bg-white/20 rounded-2xl p-8 text-center flex flex-col items-center transition-all hover:-translate-y-1.5 hover:shadow-[0_16px_48px_rgba(0,0,0,.2)]">
+              <div className="group bg-white border border-gray-100 hover:border-blue-200 rounded-3xl p-8 text-center flex flex-col items-center transition-all hover:-translate-y-1.5 hover:shadow-[0_16px_48px_rgba(37,99,235,.1)]">
                 <div className="relative mb-6">
-                  <div className="w-20 h-20 rounded-full bg-white/15 group-hover:bg-white/25 flex items-center justify-center transition-colors">
-                    <Icon size={30} className="text-white" />
+                  <div className="w-20 h-20 rounded-full bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                    <Icon size={30} className="text-blue-600" />
                   </div>
-                  <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white text-blue-700 text-[11px] font-black flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-blue-600 text-white text-[11px] font-black flex items-center justify-center">
                     {n.slice(1)}
                   </span>
                 </div>
-                <h3 className="font-black text-white text-[16px] mb-3">{t}</h3>
-                <p className="text-sm text-blue-100 leading-6">{d}</p>
+                <h3 className="font-black text-gray-900 text-[16px] mb-3">{t}</h3>
+                <p className="text-sm text-gray-500 leading-6">{d}</p>
               </div>
             </Reveal>
           ))}

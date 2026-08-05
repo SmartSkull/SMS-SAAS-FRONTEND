@@ -4,11 +4,11 @@ import { STATS, TICKER } from '@/types/landing';
 
 export function TickerBar() {
   return (
-    <div className="bg-blue-800 py-3.5 overflow-hidden select-none">
+    <div className="bg-blue-600 py-3.5 overflow-hidden select-none">
       <div className="ticker-t">
         {[...TICKER, ...TICKER].map((t, i) => (
-          <span key={i} className="flex items-center gap-4 px-6 text-blue-100 font-semibold text-sm whitespace-nowrap">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />{t}
+          <span key={i} className="flex items-center gap-4 px-6 text-blue-50 font-semibold text-sm whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-200 shrink-0" />{t}
           </span>
         ))}
       </div>
@@ -18,13 +18,13 @@ export function TickerBar() {
 
 export function StatsSection() {
   return (
-    <section className="bg-blue-600 py-14 px-6">
+    <section className="bg-white py-16 px-6 border-b border-gray-100">
       <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
         {STATS.map(({ n, l }, i) => (
           <Reveal key={l} delay={i * .08}>
             <div className="text-center">
-              <p className="text-4xl font-black text-white mb-1">{n}</p>
-              <p className="text-sm text-blue-100">{l}</p>
+              <p className="text-4xl font-black text-gray-900 mb-1">{n}</p>
+              <p className="text-sm text-gray-500">{l}</p>
             </div>
           </Reveal>
         ))}
