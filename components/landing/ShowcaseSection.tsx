@@ -71,7 +71,7 @@ export function ShowcaseSection() {
                       <span className="w-3 h-3 rounded-full bg-yellow-400" />
                       <span className="w-3 h-3 rounded-full bg-green-400" />
                     </div>
-                    <img src={i === 0 ? '/images/studentgroup1.jpg' : i === 1 ? '/images/student2.jpg' : '/images/student3.jpg'} alt={label} className="w-full h-56 md:h-80 object-cover" />
+                    <img src={i === 0 ? '/images/studentgroup1.jpg' : i === 1 ? '/images/student3.jpg' : '/images/studentgroup2.jpg'} alt={label} className="w-full h-56 md:h-80 object-cover" />
                   </div>
                 </div>
               </Reveal>
