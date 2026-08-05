@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, Lock, Eye, EyeOff } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronRight, X, GraduationCap, Lock, Eye, EyeOff, Plus } from 'lucide-react';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { EmptyState } from '@/components/ui/StateDisplay';
@@ -43,7 +43,38 @@ export default function StudentsPage() {
   const [modal, setModal] = useState<{ open: boolean; student?: Student }>({ open: false });
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [addModal, setAddModal] = useState(false);
   const toast = useToast();
+
+  const addStudent = async () => {
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      toast.error('First and last name are required');
+      return;
+    }
+    if (!form.class) {
+      toast.error('Please select a class');
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post(endpoints.admin.students, {
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        telephone: form.telephone,
+        class: form.class,
+        password: form.password || undefined,
+      });
+      toast.success('Student created successfully');
+      setAddModal(false);
+      setForm(EMPTY);
+      load();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to create student');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -135,6 +166,12 @@ export default function StudentsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Students <span className="text-gray-400 font-normal text-lg">({meta.total})</span></h1>
+        <button
+          onClick={() => { setForm(EMPTY); setAddModal(true); }}
+          className="flex items-center gap-2 btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium"
+        >
+          <Plus size={16} /> Add Student
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl card shadow-sm p-4 flex flex-wrap gap-3">
@@ -259,6 +296,90 @@ export default function StudentsPage() {
               <button onClick={() => setModal({ open: false })} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
               <button onClick={save} disabled={saving} className="flex-1 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
                 {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-900">Add Student</h2>
+              <button onClick={() => setAddModal(false)}><X size={20} className="text-gray-400" /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">First Name <span className="text-red-500">*</span></label>
+                  <input
+                    value={form.firstName}
+                    onChange={(e) => setForm(p => ({ ...p, firstName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500"
+                    placeholder="e.g. John"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Last Name <span className="text-red-500">*</span></label>
+                  <input
+                    value={form.lastName}
+                    onChange={(e) => setForm(p => ({ ...p, lastName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500"
+                    placeholder="e.g. Doe"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500"
+                  placeholder="student@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={form.telephone}
+                  onChange={(e) => setForm(p => ({ ...p, telephone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500"
+                  placeholder="e.g. 08012345678"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Class <span className="text-red-500">*</span></label>
+                <select
+                  value={form.class}
+                  onChange={(e) => setForm(p => ({ ...p, class: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500 bg-white"
+                >
+                  <option value="">Select class</option>
+                  {classes.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Password <span className="text-gray-400">(default: greatkings)</span></label>
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm(p => ({ ...p, password: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-purple-500"
+                  placeholder="Leave blank to use default"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-gray-100">
+              <button onClick={() => setAddModal(false)} className="flex-1 py-2 border border-gray-200 rounded-xl text-sm hover:bg-gray-50">Cancel</button>
+              <button onClick={addStudent} disabled={saving} className="flex-1 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
+                {saving ? 'Adding…' : 'Add Student'}
               </button>
             </div>
           </div>
