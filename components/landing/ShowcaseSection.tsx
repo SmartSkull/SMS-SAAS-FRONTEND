@@ -33,7 +33,7 @@ const SHOWCASES = [
     desc: 'Students pay from their portal via Paystack. No queues, no manual records — QR-code receipts generated instantly.',
     points: ['Paystack checkout', 'Instant QR receipts', 'Payment history'],
     color: 'green',
-    image: '/images/animated chair.svg',
+    image: '/images/Money Paid.svg',
     grad: 'from-emerald-500 to-teal-600',
     glow: 'rgba(16,185,129,0.25)',
   },
