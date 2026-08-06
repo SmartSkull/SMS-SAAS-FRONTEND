@@ -43,7 +43,7 @@ export default function ContactPage() {
             <h2 className="text-2xl font-black text-gray-900 mb-8">Contact details</h2>
             <div className="space-y-6">
               {[
-                { icon: Mail, label: 'Email', value: 'admin@florierenparklaneis.com.ng', href: 'mailto:admin@florierenparklaneis.com.ng' },
+                { icon: Mail, label: 'Email', value: 'email@smartcampus.com.ng', href: 'mailto:email@smartcampus.com.ng' },
                 { icon: MessageCircle, label: 'WhatsApp', value: '+234 703 188 2197', href: 'https://wa.me/2347031882197' },
                 { icon: Phone, label: 'Phone', value: '+234 703 188 2197', href: 'tel:+2347031882197' },
               ].map(({ icon: Icon, label, value, href }) => (

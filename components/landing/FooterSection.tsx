@@ -102,7 +102,7 @@ export function Footer() {
             </div>
             <div>
               <p className="text-white font-bold mb-4">Contact</p>
-              <a href="mailto:admin@florierenparklaneis.com.ng" className="block py-1.5 hover:text-white transition-colors">Email us</a>
+              <a href="mailto:email@smartcampus.com.ng" className="block py-1.5 hover:text-white transition-colors">Email us</a>
               <a href="https://wa.me/2347031882197" className="block py-1.5 hover:text-white transition-colors">WhatsApp</a>
               <a href="tel:+2348000000000" className="block py-1.5 hover:text-white transition-colors">Call us</a>
               <a href="https://drive.google.com/uc?export=download&id=17d-QLydS0545Pu6cg0WpSgfjmyVTsAQU" target="_blank" rel="noreferrer" className="block py-1.5 hover:text-white transition-colors text-green-400">⬇ Download App</a>
