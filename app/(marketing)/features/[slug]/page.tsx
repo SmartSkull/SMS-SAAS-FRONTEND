@@ -29,18 +29,19 @@ export default async function FeatureDetailPage({ params }: Props) {
   return (
     <LandingShell>
       {/* Hero */}
-      <section className="relative pt-36 pb-20 px-6 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50" />
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
+      <section className="relative pt-36 pb-20 px-6 text-center overflow-hidden">
+        <img src="/images/studentgroup1.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-40 animate-[kenBurns_12s_ease-in-out_infinite_alternate]" />
+        <div className="absolute inset-0 bg-gray-950/80" />
+        <div className="relative z-10">
           <Reveal>
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6" style={{ background: feature.bg, color: feature.ic }}>
               {feature.icon}
             </div>
-            <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-4">Feature</p>
-            <h1 className="text-[clamp(2.5rem,5vw,4rem)] font-black text-gray-900 leading-tight mb-5">
+            <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-4">Feature</p>
+            <h1 className="text-[clamp(2.5rem,5vw,4rem)] font-black text-white leading-tight mb-5">
               {feature.label}
             </h1>
-            <p className="text-gray-500 text-[16px] max-w-2xl mx-auto leading-8">{feature.desc}</p>
+            <p className="text-blue-100/70 text-[16px] max-w-2xl mx-auto leading-8">{feature.desc}</p>
           </Reveal>
         </div>
       </section>
