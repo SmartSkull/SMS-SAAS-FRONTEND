@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
-/* Custom font from /public/fonts */
+/* WhatsApp Sans Var font from /public/fonts */
 @font-face {
-  font-family: 'Custom';
-  src: url('/fonts/fQtw5exLIdT.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'WhatsApp Sans Var';
   font-style: normal;
+  font-weight: 100 900;
+  src: url('/fonts/fQtw5exLIdT.woff2') format('woff2');
   font-display: swap;
 }
 
@@ -62,14 +62,14 @@ a:visited {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Custom', var(--font-geist-sans);
+  --font-sans: 'WhatsApp Sans Var', var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 /* Apply the custom font globally */
 html, body {
-  font-family: 'Custom', var(--font-geist-sans), system-ui, sans-serif;
-  font-weight: 450;
+  font-family: 'WhatsApp Sans Var', var(--font-geist-sans), system-ui, sans-serif;
+  font-weight: 400;
 }
 
 .btn-brand {
@@ -223,8 +223,8 @@ html, body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Custom', var(--font-geist-sans), system-ui, sans-serif;
-  font-weight: 450;
+  font-family: 'WhatsApp Sans Var', var(--font-geist-sans), system-ui, sans-serif;
+  font-weight: 400;
 }
 
 input, select, textarea {
