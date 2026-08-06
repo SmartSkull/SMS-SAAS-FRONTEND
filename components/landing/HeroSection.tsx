@@ -10,11 +10,6 @@ interface HeroSectionProps {
 export function HeroSection({ heroRef }: HeroSectionProps) {
   return (
     <section ref={heroRef} className="relative pt-[68px] bg-white overflow-hidden">
-      {/* decorative gradient blobs */}
-      <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-200/40 blur-3xl pointer-events-none" />
-      <div className="absolute top-40 -right-40 w-[600px] h-[600px] rounded-full bg-indigo-200/30 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-emerald-100/40 blur-3xl pointer-events-none" />
-
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-24 grid lg:grid-cols-2 gap-16 lg:gap-12 items-center">
         {/* Left — text */}
         <div className="text-center lg:text-left flex flex-col items-center lg:items-start">
@@ -85,9 +80,6 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
         {/* Right — phone-framed map visual */}
         <Reveal delay={0.25} className="relative flex justify-center lg:justify-end">
           <div className="relative">
-            {/* glow behind */}
-            <div className="absolute -inset-10 bg-gradient-to-tr from-blue-200 via-indigo-100 to-emerald-100 rounded-[4rem] blur-2xl opacity-70 pointer-events-none" />
-
             {/* phone frame */}
             <div className="relative w-[330px] sm:w-[380px] rounded-[2.5rem] bg-gray-900 p-3 shadow-[0_40px_100px_rgba(37,99,235,.35)]">
               <div className="rounded-[2rem] overflow-hidden bg-white">
