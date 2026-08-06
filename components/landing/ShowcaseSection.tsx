@@ -13,8 +13,6 @@ const SHOWCASES = [
     points: ['Automated result sheets', 'Online CBT exams', 'Homework & grading'],
     color: 'blue',
     image: '/images/chat system.svg?v=2',
-    grad: 'from-blue-500 to-indigo-600',
-    glow: 'rgba(59,130,246,0.25)',
   },
   {
     icon: Bus,
@@ -24,8 +22,6 @@ const SHOWCASES = [
     points: ['Live GPS tracking', 'Driver mobile app', 'Pickup confirmations'],
     color: 'indigo',
     image: '/images/car.svg?v=2',
-    grad: 'from-indigo-500 to-purple-600',
-    glow: 'rgba(99,102,241,0.25)',
   },
   {
     icon: CreditCard,
@@ -35,8 +31,6 @@ const SHOWCASES = [
     points: ['Paystack checkout', 'Instant QR receipts', 'Payment history'],
     color: 'green',
     image: '/images/Money Paid.svg?v=2',
-    grad: 'from-emerald-500 to-teal-600',
-    glow: 'rgba(16,185,129,0.25)',
   },
 ];
 
@@ -51,7 +45,7 @@ export function ShowcaseSection() {
         />
 
         <div className="space-y-16 md:space-y-24">
-          {SHOWCASES.map(({ icon: Icon, label, title, desc, points, color, image, grad, glow }, i) => {
+          {SHOWCASES.map(({ icon: Icon, label, title, desc, points, color, image }, i) => {
             const reversed = i % 2 === 1;
             const textColor = color === 'green' ? 'text-emerald-600' : color === 'indigo' ? 'text-indigo-600' : 'text-blue-600';
             const iconBg = color === 'green' ? 'bg-emerald-100' : color === 'indigo' ? 'bg-indigo-100' : 'bg-blue-100';
@@ -84,33 +78,11 @@ export function ShowcaseSection() {
                 </Reveal>
 
                 <Reveal variant={reversed ? 'left' : 'right'} delay={0.1} className={reversed ? 'md:order-1' : ''}>
-                  <div className="group relative">
-                    {/* animated glow behind */}
-                    <div
-                      className="absolute -inset-6 rounded-[3rem] blur-2xl opacity-60 transition-opacity duration-500 group-hover:opacity-90 pointer-events-none"
-                      style={{ background: glow }}
-                    />
-                    {/* gradient card */}
-                    <div className={`relative rounded-[2rem] overflow-hidden bg-gradient-to-br ${grad}`}>
-                      {/* browser chrome */}
-                      <div className="flex items-center justify-between px-5 py-3 bg-black/20 backdrop-blur-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="w-3 h-3 rounded-full bg-white/30" />
-                          <span className="w-3 h-3 rounded-full bg-white/30" />
-                          <span className="w-3 h-3 rounded-full bg-white/30" />
-                        </div>
-                        <span className="text-white/70 text-[10px] font-semibold tracking-wide uppercase">{label}</span>
-                      </div>
-                      {/* svg */}
-                      <div className="p-8 md:p-10 flex items-center justify-center min-h-[340px] md:min-h-[420px]">
-                        <img
-                          src={image}
-                          alt={label}
-                          className="w-full h-auto object-contain transition-transform duration-500 group-hover:scale-[1.03]"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <img
+                    src={image}
+                    alt={label}
+                    className="w-full max-w-lg h-auto object-contain"
+                  />
                 </Reveal>
               </div>
             );

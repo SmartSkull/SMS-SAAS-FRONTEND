@@ -21,14 +21,11 @@ export function PaymentSection() {
         </Reveal>
 
         <Reveal variant="left" delay={0.15} className="flex-1 flex justify-center">
-          <div className="relative w-full max-w-sm">
-            <div className="absolute -inset-4 bg-blue-400/30 rounded-[2.5rem] blur-2xl pointer-events-none" />
-            <img
-              src="/images/qrcode.svg"
-              alt="QR code payment"
-              className="relative w-full h-auto rounded-3xl border border-white/30 shadow-[0_32px_80px_rgba(0,0,0,.3)]"
-            />
-          </div>
+          <img
+            src="/images/qrcode.svg"
+            alt="QR code payment"
+            className="w-full max-w-sm h-auto"
+          />
         </Reveal>
       </div>
     </section>
