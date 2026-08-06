@@ -14,13 +14,14 @@ interface SectionHeaderProps {
 export function SectionHeader({ eyebrow, title, subtitle, dark, align = 'center' }: SectionHeaderProps) {
   const centered = align === 'center';
   return (
-    <Reveal className={`mb-16 ${centered ? 'text-center' : 'text-left'}`}>
-      {/* eyebrow pill */}
-      <div className={`inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50/80 px-4 py-1.5 mb-5 shadow-sm`}>
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-        <span className={`text-xs font-bold uppercase tracking-[0.15em] ${dark ? 'text-blue-300' : 'text-blue-700'}`}>
+    <Reveal className={`mb-14 ${centered ? 'text-center' : 'text-left'}`}>
+      {/* eyebrow */}
+      <div className={`flex items-center gap-3 mb-4 ${centered ? 'justify-center' : 'justify-start'}`}>
+        <span className="h-px w-6 bg-blue-400" />
+        <span className={`text-sm font-bold uppercase tracking-[0.2em] ${dark ? 'text-blue-300' : 'text-blue-600'}`}>
           {eyebrow}
         </span>
+        <span className="h-px w-6 bg-blue-400" />
       </div>
 
       {/* title */}
@@ -28,16 +29,9 @@ export function SectionHeader({ eyebrow, title, subtitle, dark, align = 'center'
         {title}
       </h2>
 
-      {/* decorative divider */}
-      <div className={`flex items-center gap-1.5 mb-5 ${centered ? 'justify-center' : 'justify-start'}`}>
-        <span className="h-1 w-8 rounded-full bg-blue-500" />
-        <span className="h-1 w-2 rounded-full bg-blue-300" />
-        <span className="h-1 w-8 rounded-full bg-indigo-500" />
-      </div>
-
       {/* subtitle */}
       {subtitle && (
-        <p className={`max-w-lg text-[15px] leading-7 ${dark ? 'text-white/60' : 'text-gray-500'} ${centered ? 'mx-auto' : ''}`}>
+        <p className={`max-w-lg text-[16px] leading-7 ${dark ? 'text-white/60' : 'text-gray-500'} ${centered ? 'mx-auto' : ''}`}>
           {subtitle}
         </p>
       )}
