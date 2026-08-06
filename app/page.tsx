@@ -26,6 +26,14 @@ export default function LandingPage() {
         @keyframes float2{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
         .float{animation:float 4s ease-in-out infinite;will-change:transform}
         .float2{animation:float2 5s .9s ease-in-out infinite;will-change:transform}
+        @keyframes gradient-x{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+        .animate-gradient-x{background-size:200% 200%;animation:gradient-x 8s ease infinite}
+        @keyframes float-slow{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-16px) scale(1.08)}}
+        .animate-float-slow{animation:float-slow 5s ease-in-out infinite}
+        @keyframes float-slower{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(14px) scale(0.94)}}
+        .animate-float-slower{animation:float-slower 6s ease-in-out infinite}
+        @keyframes bounce-soft{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+        .animate-bounce-soft{animation:bounce-soft 1.6s ease-in-out infinite}
       `}</style>
 
       <Navbar scrolled={scrolled} menu={menu} setMenu={setMenu} />
