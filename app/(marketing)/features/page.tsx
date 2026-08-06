@@ -30,7 +30,7 @@ export default function FeaturesPage() {
 
       {/* Detail grid */}
       <section className="py-24 px-6 bg-white">
-        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-10">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { title: 'CBT Exams', body: 'Staff create multiple-choice tests per subject. Students take them online and get instant scores. All results are stored and exportable.' },
             { title: 'Live GPS Transport', body: "Bus location is broadcast from the driver's phone in real time. Parents get alerts when the bus is 500m away and a confirmation on pickup." },
