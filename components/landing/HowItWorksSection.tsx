@@ -11,7 +11,7 @@ const STEPS = [
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-24 md:py-32 px-6 bg-[#f7f9fc]">
+    <section id="how-it-works" className="py-24 md:py-32 px-6 bg-[#fcf5eb]">
       <div className="max-w-5xl mx-auto">
         <SectionHeader
           eyebrow="Simple setup"

@@ -5,7 +5,7 @@ import { FEATURES } from '@/types/landing';
 
 export function FeaturesSection() {
   return (
-    <section className="py-24 md:py-32 px-6 bg-[#f7f9fc]">
+    <section className="py-24 md:py-32 px-6 bg-[#fcf5eb]">
       <div className="max-w-7xl mx-auto">
         <SectionHeader
           eyebrow="Everything included"
