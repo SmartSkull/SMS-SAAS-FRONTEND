@@ -1,18 +1,17 @@
 'use client';
 import { Reveal } from './Reveal';
+import { SectionHeader } from './SectionHeader';
 import { FEATURES } from '@/types/landing';
 
 export function FeaturesSection() {
   return (
     <section className="py-24 md:py-32 px-6 bg-[#f7f9fc]">
       <div className="max-w-7xl mx-auto">
-        <Reveal className="text-center mb-16">
-          <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-3">Everything included</p>
-          <h2 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-tight text-gray-900 mb-4">
-            More than just results
-          </h2>
-          <p className="text-gray-500 max-w-lg mx-auto text-[15px] leading-7">One platform for the whole school — staff, students, transport, fees and more.</p>
-        </Reveal>
+        <SectionHeader
+          eyebrow="Everything included"
+          title={<>More than <span className="text-blue-600">just results</span></>}
+          subtitle="One platform for the whole school — staff, students, transport, fees and more."
+        />
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {FEATURES.map(({ label, desc, ic, bg, icon }, i) => (

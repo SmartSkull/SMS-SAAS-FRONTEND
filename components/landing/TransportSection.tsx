@@ -2,19 +2,19 @@
 import { ArrowRight, Bus, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Reveal } from './Reveal';
+import { SectionHeader } from './SectionHeader';
 
 export function TransportSection() {
   return (
     <section className="py-28 px-6 bg-[#e8f0fe]">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-20">
         <Reveal variant="left" className="flex-1">
-          <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-4">Live Transport Tracking</p>
-          <h2 className="text-[clamp(2rem,4vw,3rem)] font-black leading-tight text-gray-900 mb-5">
-            Parents always know<br /><span className="text-blue-600">where the bus is</span>
-          </h2>
-          <p className="text-gray-500 text-[15px] leading-8 mb-8">
-            Real-time GPS from the driver's phone. Alerts when the bus is 500m away. Automatic pickup confirmation the moment your child boards.
-          </p>
+          <SectionHeader
+            align="left"
+            eyebrow="Live Transport Tracking"
+            title={<>Parents always know <span className="text-blue-600">where the bus is</span></>}
+            subtitle="Real-time GPS from the driver's phone. Alerts when the bus is 500m away. Automatic pickup confirmation the moment your child boards."
+          />
           <Link href="/school" className="inline-flex items-center gap-2 px-7 py-4 btn-hero text-white font-bold rounded-2xl text-[15px]" style={{ color: '#fff' }}>
             Access your portal <ArrowRight size={16} />
           </Link>

@@ -2,6 +2,7 @@
 import { ArrowRight, Bus, CheckCircle, GraduationCap, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Reveal } from './Reveal';
+import { SectionHeader } from './SectionHeader';
 
 const SHOWCASES = [
   {
@@ -43,15 +44,11 @@ export function ShowcaseSection() {
   return (
     <section id="features" className="py-24 md:py-32 px-6 bg-white">
       <div className="max-w-6xl mx-auto">
-        <Reveal className="text-center mb-16 md:mb-24">
-          <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-3">Platform features</p>
-          <h2 className="text-[clamp(2rem,4vw,3.2rem)] font-black tracking-tight text-gray-900 mb-4">
-            Everything your school needs
-          </h2>
-          <p className="text-gray-500 max-w-lg mx-auto text-[15px] leading-7">
-            Three core pillars that power your whole school — from the classroom to the bus stop.
-          </p>
-        </Reveal>
+        <SectionHeader
+          eyebrow="Platform features"
+          title={<>Everything your <span className="text-blue-600">school needs</span></>}
+          subtitle="Three core pillars that power your whole school — from the classroom to the bus stop."
+        />
 
         <div className="space-y-16 md:space-y-24">
           {SHOWCASES.map(({ icon: Icon, label, title, desc, points, color, image, grad, glow }, i) => {

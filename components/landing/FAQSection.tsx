@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
 import { FAQS } from '@/types/landing';
 import { Reveal } from './Reveal';
+import { SectionHeader } from './SectionHeader';
 
 export function FAQSection() {
   const [open, setOpen] = useState<number | null>(0);
@@ -14,11 +15,12 @@ export function FAQSection() {
       <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-blue-800/10 blur-3xl pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative z-10">
-        <Reveal className="mb-14 text-center">
-          <p className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-3">FAQ</p>
-          <h2 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-tight text-white">Common questions</h2>
-          <p className="text-blue-100/50 mt-3 text-[15px]">Everything you need to know about Smart Campus.</p>
-        </Reveal>
+        <SectionHeader
+          dark
+          eyebrow="FAQ"
+          title={<>Common <span className="text-blue-400">questions</span></>}
+          subtitle="Everything you need to know about Smart Campus."
+        />
 
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           {/* Accordion — left */}

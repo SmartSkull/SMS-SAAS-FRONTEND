@@ -1,6 +1,7 @@
 'use client';
 import { GraduationCap, Users, Zap } from 'lucide-react';
 import { Reveal } from './Reveal';
+import { SectionHeader } from './SectionHeader';
 
 const STEPS = [
   { n: '01', t: 'Register your school', d: 'Create your profile — name, logo, brand colors and contact details.', icon: GraduationCap },
@@ -12,11 +13,11 @@ export function HowItWorksSection() {
   return (
     <section id="how-it-works" className="py-24 md:py-32 px-6 bg-[#f7f9fc]">
       <div className="max-w-5xl mx-auto">
-        <Reveal className="text-center mb-16">
-          <p className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-3">Simple setup</p>
-          <h2 className="text-[clamp(2rem,4vw,3rem)] font-black tracking-tight text-gray-900">Up and running in minutes</h2>
-          <p className="text-gray-500 max-w-lg mx-auto text-[15px] leading-7 mt-4">Three simple steps to bring your whole school online.</p>
-        </Reveal>
+        <SectionHeader
+          eyebrow="Simple setup"
+          title={<>Up and running <span className="text-blue-600">in minutes</span></>}
+          subtitle="Three simple steps to bring your whole school online."
+        />
         <div className="grid md:grid-cols-3 gap-6 relative">
           <div className="hidden md:block absolute top-12 left-[calc(16.66%+2rem)] right-[calc(16.66%+2rem)] h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent" />
           {STEPS.map(({ n, t, d, icon: Icon }, i) => (
