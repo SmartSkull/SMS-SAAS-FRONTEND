@@ -5,7 +5,7 @@ import { Reveal } from './Reveal';
 
 export function PaymentSection() {
   return (
-    <section className="py-28 px-6 bg-blue-600">
+    <section className="py-28 px-6 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row-reverse items-center gap-20">
         <Reveal variant="right" className="flex-1">
           <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-4">Online Payments</p>

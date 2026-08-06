@@ -13,7 +13,7 @@ interface ContactSectionProps {
 
 export function ContactSection({ sent, form, setForm, submit }: ContactSectionProps) {
   return (
-    <section id="contact" className="py-28 px-6 bg-blue-700">
+    <section id="contact" className="py-28 px-6 bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-20 items-start">
         <Reveal variant="left" className="flex-1">
           <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-4">Free Demo</p>
@@ -64,7 +64,7 @@ export function ContactSection({ sent, form, setForm, submit }: ContactSectionPr
                   className="w-full bg-blue-50 border border-blue-100 focus:border-blue-400 rounded-xl px-4 py-3.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all" />
               ))}
               <button type="submit"
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-[15px] transition-all shadow-[0_4px_16px_rgba(37,99,235,.3)]">
+                className="w-full py-4 btn-hero text-white font-bold rounded-xl text-[15px]">
                 Request Free Demo
               </button>
             </form>

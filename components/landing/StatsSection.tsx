@@ -4,7 +4,7 @@ import { STATS, TICKER } from '@/types/landing';
 
 export function TickerBar() {
   return (
-    <div className="bg-blue-600 py-3.5 overflow-hidden select-none">
+    <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 py-3.5 overflow-hidden select-none">
       <div className="ticker-t">
         {[...TICKER, ...TICKER].map((t, i) => (
           <span key={i} className="flex items-center gap-4 px-6 text-blue-50 font-semibold text-sm whitespace-nowrap">

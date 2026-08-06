@@ -60,7 +60,7 @@ export function FinalCTA() {
             <Link href="/school/register" className="px-8 py-4 bg-white hover:bg-blue-50 text-blue-700 font-bold rounded-2xl text-[15px] transition-all shadow-lg">
               Register Your School
             </Link>
-            <Link href="/school" className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-2xl text-[15px] transition-all">
+            <Link href="/school" className="px-8 py-4 btn-hero text-white font-semibold rounded-2xl text-[15px]" style={{ color: '#fff' }}>
               Access Existing Portal
             </Link>
             <a

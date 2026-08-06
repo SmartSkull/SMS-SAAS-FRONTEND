@@ -27,7 +27,7 @@ export function Navbar({ scrolled, menu, setMenu }: NavbarProps) {
 
         <div className="hidden md:flex items-center gap-3 animate-[fadeSlideR_.5s_.3s_ease_both] opacity-0" style={{ animationFillMode: 'forwards' }}>
           <Link href="/school" className="text-[14px] font-semibold text-gray-600 hover:text-gray-900 px-4 py-2 transition-colors">Log in</Link>
-          <a href="/get-a-demo" className="text-[14px] font-bold px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-[0_4px_14px_rgba(37,99,235,.25)]">
+          <a href="/get-a-demo" className="text-[14px] font-bold px-5 py-2.5 btn-hero text-white rounded-xl transition-colors" style={{ color: '#fff' }}>
             Get a demo
           </a>
         </div>
@@ -44,7 +44,7 @@ export function Navbar({ scrolled, menu, setMenu }: NavbarProps) {
           ))}
           <div className="flex gap-3">
             <Link href="/school" onClick={() => setMenu(false)} className="flex-1 text-center border border-gray-200 py-3 rounded-xl font-semibold text-sm text-gray-700">Log in</Link>
-            <a href="/get-a-demo" onClick={() => setMenu(false)} className="flex-1 text-center bg-blue-600 text-white py-3 rounded-xl font-bold text-sm">Get a demo</a>
+            <a href="/get-a-demo" onClick={() => setMenu(false)} className="flex-1 text-center btn-hero text-white py-3 rounded-xl font-bold text-sm" style={{ color: '#fff' }}>Get a demo</a>
           </div>
         </div>
       </div>

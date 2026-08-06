@@ -9,7 +9,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ heroRef }: HeroSectionProps) {
   return (
-    <section ref={heroRef} className="relative pt-[68px] bg-gradient-to-b from-blue-50 via-white to-white overflow-hidden">
+    <section ref={heroRef} className="relative pt-[68px] bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
       {/* decorative gradient blobs */}
       <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-200/40 blur-3xl pointer-events-none" />
       <div className="absolute top-40 -right-40 w-[600px] h-[600px] rounded-full bg-indigo-200/30 blur-3xl pointer-events-none" />
@@ -42,7 +42,7 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
 
           <Reveal delay={0.15}>
             <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-              <Link href="/school/register" className="group flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-[15px] transition-all shadow-[0_12px_30px_rgba(37,99,235,.35)] hover:shadow-[0_16px_40px_rgba(37,99,235,.45)] hover:-translate-y-0.5">
+              <Link href="/school/register" className="group btn-hero flex items-center gap-2 px-8 py-4 font-bold rounded-2xl text-[15px]" style={{ color: '#fff' }}>
                 Register your school
                 <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
               </Link>

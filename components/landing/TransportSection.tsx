@@ -15,7 +15,7 @@ export function TransportSection() {
           <p className="text-gray-500 text-[15px] leading-8 mb-8">
             Real-time GPS from the driver's phone. Alerts when the bus is 500m away. Automatic pickup confirmation the moment your child boards.
           </p>
-          <Link href="/school" className="inline-flex items-center gap-2 px-7 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-[15px] transition-all shadow-[0_8px_24px_rgba(37,99,235,.3)]">
+          <Link href="/school" className="inline-flex items-center gap-2 px-7 py-4 btn-hero text-white font-bold rounded-2xl text-[15px]" style={{ color: '#fff' }}>
             Access your portal <ArrowRight size={16} />
           </Link>
         </Reveal>

@@ -72,7 +72,7 @@ export function FAQSection() {
         {/* CTA */}
         <Reveal delay={0.3} className="mt-14 text-center">
           <p className="text-white/40 text-sm mb-4">Still have questions?</p>
-          <a href="/reach-us" className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all shadow-[0_8px_24px_rgba(37,99,235,.35)]">
+          <a href="/reach-us" className="inline-flex items-center gap-2 px-6 py-3 btn-hero text-white font-bold rounded-xl text-sm" style={{ color: '#fff' }}>
             Contact us
           </a>
         </Reveal>
