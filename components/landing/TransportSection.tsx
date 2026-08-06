@@ -24,8 +24,8 @@ export function TransportSection() {
           <div className="relative w-full max-w-sm">
             <div className="absolute -inset-4 bg-blue-200/50 rounded-[2.5rem] blur-2xl pointer-events-none" />
             <img
-              src="/images/qrcode.svg"
-              alt="QR code tracking"
+              src="/images/Google Map.svg"
+              alt="Live bus tracking map"
               className="relative w-full h-auto rounded-3xl border border-blue-100 shadow-[0_24px_60px_rgba(37,99,235,.15)]"
             />
           </div>
