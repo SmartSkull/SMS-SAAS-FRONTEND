@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" type="image/png" href="/images/logo.png" />
         <link rel="apple-touch-icon" href="/images/logo2.png" />
       </head>
-      <body className={`${geist.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className={`${geist.variable} ${geistMono.variable} font-[family-name:var(--font-geist)] h-full antialiased`}>
         <Script id="brand-colors" strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var s=JSON.parse(localStorage.getItem('selected_school'));if(s){var p=s.primaryColor||'#2563eb',sec=s.secondaryColor||'#eff6ff',a=s.accentColor||'#84cc16';var r=document.documentElement.style;r.setProperty('--brand',p);r.setProperty('--brand-dark',p);r.setProperty('--brand-light',sec);r.setProperty('--brand-accent',a);r.setProperty('--brand-border',p+'33');r.setProperty('--brand-shadow',p+'40');}}catch(e){}})();`,
