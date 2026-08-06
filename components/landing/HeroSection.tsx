@@ -93,7 +93,7 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
 
                 {/* map area */}
                 <div className="relative">
-                  <img src="/images/Google Map.svg" alt="Live bus tracking map" className="w-full h-auto max-h-[640px]" />
+                  <img src="/images/Google Map.svg?v=2" alt="Live bus tracking map" className="w-full h-auto max-h-[640px]" />
                   {/* overlay cards */}
                   <div className="absolute top-3 left-3 right-3">
                     <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg px-3 py-2.5 flex items-center gap-2.5">
