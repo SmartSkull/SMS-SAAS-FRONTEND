@@ -81,7 +81,7 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
         <Reveal delay={0.25} className="relative flex justify-center lg:justify-end">
           <div className="relative">
             {/* phone frame */}
-            <div className="relative w-[330px] sm:w-[380px] rounded-[2.5rem] bg-gray-900 p-3 shadow-[0_40px_100px_rgba(37,99,235,.35)]">
+            <div className="relative w-[330px] sm:w-[380px] rounded-[2.5rem] bg-gray-900 p-3">
               <div className="rounded-[2rem] overflow-hidden bg-white">
                 {/* status bar */}
                 <div className="bg-blue-600 px-5 pt-4 pb-3">
