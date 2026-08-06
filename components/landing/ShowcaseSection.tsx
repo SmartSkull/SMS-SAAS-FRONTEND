@@ -22,7 +22,7 @@ const SHOWCASES = [
     desc: 'Real-time GPS from the driver\'s phone. Alerts when the bus is 500m away. Automatic pickup confirmation the moment your child boards.',
     points: ['Live GPS tracking', 'Driver mobile app', 'Pickup confirmations'],
     color: 'indigo',
-    image: '/images/phone slide.svg',
+    image: '/images/car.svg',
     grad: 'from-indigo-500 to-purple-600',
     glow: 'rgba(99,102,241,0.25)',
   },
