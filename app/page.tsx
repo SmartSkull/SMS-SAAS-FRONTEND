@@ -2,7 +2,7 @@
 import { useLandingPage } from '@/hooks/useLandingPage';
 import { Navbar } from '@/components/landing/Navbar';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { TickerBar, StatsSection } from '@/components/landing/StatsSection';
+import { TickerBar } from '@/components/landing/StatsSection';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { PhotoBreak, TrustSection, FinalCTA, Footer } from '@/components/landing/FooterSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
@@ -31,7 +31,6 @@ export default function LandingPage() {
       <Navbar scrolled={scrolled} menu={menu} setMenu={setMenu} />
       <HeroSection heroRef={heroRef} />
       <TickerBar />
-      <StatsSection />
       <ShowcaseSection />
       <FeaturesSection />
       <HowItWorksSection />

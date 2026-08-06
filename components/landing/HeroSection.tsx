@@ -9,7 +9,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ heroRef }: HeroSectionProps) {
   return (
-    <section ref={heroRef} className="relative pt-[68px] bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
+    <section ref={heroRef} className="relative pt-[68px] bg-white overflow-hidden">
       {/* decorative gradient blobs */}
       <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-blue-200/40 blur-3xl pointer-events-none" />
       <div className="absolute top-40 -right-40 w-[600px] h-[600px] rounded-full bg-indigo-200/30 blur-3xl pointer-events-none" />
@@ -18,13 +18,6 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-24 grid lg:grid-cols-2 gap-16 lg:gap-12 items-center">
         {/* Left — text */}
         <div className="text-center lg:text-left flex flex-col items-center lg:items-start">
-          <Reveal>
-            <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 backdrop-blur px-4 py-1.5 text-xs font-semibold text-blue-700 shadow-sm mb-7">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Trusted by 1,200+ schools across Nigeria
-            </div>
-          </Reveal>
-
           <Reveal delay={0.05}>
             <h1 className="text-[clamp(2.5rem,5vw,4.25rem)] font-black leading-[1.04] tracking-tight text-gray-900 max-w-2xl mb-6">
               Run your school{' '}
