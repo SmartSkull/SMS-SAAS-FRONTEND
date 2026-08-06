@@ -15,15 +15,6 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
       <div className="absolute top-40 -right-40 w-[600px] h-[600px] rounded-full bg-indigo-200/30 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-emerald-100/40 blur-3xl pointer-events-none" />
 
-      {/* subtle grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
-        style={{
-          backgroundImage: 'linear-gradient(#2563eb 1px, transparent 1px), linear-gradient(90deg, #2563eb 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-        }}
-      />
-
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-24 grid lg:grid-cols-2 gap-16 lg:gap-12 items-center">
         {/* Left — text */}
         <div className="text-center lg:text-left flex flex-col items-center lg:items-start">
