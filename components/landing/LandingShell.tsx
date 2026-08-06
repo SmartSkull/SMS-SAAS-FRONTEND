@@ -12,7 +12,7 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', fn);
   }, []);
   return (
-    <div className="bg-[#fcf5eb] text-gray-900 overflow-x-hidden">
+    <div className="bg-[#eef2f7] text-gray-900 overflow-x-hidden">
       <Navbar scrolled={scrolled} menu={menu} setMenu={setMenu} />
       {children}
       <Footer />

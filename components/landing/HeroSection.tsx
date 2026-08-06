@@ -9,7 +9,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ heroRef }: HeroSectionProps) {
   return (
-    <section ref={heroRef} className="relative pt-[68px] bg-[#fcf5eb] overflow-hidden">
+    <section ref={heroRef} className="relative pt-[68px] bg-[#eef2f7] overflow-hidden">
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-24 grid lg:grid-cols-2 gap-16 lg:gap-12 items-center">
         {/* Left — text */}
         <div className="text-center lg:text-left flex flex-col items-center lg:items-start">

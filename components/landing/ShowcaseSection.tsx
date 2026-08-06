@@ -36,7 +36,7 @@ const SHOWCASES = [
 
 export function ShowcaseSection() {
   return (
-    <section id="features" className="py-24 md:py-32 px-6 bg-[#fcf5eb]">
+    <section id="features" className="py-24 md:py-32 px-6 bg-[#eef2f7]">
       <div className="max-w-6xl mx-auto">
         <SectionHeader
           eyebrow="Platform features"

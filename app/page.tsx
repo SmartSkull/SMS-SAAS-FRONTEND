@@ -17,7 +17,7 @@ export default function LandingPage() {
   const { menu, setMenu, scrolled, sent, form, setForm, heroRef, submit } = useLandingPage();
 
   return (
-    <div className="bg-[#fcf5eb] text-gray-900 overflow-x-hidden">
+    <div className="bg-[#eef2f7] text-gray-900 overflow-x-hidden">
       <style>{`
         @keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
         .ticker-t{display:flex;width:max-content;animation:ticker 32s linear infinite}
