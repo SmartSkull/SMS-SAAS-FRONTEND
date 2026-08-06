@@ -16,7 +16,7 @@ export function FeaturesSection() {
         />
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {FEATURES.map(({ label, desc, ic, bg, icon }, i) => (
+          {FEATURES.map(({ slug, label, desc, ic, bg, icon }, i) => (
             <Reveal key={label} delay={i * 0.06}>
               <div className="group bg-white border border-gray-100 hover:border-blue-200 rounded-3xl p-8 flex flex-col hover:-translate-y-1.5 transition-all cursor-default shadow-sm hover:shadow-[0_24px_60px_rgba(37,99,235,.12)]">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5 shrink-0" style={{ background: bg, color: ic }}>
@@ -25,7 +25,7 @@ export function FeaturesSection() {
                 <p className="font-bold text-gray-900 text-[15px] mb-2">{label}</p>
                 <p className="text-sm text-gray-500 leading-6 mb-6">{desc}</p>
                 <div className="mt-auto">
-                  <Link href="/features" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors group/btn">
+                  <Link href={`/features/${slug}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors group/btn">
                     View feature
                     <ArrowRight size={15} className="transition-transform group-hover/btn:translate-x-0.5" />
                   </Link>
