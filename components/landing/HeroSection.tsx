@@ -62,8 +62,8 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
 
         {/* Right — Google Map SVG */}
         <Reveal delay={0.25} className="flex-1 w-full flex justify-center">
-          <div className="relative w-full max-w-md lg:max-w-lg">
-            <div className="absolute -inset-8 bg-gradient-to-b from-blue-100/70 to-transparent rounded-[3rem] blur-2xl pointer-events-none" />
+          <div className="relative w-44 sm:w-52 md:w-64 lg:w-72">
+            <div className="absolute -inset-6 bg-gradient-to-b from-blue-100/70 to-transparent rounded-[3rem] blur-2xl pointer-events-none" />
             <img
               src="/images/Google Map.svg"
               alt="Live bus tracking map"
