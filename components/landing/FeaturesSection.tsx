@@ -1,4 +1,6 @@
 'use client';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import { Reveal } from './Reveal';
 import { SectionHeader } from './SectionHeader';
 import { FEATURES } from '@/types/landing';
@@ -21,8 +23,13 @@ export function FeaturesSection() {
                   {icon}
                 </div>
                 <p className="font-bold text-gray-900 text-[15px] mb-2">{label}</p>
-                <p className="text-sm text-gray-500 leading-6">{desc}</p>
-                <div className="mt-5 w-8 h-1 rounded-full group-hover:w-12 transition-all duration-300" style={{ background: ic, opacity: 0.7 }} />
+                <p className="text-sm text-gray-500 leading-6 mb-6">{desc}</p>
+                <div className="mt-auto">
+                  <Link href="/features" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors group/btn">
+                    View feature
+                    <ArrowRight size={15} className="transition-transform group-hover/btn:translate-x-0.5" />
+                  </Link>
+                </div>
               </div>
             </Reveal>
           ))}
