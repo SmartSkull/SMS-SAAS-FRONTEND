@@ -56,10 +56,10 @@ export default async function FeatureDetailPage({ params }: Props) {
 
       {/* Highlights */}
       <section className="py-16 px-6 bg-[#eef2f7]">
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-6">
           {detail.highlights.map((h, i) => (
             <Reveal key={h.title} delay={i * 0.08}>
-              <div className="bg-white border border-gray-100 rounded-3xl p-8 flex gap-5 shadow-sm">
+              <div className="bg-white border border-gray-100 rounded-3xl p-8 flex flex-col gap-5 shadow-sm h-full">
                 <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center" style={{ background: feature.bg, color: feature.ic }}>
                   <CheckCircle size={20} />
                 </div>
