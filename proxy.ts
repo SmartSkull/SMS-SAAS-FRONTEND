@@ -26,7 +26,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Allow public paths and static assets
-  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
+  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/features/') || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
     // Redirect authenticated users away from login
     if (pathname === '/login' && token && role && VALID_ROLES.has(role)) {
       return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url));
