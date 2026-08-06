@@ -42,7 +42,7 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
               <Link href="/school/register" className="flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-[15px] transition-all shadow-[0_12px_30px_rgba(37,99,235,.3)]">
                 Register your school <ArrowRight size={16} />
               </Link>
-              <Link href="/school" className="flex items-center gap-2 px-8 py-4 bg-white hover:bg-gray-50 border border-gray-200 text-gray-800 font-semibold rounded-2xl text-[15px] transition-all">
+              <Link href="/school" className="flex items-center gap-2 px-8 py-4 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-2xl text-[15px] transition-all">
                 Log in to portal
               </Link>
             </div>
