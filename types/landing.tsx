@@ -15,7 +15,7 @@ export const FEATURES = [
 
 export const FEATURE_DETAILS: Record<string, { intro: string; highlights: { title: string; body: string }[]; outcome: string }> = {
   'academic-management': {
-    intro: 'Academic Management puts your entire teaching workflow in one place — from the first day of term to the final report card. Teachers record scores, publish results and issue assignments through a single dashboard, while students see everything instantly in their own portal.',
+    intro: 'Academic Management puts everything your school does in the classroom in one place. Teachers enter scores and set assignments, students see their results and tasks instantly, and report cards are generated automatically — no more paper records.',
     highlights: [
       { title: 'Digital result sheets', body: 'Enter test and exam scores once. Smart Campus computes totals, grades and remarks automatically, and cumulative averages across first, second and third terms — just like a printed result sheet.' },
       { title: 'Online CBT exams', body: 'Staff create multiple-choice tests per subject. Students take them on any device and receive instant scores. Every attempt is stored and exportable for review.' },
@@ -24,7 +24,7 @@ export const FEATURE_DETAILS: Record<string, { intro: string; highlights: { titl
     outcome: 'No more hand-written records or chasing lost papers — results, grades and report cards are generated automatically and available to staff, students and parents in real time.',
   },
   'smart-transport': {
-    intro: 'Smart Transport turns your school buses into a live, trackable fleet. The driver\'s phone becomes a GPS beacon, and parents get peace of mind with real-time visibility from pickup to drop-off.',
+    intro: 'Smart Transport lets you see exactly where every school bus is at all times. The driver simply uses their phone to share the bus location, so parents always know how close the bus is and when their child has been picked up — from the start of the journey to the final drop-off.',
     highlights: [
       { title: 'Live GPS tracking', body: 'The bus location is broadcast from the driver\'s phone in real time. Open the portal and see exactly where the bus is on the map at any moment.' },
       { title: 'Parent alerts', body: 'Parents receive an alert when the bus is 500 metres away from their stop, and a confirmation the moment their child boards — no more waiting at the gate wondering.' },
@@ -33,7 +33,7 @@ export const FEATURE_DETAILS: Record<string, { intro: string; highlights: { titl
     outcome: 'Parents always know where the bus is, drivers stay accountable, and the daily school run becomes calm, predictable and safe.',
   },
   'online-payments': {
-    intro: 'Online Payments ends the era of cash queues and manual fee records. Students pay school fees directly from their portal through Paystack\'s secure checkout, and everything is reconciled automatically.',
+    intro: 'Online Payments gets rid of cash queues and handwritten fee records. Students pay their school fees directly from their own portal using a secure payment page, and the payment is recorded automatically — no chasing receipts or bank confirmations.',
     highlights: [
       { title: 'Paystack checkout', body: 'Students click Pay Now and are taken to a secure Paystack checkout. Payments are verified instantly — no bank confirmations or chasing receipts.' },
       { title: 'Instant QR receipts', body: 'Every successful payment generates a QR-code receipt that can be scanned to verify the transaction. Students and parents keep a complete payment history.' },
@@ -42,7 +42,7 @@ export const FEATURE_DETAILS: Record<string, { intro: string; highlights: { titl
     outcome: 'Fees are collected faster, records are always accurate, and your accounts team can see exactly who has paid and who is outstanding.',
   },
   'staff-hr': {
-    intro: 'Staff & HR centralises the people side of your school. From attendance and leave to payroll and performance, every staff record lives in one dashboard — no spreadsheets, no double entry.',
+    intro: 'Staff & HR keeps all your staff information in one place. Attendance, leave requests, salaries and performance are managed from a single dashboard — no spreadsheets, no entering the same information twice.',
     highlights: [
       { title: 'Attendance tracking', body: 'Clock-ins and clock-outs are captured digitally, giving you an accurate daily record of every staff member\'s presence.' },
       { title: 'Leave management', body: 'Staff request leave, admins approve or reject, and balances are tracked automatically. Everyone can see their remaining days at a glance.' },
@@ -51,7 +51,7 @@ export const FEATURE_DETAILS: Record<string, { intro: string; highlights: { titl
     outcome: 'HR tasks that took days now take minutes, and your staff records are complete, accurate and audit-ready at all times.',
   },
   'library-hostel': {
-    intro: 'Library & Hostel brings order to two of the busiest spaces in any school. Barcode-driven book management keeps your library accurate, while hostel beds, rooms and attendance are managed digitally.',
+    intro: 'Library & Hostel helps you manage your school library and boarding house without the usual paperwork. Books are checked in and out with a quick scan, and hostel beds and rooms are tracked digitally.',
     highlights: [
       { title: 'Barcode scanning', body: 'Check books in and out with a quick barcode scan. The system tracks who has what, when it is due, and calculates fines automatically for late returns.' },
       { title: 'Borrowing records', body: 'Every borrow and return is logged against the student\'s record — no more paper registers or lost books that vanish without a trace.' },
@@ -60,7 +60,7 @@ export const FEATURE_DETAILS: Record<string, { intro: string; highlights: { titl
     outcome: 'Books stop disappearing, fines are collected fairly, and hostel management becomes a simple, organised routine.',
   },
   'finance-reports': {
-    intro: 'Finance Reports gives your school a real-time, at-a-glance view of its money. Income, expenses, outstanding debts and payment summaries are broken down by term or session — so you always know your financial position.',
+    intro: 'Finance Reports gives you a clear, up-to-date picture of your school\'s money. Income, spending, unpaid fees and payment summaries are all shown by term or session, so you always know how the school is doing financially.',
     highlights: [
       { title: 'Income tracking', body: 'Every fee payment flows into your reports automatically. See total collections, verified payments and pending amounts in one place.' },
       { title: 'Expenses & debts', body: 'Record expenses and track outstanding debts per student. The report surfaces who owes what, making follow-up simple and data-driven.' },
