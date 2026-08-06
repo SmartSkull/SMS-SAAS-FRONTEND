@@ -105,7 +105,7 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
             <div className="absolute -inset-10 bg-gradient-to-tr from-blue-200 via-indigo-100 to-emerald-100 rounded-[4rem] blur-2xl opacity-70 pointer-events-none" />
 
             {/* phone frame */}
-            <div className="relative w-[300px] sm:w-[340px] rounded-[2.5rem] bg-gray-900 p-3 shadow-[0_40px_100px_rgba(37,99,235,.35)]">
+            <div className="relative w-[330px] sm:w-[380px] rounded-[2.5rem] bg-gray-900 p-3 shadow-[0_40px_100px_rgba(37,99,235,.35)]">
               <div className="rounded-[2rem] overflow-hidden bg-white">
                 {/* status bar */}
                 <div className="bg-blue-600 px-5 pt-4 pb-3">
@@ -117,7 +117,7 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
 
                 {/* map area */}
                 <div className="relative">
-                  <img src="/images/Google Map.svg" alt="Live bus tracking map" className="w-full h-[340px] object-cover" />
+                  <img src="/images/Google Map.svg" alt="Live bus tracking map" className="w-full h-[460px] object-cover" />
                   {/* overlay cards */}
                   <div className="absolute top-3 left-3 right-3">
                     <div className="bg-white/95 backdrop-blur rounded-xl shadow-lg px-3 py-2.5 flex items-center gap-2.5">
