@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { loadGoogleMaps } from '@/lib/googleMaps';
+import { Map as MapLibreMap, Marker, AttributionControl, LngLatBounds } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Campus, CampusBuilding } from '@/types/campus';
 
 interface CampusMapProps {
@@ -9,132 +10,115 @@ interface CampusMapProps {
   hiddenCategories: Set<string>;
   hiddenLayers: Set<string>;
   onSelect: (b: CampusBuilding) => void;
-  onReady: (api: { flyTo: (b: CampusBuilding) => void; reset: () => void; tilt: (on: boolean) => void }) => void;
+  onReady: (api: { flyTo: (b: CampusBuilding) => void; reset: () => void; tilt: (on: boolean) => void; zoomIn: () => void; zoomOut: () => void }) => void;
 }
 
-export function CampusMap({ campus, selectedId, hiddenCategories, hiddenLayers, onSelect, onReady }: CampusMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef<{
-    map?: any;
-    markers?: Map<string, any>;
-    bounds?: any;
-    selected?: string | null;
-    hiddenCategories?: Set<string>;
-  }>({ markers: new Map(), selected: null, hiddenCategories: new Set() });
-
-  // keep latest props in a ref so the map callbacks see fresh state
-  useEffect(() => {
-    stateRef.current.selected = selectedId;
-    stateRef.current.hiddenCategories = hiddenCategories;
-    if (stateRef.current.map && selectedId) {
-      const b = campus.buildings.find(x => x.id === selectedId);
-      if (b) flyTo(b);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, hiddenCategories]);
-
-  const flyTo = (b: CampusBuilding) => {
-    const map = stateRef.current.map;
-    if (!map) return;
-    map.panTo({ lat: b.lat, lng: b.lng });
-    map.setZoom(17);
-    if (typeof map.setTilt === 'function') map.setTilt(45);
-  };
+export function CampusMap({ campus, selectedId, hiddenCategories, onSelect, onReady }: CampusMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const markersRef = useRef<Map<string, Marker>>(new Map());
+  const stateRef = useRef<{ bounds?: LngLatBounds }>({});
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!containerRef.current || mapRef.current) return;
     let cancelled = false;
 
-    (async () => {
-      try {
-        const google = await loadGoogleMaps();
-        if (cancelled || !mapRef.current) return;
-
-        const map = new google.maps.Map(mapRef.current, {
-          center: campus.center,
-          zoom: 15,
-          mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || undefined,
-          mapTypeControl: false,
-          fullscreenControl: false,
-          streetViewControl: true,
-          zoomControl: false,
-        });
-
-        stateRef.current.map = map;
-
-        // Campus boundary
-        const bounds = new google.maps.LatLngBounds();
-        campus.buildings.forEach(b => bounds.extend({ lat: b.lat, lng: b.lng }));
-        campus.points.forEach(p => bounds.extend({ lat: p.lat, lng: p.lng }));
-        map.fitBounds(bounds, { top: 80, bottom: 80, left: 80, right: 80 });
-        stateRef.current.bounds = bounds;
-
-        // Markers for buildings
-        const markers = new Map<string, any>();
-        campus.buildings.forEach(b => {
-          const marker = new google.maps.marker.AdvancedMarkerElement({
-            position: { lat: b.lat, lng: b.lng },
-            map,
-            title: b.name,
-            content: buildMarkerContent(b.icon, b.color),
-          });
-          marker.addListener('click', () => onSelect(b));
-          markers.set(b.id, marker);
-        });
-        stateRef.current.markers = markers;
-
-        onReady({
-          flyTo: (b) => flyTo(b),
-          reset: () => {
-            map.fitBounds(bounds, { top: 80, bottom: 80, left: 80, right: 80 });
-            if (typeof map.setTilt === 'function') map.setTilt(0);
+    const map = new MapLibreMap({
+      container: containerRef.current,
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: 'vector',
+            tiles: ['https://tiles.openfreemap.org/planet/{z}/{x}/{y}.pbf'],
+            maxzoom: 15,
           },
-          tilt: (on) => { if (typeof map.setTilt === 'function') map.setTilt(on ? 45 : 0); },
-        });
-      } catch (e) {
-        console.error('Google Maps failed to load:', e);
-      }
-    })();
+        },
+        layers: [
+          { id: 'background', type: 'background', paint: { 'background-color': '#eef2f7' } },
+          // Land / parks
+          { id: 'landcover', type: 'fill', source: 'osm', 'source-layer': 'landcover', paint: { 'fill-color': '#dbe8d3' } },
+          { id: 'landuse', type: 'fill', source: 'osm', 'source-layer': 'landuse', paint: { 'fill-color': '#f0ead6' } },
+          // Roads
+          { id: 'roads', type: 'line', source: 'osm', 'source-layer': 'transportation', filter: ['==', ['geometry-type'], 'LineString'], paint: { 'line-color': '#ffffff', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 1.5, 15, 4] } },
+          { id: 'road-casing', type: 'line', source: 'osm', 'source-layer': 'transportation', filter: ['==', ['geometry-type'], 'LineString'], paint: { 'line-color': '#cbd5e1', 'line-width': ['interpolate', ['linear'], ['zoom'], 12, 3, 15, 6] } },
+          // Buildings (3D extrusion)
+          { id: 'buildings', type: 'fill-extrusion', source: 'osm', 'source-layer': 'building', paint: {
+            'fill-extrusion-color': '#cbd5e1',
+            'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, ['get', 'render_height']],
+            'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, ['get', 'render_min_height']],
+            'fill-extrusion-opacity': 0.85,
+          } },
+          // Water
+          { id: 'water', type: 'fill', source: 'osm', 'source-layer': 'water', paint: { 'fill-color': '#b3d9f7' } },
+        ],
+      },
+      center: [campus.center.lng, campus.center.lat],
+      zoom: 15,
+      pitch: 45, // initial 3D tilt
+      bearing: 0,
+      attributionControl: false,
+    });
 
-    return () => { cancelled = true; };
+    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+    mapRef.current = map;
+
+    map.on('load', () => {
+      if (cancelled) return;
+      // Fit to campus bounds
+      const bounds = new LngLatBounds();
+      campus.buildings.forEach(b => bounds.extend([b.lng, b.lat]));
+      campus.points.forEach(p => bounds.extend([p.lng, p.lat]));
+      map.fitBounds(bounds, { padding: 90, duration: 1200 });
+      stateRef.current.bounds = bounds;
+
+      // Markers for curated places
+      campus.buildings.forEach(b => {
+        const el = document.createElement('div');
+        el.style.cssText = `display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;font-size:17px;box-shadow:0 2px 8px rgba(0,0,0,.3);border:2px solid #fff;background:${b.color};cursor:pointer`;
+        el.textContent = b.icon;
+        el.title = b.name;
+
+        const marker = new Marker({ element: el })
+          .setLngLat([b.lng, b.lat])
+          .addTo(map);
+        el.addEventListener('click', () => onSelect(b));
+        markersRef.current.set(b.id, marker);
+      });
+    });
+
+    // apply 3D tilt on load
+    map.on('load', () => { map.setPitch(50); });
+
+    onReady({
+      flyTo: (b) => {
+        map.flyTo({ center: [b.lng, b.lat], zoom: 16.5, pitch: 55, duration: 1500 });
+      },
+      reset: () => {
+        const b = stateRef.current.bounds;
+        if (b) map.fitBounds(b, { padding: 90, duration: 1000 });
+        map.setPitch(45);
+      },
+      tilt: (on) => map.setPitch(on ? 55 : 0),
+      zoomIn: () => map.zoomIn({ duration: 500 }),
+      zoomOut: () => map.zoomOut({ duration: 500 }),
+    });
+
+    return () => { cancelled = true; map.remove(); mapRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // visibility: hide markers of filtered categories
+  // keep selected marker state visible (highlight handled by info panel)
+  useEffect(() => { /* selection highlight is driven by the panel */ }, [selectedId]);
+
+  // hide markers of filtered categories
   useEffect(() => {
-    const { markers, hiddenCategories } = stateRef.current;
-    if (!markers) return;
     campus.buildings.forEach(b => {
-      const m = markers.get(b.id);
-      if (!m) return;
-      m.map = hiddenCategories?.has(b.category) ? null : stateRef.current.map;
+      const m = markersRef.current.get(b.id);
+      if (!m || !mapRef.current) return;
+      m.getElement().style.display = hiddenCategories.has(b.category) ? 'none' : 'flex';
     });
   }, [hiddenCategories, campus]);
 
-  const noKey = !process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-
-  return (
-    <div className="w-full h-full relative">
-      {noKey ? (
-        <div className="w-full h-full flex items-center justify-center bg-[#eef2f7] p-6">
-          <div className="max-w-sm text-center">
-            <p className="text-lg font-black text-gray-900 mb-2">Campus map needs a Google Maps key</p>
-            <p className="text-sm text-gray-500 leading-6">
-              Add <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">NEXT_PUBLIC_GOOGLE_MAPS_KEY</code> to your{' '}
-              <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs">.env.local</code> to enable the interactive campus map.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div ref={mapRef} className="w-full h-full" />
-      )}
-    </div>
-  );
-}
-
-function buildMarkerContent(icon: string, color: string): HTMLElement {
-  const el = document.createElement('div');
-  el.style.cssText = `display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;font-size:17px;box-shadow:0 2px 8px rgba(0,0,0,.25);border:2px solid #fff;background:${color}`;
-  el.textContent = icon;
-  return el;
+  return <div ref={containerRef} className="w-full h-full" />;
 }

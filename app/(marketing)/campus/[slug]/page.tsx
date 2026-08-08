@@ -31,6 +31,8 @@ interface MapApi {
   flyTo: (b: CampusBuilding) => void;
   reset: () => void;
   tilt: (on: boolean) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
 }
 
 export default function CampusViewPage() {
@@ -169,8 +171,8 @@ export default function CampusViewPage() {
 
       {/* Floating controls */}
       <GoogleMapControls
-        onZoomIn={() => {}}
-        onZoomOut={() => {}}
+        onZoomIn={() => mapApiRef.current?.zoomIn()}
+        onZoomOut={() => mapApiRef.current?.zoomOut()}
         onReset={() => mapApiRef.current?.reset()}
         onLocate={locateMe}
         onTilt={toggleTilt}
