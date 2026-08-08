@@ -9,7 +9,7 @@ interface NavbarProps {
   setMenu: (v: boolean | ((p: boolean) => boolean)) => void;
 }
 
-const NAV = [['Features', '/features'], ['How it works', '/how-it-works'], ['Contact', '/reach-us']];
+const NAV = [['Campus Explorer', '/campus'], ['Features', '/features'], ['How it works', '/how-it-works'], ['Contact', '/reach-us']];
 
 export function Navbar({ scrolled, menu, setMenu }: NavbarProps) {
   return (

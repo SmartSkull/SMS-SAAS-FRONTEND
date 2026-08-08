@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_PATHS = ['/', '/login', '/school', '/school/register', '/about', '/history', '/contact', '/admissions',
   '/gallery', '/our-staff', '/policy', '/classrooms', '/principal-speech', '/forgot-password', '/reset-password',
-  '/features', '/how-it-works', '/get-a-demo', '/reach-us', '/download', '/terms'];
+  '/features', '/how-it-works', '/get-a-demo', '/reach-us', '/download', '/terms', '/campus'];
 
 const VALID_ROLES = new Set(['student', 'staff', 'admin']);
 
@@ -26,7 +26,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Allow public paths and static assets
-  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/features/') || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
+  if (PUBLIC_PATHS.includes(pathname) || pathname.startsWith('/features/') || pathname.startsWith('/campus/') || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
     // Redirect authenticated users away from login
     if (pathname === '/login' && token && role && VALID_ROLES.has(role)) {
       return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url));

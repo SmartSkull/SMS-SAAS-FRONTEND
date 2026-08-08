@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
-const TABS: { id: Role; label: string; icon: React.ElementType }[] = [
+const TABS: { id: Role; label: string; icon: React.ComponentType<{ size?: number | string }> }[] = [
   { id: 'student', label: 'Student', icon: GraduationCap },
   { id: 'staff', label: 'Staff', icon: Users },
   { id: 'admin', label: 'Admin', icon: ShieldCheck },

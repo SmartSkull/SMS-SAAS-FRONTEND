@@ -8,7 +8,7 @@ import { BarChart3, BookOpen, Calendar, Clock, FileText, TrendingUp, User, Users
 import Link from 'next/link';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-function StatCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string | number; color: string }) {
+function StatCard({ icon: Icon, label, value, color }: { icon: React.ComponentType<{ size?: number | string; className?: string }>; label: string; value: string | number; color: string }) {
   return (
     <div className="bg-white rounded-2xl card shadow-sm p-6 flex items-center gap-4">
       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
