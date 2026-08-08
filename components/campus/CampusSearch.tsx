@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { Search, Navigation } from 'lucide-react';
-import { DEMO_CAMPUS, searchCampusBuildings } from '@/data/demoCampus';
+import { searchCampusBuildings } from '@/data/campuses';
+import type { Campus } from '@/types/campus';
 
 interface CampusSearchProps {
+  campus: Campus;
   onSelect: (buildingId: string) => void;
   onDirections: (buildingId: string) => void;
 }
@@ -18,11 +20,11 @@ function distanceBetween(b1: { lat: number; lng: number }, b2: { lat: number; ln
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
-export function CampusSearch({ onSelect, onDirections }: CampusSearchProps) {
+export function CampusSearch({ campus, onSelect, onDirections }: CampusSearchProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const results = searchCampusBuildings(query);
-  const gate = DEMO_CAMPUS.buildings.find(b => b.id === 'main-gate')!;
+  const results = searchCampusBuildings(campus, query);
+  const gate = campus.buildings.find(b => b.category === 'transport') ?? campus.buildings[0];
 
   return (
     <div className="relative z-30 w-full max-w-sm">

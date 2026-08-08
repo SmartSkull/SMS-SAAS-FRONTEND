@@ -5,20 +5,27 @@ import { Building2, MapPin, Search, LocateFixed, Compass, Clock, ChevronRight } 
 import { LandingShell } from '@/components/landing/LandingShell';
 import { searchSchools, normalizeSchoolLogo } from '@/hooks/useSelectedSchool';
 import type { SchoolProfile } from '@/types';
-import { DEMO_CAMPUS } from '@/data/demoCampus';
+import { CAMPUSES } from '@/data/campuses';
 
 const DEMO_SCHOOL: SchoolProfile = {
   id: 'demo', name: 'Smart Campus Demo School', slug: 'florieren-demo',
-  slogan: 'A fully interactive 3D campus demo', primaryColor: '#2563eb',
+  slogan: 'A fully interactive campus demo', primaryColor: '#2563eb',
   secondaryColor: '#ffffff', accentColor: '#84cc16', location: 'Akoka, Lagos, Nigeria',
-  description: 'Explore a complete campus in 3D — buildings, facilities, directions and more.',
+  description: 'Explore a complete campus — buildings, facilities, directions and more.',
+};
+
+const UNILAG_SCHOOL: SchoolProfile = {
+  id: 'unilag', name: 'University of Lagos', slug: 'unilag',
+  slogan: 'Explore UNILAG campus in 3D', primaryColor: '#0d3b66',
+  secondaryColor: '#ffffff', accentColor: '#84cc16', location: 'Akoka, Lagos, Nigeria',
+  description: 'Nigeria\'s premier university — explore hostels, lecture theatres, the library and more on a real map.',
 };
 
 const POPULAR = [
-  { icon: '📚', name: 'Central Library', building: 'central-library' },
-  { icon: '🏛️', name: 'Administration Block', building: 'admin-block' },
-  { icon: '🏠', name: 'Boys Hostel', building: 'boys-hostel' },
-  { icon: '⚽', name: 'Sports Centre', building: 'sports-centre' },
+  { icon: '📚', name: 'Central Library', building: 'central-library', school: 'unilag' },
+  { icon: '🏛️', name: 'Administration Block', building: 'admin-block', school: 'demo' },
+  { icon: '🏠', name: 'Moremi Hall', building: 'moremi-hall', school: 'unilag' },
+  { icon: '⚽', name: 'Sports Centre', building: 'sports-centre', school: 'unilag' },
 ];
 
 export default function CampusExplorerPage() {
@@ -41,8 +48,8 @@ export default function CampusExplorerPage() {
       setLoading(true);
       try {
         const results = await searchSchools(query);
-        // always include the demo school for a fully functional prototype
-        setSchools(query ? results : [DEMO_SCHOOL, ...results]);
+        // always include UNILAG + demo school for a fully functional prototype
+        setSchools(query ? [UNILAG_SCHOOL, DEMO_SCHOOL, ...results] : [UNILAG_SCHOOL, DEMO_SCHOOL, ...results]);
       } finally {
         setLoading(false);
       }
@@ -60,7 +67,7 @@ export default function CampusExplorerPage() {
   };
 
   const locateMe = () => {
-    router.push(`/campus/${DEMO_CAMPUS.schoolSlug}?locate=1`);
+    router.push('/campus/unilag?locate=1');
   };
 
   return (
@@ -96,7 +103,7 @@ export default function CampusExplorerPage() {
             <button onClick={locateMe} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-bold transition-colors backdrop-blur">
               <LocateFixed size={16} /> Locate Me
             </button>
-            <button onClick={() => enterCampus(DEMO_CAMPUS.schoolSlug)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-blue-700 text-sm font-bold transition-colors">
+            <button onClick={() => enterCampus('unilag')} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-blue-700 text-sm font-bold transition-colors">
               Explore Campus <ChevronRight size={16} />
             </button>
           </div>
@@ -146,7 +153,7 @@ export default function CampusExplorerPage() {
               <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-2"><Compass size={14} /> Popular locations</p>
               <div className="grid grid-cols-2 gap-3">
                 {POPULAR.map(p => (
-                  <button key={p.building} onClick={() => enterCampus(DEMO_CAMPUS.schoolSlug)}
+                  <button key={p.building} onClick={() => enterCampus(p.school)}
                     className="bg-white rounded-xl border border-gray-100 p-4 text-center hover:border-blue-300 hover:shadow-md transition-all">
                     <span className="text-2xl">{p.icon}</span>
                     <p className="text-xs font-bold text-gray-700 mt-2">{p.name}</p>
@@ -161,7 +168,7 @@ export default function CampusExplorerPage() {
                   {recent.map(slug => (
                     <button key={slug} onClick={() => enterCampus(slug)}
                       className="w-full flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3 hover:border-blue-300 hover:shadow-md transition-all text-sm">
-                      <span className="font-semibold text-gray-700">{slug === DEMO_CAMPUS.schoolSlug ? 'Smart Campus Demo School' : slug}</span>
+                      <span className="font-semibold text-gray-700">{slug === 'unilag' ? 'University of Lagos' : slug === 'florieren-demo' ? 'Smart Campus Demo School' : slug}</span>
                       <ChevronRight size={14} className="text-gray-400" />
                     </button>
                   ))}

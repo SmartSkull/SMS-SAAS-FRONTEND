@@ -1,6 +1,6 @@
 'use client';
 import { X, Navigation, Footprints, MapPin } from 'lucide-react';
-import { DEMO_CAMPUS } from '@/data/demoCampus';
+import { getCampus } from '@/data/campuses';
 import type { CampusBuilding } from '@/types/campus';
 
 interface DirectionsPanelProps {
@@ -10,9 +10,10 @@ interface DirectionsPanelProps {
 }
 
 export function DirectionsPanel({ destination, onClose, onStart }: DirectionsPanelProps) {
+  const campus = getCampus('unilag');
   const route =
-    DEMO_CAMPUS.routes.find(r => r.landmarks[r.landmarks.length - 1] === destination.name) ??
-    DEMO_CAMPUS.routes[0];
+    campus.routes.find(r => r.landmarks[r.landmarks.length - 1] === destination.name) ??
+    campus.routes[0];
 
   return (
     <div className="pointer-events-auto w-full max-w-sm rounded-2xl bg-white/95 backdrop-blur-xl shadow-2xl border border-gray-100 overflow-hidden">
