@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -35,7 +35,7 @@ interface MapApi {
   zoomOut: () => void;
 }
 
-export default function CampusViewPage() {
+function CampusViewContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = typeof params.slug === 'string' ? params.slug : 'demo';
@@ -265,5 +265,13 @@ export default function CampusViewPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CampusViewPage() {
+  return (
+    <Suspense fallback={<div className="w-full h-screen bg-[#eef2f7]" />}>
+      <CampusViewContent />
+    </Suspense>
   );
 }
