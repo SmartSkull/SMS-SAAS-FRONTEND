@@ -1,4 +1,4 @@
-const CACHE = 'florieren-v1';
+const CACHE = 'florieren-v2';
 const APP_SHELL = ['/', '/student/dashboard'];
 
 self.addEventListener('install', (e) => {
@@ -7,11 +7,37 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(clients.claim());
+  e.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+
+  // Never intercept Next.js build assets — they must always hit the network
+  // so stale shell HTML is never served as a JS/CSS module (causes
+  // "non-JavaScript MIME type" errors).
+  if (url.pathname.startsWith('/_next/') || url.pathname.endsWith('.map')) return;
+
+  // Navigations: network-first, fall back to the cached shell when offline
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          return res;
+        })
+        .catch(() => caches.match(e.request).then((cached) => cached || caches.match('/')))
+    );
+    return;
+  }
+
+  // Everything else (API, images, fonts): network-first, cache fallback
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))
   );

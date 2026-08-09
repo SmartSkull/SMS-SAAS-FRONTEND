@@ -24,15 +24,28 @@ export function CampusMap({ campus, selectedId, hiddenCategories, onSelect, onRe
     if (!containerRef.current || mapRef.current) return;
     let cancelled = false;
 
-    const map = new MapLibreMap({
-      container: containerRef.current,
-      style: 'https://tiles.openfreemap.org/styles/liberty',
-      center: [campus.center.lng, campus.center.lat],
-      zoom: 15.5,
-      pitch: 55, // strong 3D tilt
-      bearing: 0,
-      attributionControl: false,
-    });
+    // Ensure the container has a real size before creating the map
+    const container = containerRef.current;
+    if (container.clientHeight === 0) {
+      container.style.height = '100%';
+    }
+
+    let map: MapLibreMap;
+    try {
+      map = new MapLibreMap({
+        container,
+        style: 'https://tiles.openfreemap.org/styles/liberty',
+        center: [campus.center.lng, campus.center.lat],
+        zoom: 15.5,
+        pitch: 55, // strong 3D tilt
+        bearing: 0,
+        attributionControl: false,
+      });
+    } catch (e) {
+      console.error('MapLibre init failed:', e);
+      setError('Map could not initialize: ' + (e as Error).message);
+      return;
+    }
 
     map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
     mapRef.current = map;
