@@ -1,31 +1,18 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Building2, Layers, Info, ArrowLeft, LocateFixed } from 'lucide-react';
 import { getCampus } from '@/data/campuses';
 import type { CampusBuilding } from '@/types/campus';
+import { CampusMap } from '@/components/campus/CampusMap';
+import { GoogleMapControls } from '@/components/campus/GoogleMapControls';
 import { CampusSearch } from '@/components/campus/CampusSearch';
 import { CampusInfoPanel } from '@/components/campus/CampusInfoPanel';
 import { CampusDrawer } from '@/components/campus/CampusDrawer';
 import { DirectionsPanel } from '@/components/campus/DirectionsPanel';
 import { CategoryFilter } from '@/components/campus/CategoryFilter';
 import { LayerToggles } from '@/components/campus/LayerToggles';
-
-// Google Maps loads only on this page (keeps the rest of the bundle light)
-const CampusMap = dynamic(() => import('@/components/campus/CampusMap').then(m => m.CampusMap), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-[#eef2f7]">
-      <div className="text-center">
-        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto" />
-        <p className="text-sm text-gray-500 mt-4 font-medium">Preparing Campus Explorer...</p>
-      </div>
-    </div>
-  ),
-});
-const GoogleMapControls = dynamic(() => import('@/components/campus/GoogleMapControls').then(m => m.GoogleMapControls), { ssr: false });
 
 interface MapApi {
   flyTo: (b: CampusBuilding) => void;

@@ -10,7 +10,8 @@ export default function PageLoader() {
 
   const isDashboard = pathname.startsWith('/admin') ||
                       pathname.startsWith('/staff') ||
-                      pathname.startsWith('/student');
+                      pathname.startsWith('/student') ||
+                      pathname.startsWith('/campus');
 
   useEffect(() => {
     if (pathname === '/null/dashboard' || pathname.startsWith('/null/')) {
