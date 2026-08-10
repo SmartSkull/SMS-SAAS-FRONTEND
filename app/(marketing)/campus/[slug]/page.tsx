@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Building2, Layers, Info, ArrowLeft, LocateFixed } from 'lucide-react';
+import { Building2, Layers, Info, ArrowLeft, LocateFixed, Eye, EyeOff } from 'lucide-react';
 import { getCampus } from '@/data/campuses';
 import type { CampusBuilding } from '@/types/campus';
 import { CampusMap } from '@/components/campus/CampusMap';
@@ -20,6 +20,7 @@ interface MapApi {
   tilt: (on: boolean) => void;
   zoomIn: () => void;
   zoomOut: () => void;
+  streetView: (b: CampusBuilding) => void;
 }
 
 function CampusViewContent() {
@@ -38,6 +39,7 @@ function CampusViewContent() {
   const [tilted, setTilted] = useState(false);
   const [locating, setLocating] = useState(false);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [streetViewFor, setStreetViewFor] = useState<CampusBuilding | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapApiRef = useRef<MapApi | null>(null);
 
@@ -105,6 +107,18 @@ function CampusViewContent() {
       mapApiRef.current?.tilt(!t);
       return !t;
     });
+  };
+
+  const enterStreetView = (b: CampusBuilding) => {
+    setSelected(b);
+    setStreetViewFor(b);
+    setDirectionsTo(null);
+    mapApiRef.current?.streetView(b);
+  };
+
+  const exitStreetView = () => {
+    setStreetViewFor(null);
+    mapApiRef.current?.reset();
   };
 
   return (
@@ -180,9 +194,10 @@ function CampusViewContent() {
         {selected && !directionsTo && (
           <CampusInfoPanel
             building={selected}
-            onClose={() => setSelected(null)}
+            onClose={() => { setSelected(null); setStreetViewFor(null); }}
             onDirections={() => setDirectionsTo(selected)}
             onExplore={() => setSelected(null)}
+            onStreetView={() => enterStreetView(selected)}
           />
         )}
         {directionsTo && (
@@ -234,9 +249,10 @@ function CampusViewContent() {
       {/* Mobile drawer */}
       <CampusDrawer
         building={selected}
-        onClose={() => setSelected(null)}
+        onClose={() => { setSelected(null); setStreetViewFor(null); }}
         onDirections={() => selected && setDirectionsTo(selected)}
         onExplore={() => setSelected(null)}
+        onStreetView={() => selected && enterStreetView(selected)}
       />
       {directionsTo && (
         <div className="md:hidden fixed inset-x-0 bottom-0 z-40 p-4 pb-6">
@@ -248,6 +264,25 @@ function CampusViewContent() {
         <div className="absolute inset-0 z-50 bg-black/30 flex items-center justify-center">
           <div className="px-6 py-4 rounded-2xl bg-white shadow-xl text-sm font-semibold text-gray-700 flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" /> Locating you...
+          </div>
+        </div>
+      )}
+
+      {/* Street View banner */}
+      {streetViewFor && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] sm:w-auto">
+          <div className="flex items-center gap-3 rounded-2xl bg-gray-900/90 backdrop-blur border border-white/10 px-4 py-2.5 shadow-2xl">
+            <span className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-base">{streetViewFor.icon}</span>
+            <div className="min-w-0">
+              <p className="text-xs font-black text-white leading-tight">Street View · {streetViewFor.name}</p>
+              <p className="text-[10px] text-gray-300">Standing on the campus street in front of the building</p>
+            </div>
+            <button
+              onClick={exitStreetView}
+              className="flex items-center gap-1.5 ml-2 px-3 py-1.5 rounded-xl bg-white text-gray-900 text-xs font-bold hover:bg-gray-100 transition-colors shrink-0"
+            >
+              <EyeOff size={13} /> Exit
+            </button>
           </div>
         </div>
       )}

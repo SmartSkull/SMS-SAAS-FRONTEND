@@ -1,5 +1,5 @@
 'use client';
-import { X, Navigation, Building2, Camera, Share2, Clock, Phone, Accessibility, Layers, MapPin } from 'lucide-react';
+import { X, Navigation, Building2, Camera, Share2, Clock, Phone, Accessibility, Layers, MapPin, Eye } from 'lucide-react';
 import { CATEGORY_MAP, type CampusBuilding } from '@/types/campus';
 
 interface CampusInfoPanelProps {
@@ -7,9 +7,10 @@ interface CampusInfoPanelProps {
   onClose: () => void;
   onDirections: () => void;
   onExplore: () => void;
+  onStreetView: () => void;
 }
 
-export function CampusInfoPanel({ building, onClose, onDirections, onExplore }: CampusInfoPanelProps) {
+export function CampusInfoPanel({ building, onClose, onDirections, onExplore, onStreetView }: CampusInfoPanelProps) {
   const cat = CATEGORY_MAP[building.category];
 
   return (
@@ -78,6 +79,9 @@ export function CampusInfoPanel({ building, onClose, onDirections, onExplore }: 
 
       {/* Actions */}
       <div className="p-4 border-t border-gray-100 grid grid-cols-2 gap-2">
+        <button onClick={onStreetView} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold transition-colors col-span-2">
+          <Eye size={14} /> Street View
+        </button>
         <button onClick={onDirections} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors">
           <Navigation size={14} /> Get Directions
         </button>

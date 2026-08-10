@@ -10,7 +10,7 @@ interface CampusMapProps {
   hiddenCategories: Set<string>;
   hiddenLayers: Set<string>;
   onSelect: (b: CampusBuilding) => void;
-  onReady: (api: { flyTo: (b: CampusBuilding) => void; reset: () => void; tilt: (on: boolean) => void; zoomIn: () => void; zoomOut: () => void }) => void;
+  onReady: (api: { flyTo: (b: CampusBuilding) => void; reset: () => void; tilt: (on: boolean) => void; zoomIn: () => void; zoomOut: () => void; streetView: (b: CampusBuilding) => void }) => void;
 }
 
 export function CampusMap({ campus, selectedId, hiddenCategories, onSelect, onReady }: CampusMapProps) {
@@ -84,6 +84,19 @@ export function CampusMap({ campus, selectedId, hiddenCategories, onSelect, onRe
       tilt: (on) => map.setPitch(on ? 55 : 0),
       zoomIn: () => map.zoomIn({ duration: 500 }),
       zoomOut: () => map.zoomOut({ duration: 500 }),
+      streetView: (b) => {
+        // Place the camera at street level, offset from the building's
+        // entrance so the real 3D building fills the view like Street View.
+        const offsetLat = (b.height || 3) * 0.000045; // scale height to a small lat offset
+        const entranceLat = b.lat - offsetLat; // assume entrance on the "south" road
+        map.flyTo({
+          center: [b.lng, entranceLat],
+          zoom: 18.2,
+          pitch: 82, // near-horizontal street-level pitch
+          bearing: 0,
+          duration: 1600,
+        });
+      },
     });
 
     return () => { cancelled = true; map.remove(); mapRef.current = null; };

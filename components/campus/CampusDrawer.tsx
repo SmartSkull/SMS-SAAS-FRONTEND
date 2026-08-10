@@ -1,5 +1,5 @@
 'use client';
-import { X, Navigation, Building2 } from 'lucide-react';
+import { X, Navigation, Building2, Eye } from 'lucide-react';
 import { CATEGORY_MAP, type CampusBuilding } from '@/types/campus';
 
 interface CampusDrawerProps {
@@ -7,9 +7,10 @@ interface CampusDrawerProps {
   onClose: () => void;
   onDirections: () => void;
   onExplore: () => void;
+  onStreetView: () => void;
 }
 
-export function CampusDrawer({ building, onClose, onDirections, onExplore }: CampusDrawerProps) {
+export function CampusDrawer({ building, onClose, onDirections, onExplore, onStreetView }: CampusDrawerProps) {
   if (!building) return null;
   const cat = CATEGORY_MAP[building.category];
 
@@ -39,6 +40,9 @@ export function CampusDrawer({ building, onClose, onDirections, onExplore }: Cam
           ))}
         </div>
         <div className="flex gap-2 mt-4">
+          <button onClick={onStreetView} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-gray-900 text-white text-xs font-bold">
+            <Eye size={14} /> Street View
+          </button>
           <button onClick={onDirections} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold">
             <Navigation size={14} /> Directions
           </button>
