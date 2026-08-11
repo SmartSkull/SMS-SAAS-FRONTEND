@@ -21,6 +21,15 @@ const EMPTY_FORM = {
   password: '',
 };
 
+const AVATAR_COLORS = [
+  'bg-blue-100 text-blue-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-amber-100 text-amber-700',
+  'bg-purple-100 text-purple-700',
+  'bg-rose-100 text-rose-700',
+];
+
 export default function StaffStudents() {
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
@@ -87,36 +96,39 @@ export default function StaffStudents() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Students</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+          <p className="mt-0.5 text-sm text-gray-500">Manage student accounts and records</p>
+        </div>
         <button
           onClick={() => { setForm(EMPTY_FORM); setModal(true); }}
-          className="flex items-center gap-2 btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium"
+          className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
         >
           <Plus size={16} /> Add Student
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl card shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
           <form onSubmit={handleSearch} className="flex gap-2 flex-1">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search students…"
-                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search by name, ID or email…"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/60 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
               />
             </div>
-            <button type="submit" className="btn-brand text-white px-4 py-2 rounded-xl text-sm font-medium">
+            <button type="submit" className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800">
               Search
             </button>
           </form>
           <select
             value={classFilter}
             onChange={(e) => setClassFilter(e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
           >
             <option value="">All Classes</option>
             {classes.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -125,40 +137,47 @@ export default function StaffStudents() {
 
         {loading ? (
           <div className="space-y-3 skeleton-stagger">
-            <div className="space-y-2">
-              <div className="shimmer h-4 w-full" />
-              <div className="shimmer h-4 w-5/6" />
-            </div>
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 border border-gray-100 rounded-lg">
-                <div className="shimmer h-10 w-32" />
-                <div className="shimmer h-10 w-40" />
-                <div className="shimmer h-10 w-32" />
-                <div className="shimmer h-10 w-48" />
+              <div key={i} className="flex items-center gap-4 p-4 border border-gray-100 rounded-xl">
+                <div className="shimmer h-10 w-10 rounded-full" />
+                <div className="shimmer h-4 w-48" />
+                <div className="shimmer h-4 w-32" />
+                <div className="shimmer h-4 w-40" />
               </div>
             ))}
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-5 px-5 sm:-mx-6 sm:px-6">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500 border-b">
-                    <th className="pb-3 font-medium">Student ID</th>
-                    <th className="pb-3 font-medium">Name</th>
-                    <th className="pb-3 font-medium">Class</th>
-                    <th className="pb-3 font-medium">Email</th>
+                  <tr className="text-left border-b border-gray-100">
+                    <th className="pb-3 pl-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">Student</th>
+                    <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Student ID</th>
+                    <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Class</th>
+                    <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Email</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {students.length === 0 ? (
                     <tr><td colSpan={4}><EmptyState icon={GraduationCap} message="No students found." card={false} /></td></tr>
-                  ) : students.map((s) => (
-                    <tr key={s.student_id} className="hover:bg-gray-50">
-                      <td className="py-3 font-mono text-xs text-gray-600">{s.student_id}</td>
-                      <td className="py-3 font-medium text-gray-800">{s.firstname} {s.lastname}</td>
-                      <td className="py-3 text-gray-600">{s.class}</td>
-                      <td className="py-3 text-gray-500">{s.email ?? '—'}</td>
+                  ) : students.map((s, idx) => (
+                    <tr key={s.student_id} className="group transition-colors hover:bg-blue-50/40">
+                      <td className="py-3.5 pl-1">
+                        <div className="flex items-center gap-3">
+                          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+                            {(s.firstname?.[0] ?? '?').toUpperCase()}{(s.lastname?.[0] ?? '').toUpperCase()}
+                          </span>
+                          <span className="font-semibold text-gray-800">{s.firstname} {s.lastname}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5">
+                        <span className="inline-flex rounded-lg bg-gray-100 px-2.5 py-1 font-mono text-xs font-medium text-gray-600">{s.student_id}</span>
+                      </td>
+                      <td className="py-3.5">
+                        <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600">{s.class}</span>
+                      </td>
+                      <td className="py-3.5 text-gray-500">{s.email ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -166,20 +185,20 @@ export default function StaffStudents() {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                 <p className="text-sm text-gray-500">Showing {students.length} of {total}</p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { setPage(p => p - 1); load(page - 1); }}
                     disabled={page === 1}
-                    className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
-                  ><ChevronLeft size={16} /></button>
-                  <span className="text-sm text-gray-600">{page} / {totalPages}</span>
+                    className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm disabled:opacity-40 hover:bg-gray-50"
+                  ><ChevronLeft size={14} /> Prev</button>
+                  <span className="px-2 text-sm font-semibold text-gray-700">{page} / {totalPages}</span>
                   <button
                     onClick={() => { setPage(p => p + 1); load(page + 1); }}
                     disabled={page === totalPages}
-                    className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50"
-                  ><ChevronRight size={16} /></button>
+                    className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm disabled:opacity-40 hover:bg-gray-50"
+                  >Next <ChevronRight size={14} /></button>
                 </div>
               </div>
             )}
@@ -190,16 +209,17 @@ export default function StaffStudents() {
       {/* Add Student Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">Register New Student</h2>
-              <button onClick={() => setModal(false)}><X size={20} className="text-gray-400" /></button>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 px-6 py-5">
+              <div>
+                <h2 className="font-semibold text-white">Register New Student</h2>
+                <p className="text-xs text-blue-200 mt-0.5">The account stays pending until an admin verifies it.</p>
+              </div>
+              <button onClick={() => setModal(false)} className="rounded-full bg-white/15 p-1.5 text-white transition hover:bg-white/25">
+                <X size={18} />
+              </button>
             </div>
             <div className="p-6 space-y-3">
-              <p className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-                The student account will be <strong>pending</strong> until an admin verifies it.
-              </p>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">First Name <span className="text-red-500">*</span></label>
@@ -273,7 +293,7 @@ export default function StaffStudents() {
               <button
                 onClick={handleRegister}
                 disabled={saving}
-                className="flex-1 py-2 btn-brand text-white rounded-xl text-sm font-medium disabled:opacity-60"
+                className="flex-1 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium transition hover:bg-blue-700 disabled:opacity-60"
               >
                 {saving ? 'Registering…' : 'Register Student'}
               </button>
