@@ -1,29 +1,92 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { CalendarDays, BookOpen, GraduationCap, Plus, Trash2, Save } from 'lucide-react';
+import { BookOpen, CalendarDays, GraduationCap, Plus, Trash2, Save, GripVertical, Clock, AlertCircle } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import clsx from 'clsx';
 
 type ClassTimetable = { id: string; classRoom: string; classRoomId: string; content: string };
 type ExamTimetable  = { id: string; level: string; content: string };
+type Subject = { id: string; course: string };
+type GridCell = { id: string; subjectId: string; label: string };
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const PERIODS = ['8:00', '9:00', '10:00', '11:00', '12:00', '13:00'];
+
+const DAY_COLORS: Record<string, string> = {
+  Monday: 'bg-blue-50 border-blue-200 text-blue-700',
+  Tuesday: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+  Wednesday: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+  Thursday: 'bg-amber-50 border-amber-200 text-amber-700',
+  Friday: 'bg-purple-50 border-purple-200 text-purple-700',
+};
+
+const PERIOD_COLORS = [
+  'from-blue-500 to-blue-600',
+  'from-sky-500 to-sky-600',
+  'from-indigo-500 to-indigo-600',
+  'from-violet-500 to-violet-600',
+  'from-fuchsia-500 to-fuchsia-600',
+  'from-cyan-500 to-cyan-600',
+];
+
+/* Parse existing "Monday: Math, English | Tuesday: ..." content into a grid */
+function parseContent(content: string): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const d of DAYS) out[d] = [];
+  (content || '').split('|').forEach(seg => {
+    const i = seg.indexOf(':');
+    if (i < 0) return;
+    const day = seg.slice(0, i).trim();
+    const subs = seg.slice(i + 1).split(',').map(s => s.trim()).filter(Boolean);
+    if (DAYS.includes(day)) out[day] = subs.slice(0, PERIODS.length);
+  });
+  return out;
+}
+
+/* Serialize grid back to "Monday: Math, English | Tuesday: ..." */
+function serializeContent(grid: Record<string, GridCell[]>): string {
+  return DAYS.map(d => {
+    const subs = (grid[d] || []).filter(Boolean).map(c => c.label).filter(Boolean);
+    return `${d}: ${subs.join(', ')}`;
+  }).join(' | ');
+}
+
+const EMPTY_CLASS_FORM = { id: '', classRoomId: '', content: '' };
+const EMPTY_EXAM_FORM = { id: '', level: '', content: '' };
 
 export default function StaffTimetablePage() {
   const toast = useToast();
   const [tab, setTab] = useState<'class' | 'exam'>('class');
+  const [mounted, setMounted] = useState(false);
+  const [editing, setEditing] = useState<'class' | 'exam' | null>(null);
+  useEffect(() => setMounted(true), []);
 
   // Class timetable state
   const [classes, setClasses] = useState<{ name: string; id: string }[]>([]);
   const [classTimetables, setClassTimetables] = useState<ClassTimetable[]>([]);
-  const [classForm, setClassForm] = useState({ id: '', classRoomId: '', content: '' });
+  const [classForm, setClassForm] = useState(EMPTY_CLASS_FORM);
+  const [grid, setGrid] = useState<Record<string, GridCell[]>>({});
   const [savingClass, setSavingClass] = useState(false);
 
   // Exam timetable state
   const [examTimetables, setExamTimetables] = useState<ExamTimetable[]>([]);
-  const [examForm, setExamForm] = useState({ id: '', level: '', content: '' });
+  const [examForm, setExamForm] = useState(EMPTY_EXAM_FORM);
+  const [examGrid, setExamGrid] = useState<Record<string, GridCell[]>>({});
   const [savingExam, setSavingExam] = useState(false);
+
+  // Subjects + drag state
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(true);
+  const [dragSubject, setDragSubject] = useState<string | null>(null);
+  const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<any>(endpoints.staff.classes).then(r => setClasses(r.data ?? []));
+    api.get<any>(endpoints.staff.courses)
+      .then(r => setSubjects((r.data ?? []).map((s: any) => ({ id: String(s.course_id ?? s.id), course: s.course }))))
+      .finally(() => setSubjectsLoading(false));
     loadClass();
     loadExam();
   }, []);
@@ -34,13 +97,42 @@ export default function StaffTimetablePage() {
   const loadExam = () =>
     api.get<any>(endpoints.staff.examTimetable).then(r => setExamTimetables(r.data ?? []));
 
+  const emptyGrid = () => Object.fromEntries(DAYS.map(d => [d, [] as GridCell[]]));
+
+  const subjectLabel = (id: string) => subjects.find(s => s.id === id)?.course ?? id;
+
+  /* ── Class timetable actions ── */
+  const openClassEditor = (t?: ClassTimetable) => {
+    setEditing('class');
+    setEditingClassFormState(t);
+  };
+
+  const openExamEditor = (t?: ExamTimetable) => {
+    setEditing('exam');
+    setEditingExamFormState(t);
+  };
+
+  const setEditingClassFormState = (t?: ClassTimetable) => {
+    if (t) {
+      const parsed = parseContent(t.content);
+      setClassForm({ id: t.id, classRoomId: t.classRoomId, content: t.content });
+      setGrid(Object.fromEntries(DAYS.map(d => [d, (parsed[d] || []).map((label, i) => ({ id: `${d}-${i}`, subjectId: label, label }))])));
+    } else {
+      setClassForm(EMPTY_CLASS_FORM);
+      setGrid(emptyGrid());
+    }
+  };
+
   const saveClass = async () => {
-    if (!classForm.classRoomId || !classForm.content.trim()) return toast.error('Select a class and enter content');
+    if (!classForm.classRoomId) return toast.error('Select a class');
+    const content = serializeContent(grid);
+    if (!content.trim()) return toast.error('Add at least one subject to the timetable');
     setSavingClass(true);
     try {
-      await api.post(endpoints.staff.classTimetable, classForm);
-      toast.success(classForm.id ? 'Updated' : 'Created');
-      setClassForm({ id: '', classRoomId: '', content: '' });
+      await api.post(endpoints.staff.classTimetable, { ...classForm, content });
+      toast.success(classForm.id ? 'Timetable updated' : 'Timetable created');
+      setEditing(null);
+      setClassForm(EMPTY_CLASS_FORM);
       loadClass();
     } catch { toast.error('Failed to save'); }
     finally { setSavingClass(false); }
@@ -51,13 +143,28 @@ export default function StaffTimetablePage() {
     catch { toast.error('Failed to delete'); }
   };
 
+  /* ── Exam timetable actions ── */
+  const setEditingExamFormState = (t?: ExamTimetable) => {
+    if (t) {
+      const parsed = parseContent(t.content);
+      setExamForm({ id: t.id, level: t.level, content: t.content });
+      setExamGrid(Object.fromEntries(DAYS.map(d => [d, (parsed[d] || []).map((label, i) => ({ id: `${d}-${i}`, subjectId: label, label }))])));
+    } else {
+      setExamForm(EMPTY_EXAM_FORM);
+      setExamGrid(emptyGrid());
+    }
+  };
+
   const saveExam = async () => {
-    if (!examForm.level || !examForm.content.trim()) return toast.error('Select a level and enter content');
+    if (!examForm.level) return toast.error('Select a level');
+    const content = serializeContent(examGrid);
+    if (!content.trim()) return toast.error('Add at least one subject to the timetable');
     setSavingExam(true);
     try {
-      await api.post(endpoints.staff.examTimetable, examForm);
-      toast.success(examForm.id ? 'Updated' : 'Created');
-      setExamForm({ id: '', level: '', content: '' });
+      await api.post(endpoints.staff.examTimetable, { ...examForm, content });
+      toast.success(examForm.id ? 'Exam timetable updated' : 'Exam timetable created');
+      setEditing(null);
+      setExamForm(EMPTY_EXAM_FORM);
       loadExam();
     } catch { toast.error('Failed to save'); }
     finally { setSavingExam(false); }
@@ -68,114 +175,297 @@ export default function StaffTimetablePage() {
     catch { toast.error('Failed to delete'); }
   };
 
+  /* ── Drag & drop ── */
+  const setGridFor = (fn: (g: Record<string, GridCell[]>) => Record<string, GridCell[]>) => {
+    if (editing === 'exam') setExamGrid(fn);
+    else setGrid(fn);
+  };
+
+  const moveCell = (from: string, to: string) => {
+    const [fDay, fIdx] = from.split('-');
+    const [tDay, tIdx] = to.split('-');
+    setGridFor(g => {
+      const src = [...(g[fDay] || [])];
+      const cell = src[parseInt(fIdx)];
+      if (!cell) return g;
+      src.splice(parseInt(fIdx), 1);
+      const dst = [...(g[tDay] || [])];
+      dst[parseInt(tIdx)] = cell;
+      return { ...g, [fDay]: src, [tDay]: dst };
+    });
+  };
+
+  const dropOnCell = (day: string, idx: number) => {
+    // Reordering an existing cell
+    if (dragOverCell && dragOverCell !== `${day}-${idx}`) {
+      moveCell(dragOverCell, `${day}-${idx}`);
+      setDragOverCell(null);
+      setDragSubject(null);
+      return;
+    }
+    if (dragOverCell) { setDragOverCell(null); setDragSubject(null); return; }
+    // Fresh subject from the sidebar
+    if (!dragSubject) return;
+    setGridFor(g => {
+      const arr = Array.from({ length: Math.max(idx + 1, (g[day] || []).length) }, (_, i) => g[day]?.[i]);
+      arr[idx] = { id: `${day}-${idx}`, subjectId: dragSubject, label: subjectLabel(dragSubject) };
+      return { ...g, [day]: arr };
+    });
+    setDragSubject(null);
+  };
+
+  const removeCell = (day: string, idx: number) =>
+    setGridFor(g => ({ ...g, [day]: (g[day] || []).filter((_, i) => i !== idx) }));
+
+  const clearDay = (day: string) => {
+    const g = editing === 'class' ? grid : examGrid;
+    if (!g[day]?.some(Boolean)) return;
+    setGridFor(prev => ({ ...prev, [day]: [] }));
+    toast.success(`${day} cleared`);
+  };
+
   const inputCls = 'w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white';
-  const textareaCls = `${inputCls} min-h-[160px] resize-y font-mono`;
+
+  if (!mounted) return null;
+
+  const gridData = editing === 'class' ? grid : examGrid;
+  const saving = editing === 'class' ? savingClass : savingExam;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Timetable Management</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Timetable Management</h1>
+          <p className="mt-0.5 text-sm text-gray-500">Drag and drop subjects to build the weekly schedule</p>
+        </div>
+        {editing === null && (
+          <button
+            onClick={() => (tab === 'class' ? openClassEditor() : openExamEditor())}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
+          >
+            <Plus size={16} /> New Timetable
+          </button>
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
         {([['class', BookOpen, 'Class Timetable'], ['exam', GraduationCap, 'Exam Timetable']] as const).map(([key, Icon, label]) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${tab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={clsx('flex items-center gap-2 px-5 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px',
+              tab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700')}>
             <Icon size={16} />{label}
           </button>
         ))}
       </div>
 
-      {tab === 'class' && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Form */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <h2 className="font-semibold text-gray-800 flex items-center gap-2"><Plus size={16} />{classForm.id ? 'Edit' : 'Add'} Class Timetable</h2>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Class</label>
-              <select value={classForm.classRoomId} onChange={e => setClassForm(f => ({ ...f, classRoomId: e.target.value }))} className={inputCls}>
-                <option value="">Select class</option>
-                {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Timetable Content</label>
-              <textarea value={classForm.content} onChange={e => setClassForm(f => ({ ...f, content: e.target.value }))}
-                placeholder="Paste or type the timetable here (e.g. Monday: Math 8am, English 9am...)" className={textareaCls} />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={saveClass} disabled={savingClass}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 transition-colors">
-                <Save size={15} />{savingClass ? 'Saving…' : 'Save'}
+      {/* ── Editor ── */}
+      {editing !== null ? (
+        <div className="grid lg:grid-cols-[300px_1fr] gap-6 items-start">
+          {/* Left rail */}
+          <div className="space-y-4 lg:sticky lg:top-24">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <h2 className="font-semibold text-gray-800 mb-3">Schedule details</h2>
+              {editing === 'class' ? (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Class</label>
+                  <select value={classForm.classRoomId} onChange={e => setClassForm(f => ({ ...f, classRoomId: e.target.value }))} className={inputCls}>
+                    <option value="">Select class</option>
+                    {classes.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Level</label>
+                  <select value={examForm.level} onChange={e => setExamForm(f => ({ ...f, level: e.target.value }))} className={inputCls}>
+                    <option value="">Select level</option>
+                    <option value="junior">Junior</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </div>
+              )}
+
+              <button onClick={() => (editing === 'class' ? saveClass() : saveExam())} disabled={saving}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60">
+                <Save size={15} />{saving ? 'Saving…' : 'Save Timetable'}
               </button>
-              {classForm.id && <button onClick={() => setClassForm({ id: '', classRoomId: '', content: '' })}
-                className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancel</button>}
+              <button onClick={() => setEditing(null)}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50">
+                Cancel
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-semibold text-gray-800">Subjects</h2>
+                {subjectsLoading && <span className="text-xs text-gray-400">Loading…</span>}
+              </div>
+              <p className="text-xs text-gray-400 mb-3">Drag a subject and drop it on a time slot.</p>
+              {subjects.length === 0 ? (
+                <p className="text-sm text-gray-400 flex items-center gap-2"><AlertCircle size={14} /> No subjects yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {subjects.map((s, i) => (
+                    <div key={s.id}
+                      draggable
+                      onDragStart={() => { setDragSubject(s.id); setDragOverCell(null); }}
+                      onDragEnd={() => setDragSubject(null)}
+                      className={clsx(
+                        'group flex cursor-grab items-center gap-3 rounded-xl border bg-white px-3 py-2.5 shadow-sm transition-all select-none active:cursor-grabbing',
+                        dragSubject === s.id ? 'opacity-40 scale-95 border-blue-300' : 'border-gray-100 hover:shadow-md hover:-translate-y-0.5')}
+                    >
+                      <span className={clsx('h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br flex items-center justify-center text-xs font-bold text-white', PERIOD_COLORS[i % PERIOD_COLORS.length])}>
+                        {s.course.slice(0, 2).toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium text-gray-700 flex-1 truncate">{s.course}</span>
+                      <GripVertical size={14} className="text-gray-300 group-hover:text-gray-400" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* List */}
-          <div className="space-y-3">
-            {classTimetables.length === 0 && <p className="text-gray-400 text-sm">No class timetables yet.</p>}
-            {classTimetables.map(t => (
-              <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-gray-800 flex items-center gap-2"><CalendarDays size={15} className="text-blue-500" />{t.classRoom}</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => setClassForm({ id: t.id, classRoomId: t.classRoomId, content: t.content })}
-                      className="text-xs px-3 py-1 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Edit</button>
-                    <button onClick={() => deleteClass(t.id)} className="text-red-500 hover:text-red-700"><Trash2 size={15} /></button>
-                  </div>
-                </div>
-                <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">{t.content}</pre>
-              </div>
-            ))}
+          {/* Right: weekly grid */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                <CalendarDays size={16} className="text-blue-500" />
+                {editing === 'class'
+                  ? (classes.find(c => c.id === classForm.classRoomId)?.name ?? 'Select a class')
+                  : `${examForm.level ? examForm.level.charAt(0).toUpperCase() + examForm.level.slice(1) : ''} Level`} — Weekly Schedule
+              </h2>
+              <span className="text-xs text-gray-400">Click a slot to remove • Drag to reorder</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="w-24 p-3 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400">Period</th>
+                    {DAYS.map(d => (
+                      <th key={d} className="p-3">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">{d}</span>
+                          <button
+                            onClick={() => clearDay(d)}
+                            disabled={!gridData[d]?.some(Boolean)}
+                            title={`Clear ${d}`}
+                            className="rounded-full bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-400 transition hover:bg-red-50 hover:text-red-500 disabled:opacity-0"
+                          >Clear</button>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {PERIODS.map((time, idx) => (
+                    <tr key={time} className={idx % 2 === 0 ? 'bg-gray-50/40' : 'bg-white'}>
+                      <td className="p-3">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                          <Clock size={12} className="text-gray-400" /> {time}
+                        </div>
+                      </td>
+                      {DAYS.map(day => {
+                        const cell = gridData[day]?.[idx];
+                        return (
+                          <td key={day} className="p-2">
+                            <div
+                              onDragOver={e => { e.preventDefault(); setDropTarget(`${day}-${idx}`); }}
+                              onDragLeave={() => setDropTarget(null)}
+                              onDrop={() => dropOnCell(day, idx)}
+                              className={clsx(
+                                'relative min-h-[64px] rounded-xl border-2 transition-all duration-150',
+                                dropTarget === `${day}-${idx}`
+                                  ? 'border-blue-400 bg-blue-50 scale-[1.02] shadow-md border-dashed'
+                                  : cell ? 'border-solid border-gray-100' : 'border-dashed border-gray-100 hover:border-blue-200 hover:bg-blue-50/30',
+                              )}
+                            >
+                              {cell ? (
+                                <div className={clsx(
+                                  'group/cell relative flex h-full min-h-[60px] cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-br px-3 py-2 text-white shadow-sm transition-all hover:shadow-md',
+                                  PERIOD_COLORS[idx % PERIOD_COLORS.length],
+                                  dragSubject === cell.subjectId ? 'opacity-50' : '',
+                                )} draggable
+                                  onDragStart={e => { e.stopPropagation(); setDragSubject(cell.subjectId); setDragOverCell(`${day}-${idx}`); }}
+                                  onDragEnd={() => { setDragSubject(null); setDragOverCell(null); setDropTarget(null); }}
+                                  onDrop={e => { e.stopPropagation(); dropOnCell(day, idx); }}
+                                  onClick={() => removeCell(day, idx)}
+                                  title="Click to remove, drag to move"
+                                >
+                                  <span className="text-xs font-bold leading-tight flex-1">{cell.label}</span>
+                                  <span className="opacity-0 group-hover/cell:opacity-100 transition-opacity"><Trash2 size={12} /></span>
+                                </div>
+                              ) : (
+                                <span className="absolute inset-0 flex items-center justify-center text-[11px] text-gray-300 pointer-events-none">
+                                  Drop subject
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      )}
-
-      {tab === 'exam' && (
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Form */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
-            <h2 className="font-semibold text-gray-800 flex items-center gap-2"><Plus size={16} />{examForm.id ? 'Edit' : 'Add'} Exam Timetable</h2>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Level</label>
-              <select value={examForm.level} onChange={e => setExamForm(f => ({ ...f, level: e.target.value }))} className={inputCls}>
-                <option value="">Select level</option>
-                <option value="junior">Junior</option>
-                <option value="senior">Senior</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">Timetable Content</label>
-              <textarea value={examForm.content} onChange={e => setExamForm(f => ({ ...f, content: e.target.value }))}
-                placeholder="Paste or type the exam timetable here..." className={textareaCls} />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={saveExam} disabled={savingExam}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 transition-colors">
-                <Save size={15} />{savingExam ? 'Saving…' : 'Save'}
+      ) : (
+        /* ── List of saved timetables ── */
+        <div className="grid gap-6">
+          {(tab === 'class' ? classTimetables : examTimetables).length === 0 && (
+            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+              <CalendarDays size={32} className="mx-auto text-gray-300 mb-3" />
+              <p className="text-gray-500 font-medium">No {tab} timetables yet</p>
+              <p className="text-sm text-gray-400 mt-1">Create one to start building your weekly schedule.</p>
+              <button
+                onClick={() => (tab === 'class' ? openClassEditor() : openExamEditor())}
+                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700"
+              >
+                <Plus size={16} /> Create {tab === 'class' ? 'Class' : 'Exam'} Timetable
               </button>
-              {examForm.id && <button onClick={() => setExamForm({ id: '', level: '', content: '' })}
-                className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancel</button>}
             </div>
-          </div>
+          )}
 
-          {/* List */}
-          <div className="space-y-3">
-            {examTimetables.length === 0 && <p className="text-gray-400 text-sm">No exam timetables yet.</p>}
-            {examTimetables.map(t => (
-              <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-gray-800 flex items-center gap-2 capitalize"><GraduationCap size={15} className="text-purple-500" />{t.level} Level</span>
-                  <div className="flex gap-2">
-                    <button onClick={() => setExamForm({ id: t.id, level: t.level, content: t.content })}
-                      className="text-xs px-3 py-1 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Edit</button>
-                    <button onClick={() => deleteExam(t.id)} className="text-red-500 hover:text-red-700"><Trash2 size={15} /></button>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {(tab === 'class' ? classTimetables : examTimetables).map(t => {
+              const parsed = parseContent((t as any).content);
+              const totalSlots = Object.values(parsed).reduce((a, arr) => a + arr.length, 0);
+              return (
+                <div key={t.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden group">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                    <div>
+                      <span className="font-semibold text-gray-800 flex items-center gap-2">
+                        {tab === 'class' ? <CalendarDays size={15} className="text-blue-500" /> : <GraduationCap size={15} className="text-purple-500" />}
+                        {(t as any).classRoom ?? `${(t as any).level} Level`}
+                      </span>
+                      <p className="text-xs text-gray-400 mt-0.5">{totalSlots} slots scheduled</p>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => (tab === 'class' ? openClassEditor(t as ClassTimetable) : openExamEditor(t as ExamTimetable))}
+                        className="text-xs px-3 py-1 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Edit</button>
+                      <button onClick={() => (tab === 'class' ? deleteClass(t.id) : deleteExam(t.id))} className="text-red-500 hover:text-red-700 p-1"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                  <div className="p-5 grid grid-cols-5 gap-3">
+                    {DAYS.map(day => {
+                      const subs = parsed[day] || [];
+                      return (
+                        <div key={day} className={clsx('rounded-xl border p-2.5 min-h-[90px]', DAY_COLORS[day])}>
+                          <p className="text-[10px] font-bold uppercase tracking-wider mb-2">{day.slice(0, 3)}</p>
+                          <div className="space-y-1.5">
+                            {subs.map((s, i) => (
+                              <span key={i} className="block rounded-md bg-white px-2 py-1 text-[11px] font-medium text-gray-700 shadow-sm truncate">{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">{t.content}</pre>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
