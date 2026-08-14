@@ -102,14 +102,20 @@ export function usePosts() {
       .finally(() => setLoading(false));
   }, []);
 
-  const like = async (id: number) => {
-    try {
-      await api.post(`/student/posts/${id}/like`);
+  const like = (id: number) => {
+    // Optimistic update — flip immediately, rollback on failure
+    setPosts((p) => p.map((post) =>
+      String(post.id) === String(id)
+        ? { ...post, likes: (post.likes ?? 0) + (post.liked ? -1 : 1), liked: !post.liked }
+        : post));
+    api.post(`/student/posts/${id}/like`).catch(() => {
+      // Rollback
       setPosts((p) => p.map((post) =>
         String(post.id) === String(id)
           ? { ...post, likes: (post.likes ?? 0) + (post.liked ? -1 : 1), liked: !post.liked }
           : post));
-    } catch { toast.error('Failed to like post'); }
+      toast.error('Failed to like post');
+    });
   };
 
   const comment = async (id: number, text: string) => {
