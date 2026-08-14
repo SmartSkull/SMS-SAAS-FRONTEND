@@ -165,6 +165,50 @@ function TimetableGrid({ content }: { content: string }) {
   );
 }
 
+/* ── Skeleton loader ─────────────────────────────────────────────────────── */
+function TimetableSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      {/* Header row: period column + 5 day columns */}
+      <div className="flex gap-3 pb-2 border-b border-gray-100">
+        <div className="w-36 h-4 rounded-lg bg-gray-200 shrink-0" />
+        {DAYS.map(d => (
+          <div key={d} className="flex-1 h-4 rounded-lg bg-gray-200" />
+        ))}
+      </div>
+
+      {/* 6 period rows */}
+      {Array.from({ length: 6 }).map((_, rowIdx) => (
+        <div key={rowIdx} className="flex gap-3 items-center">
+          {/* Time / period label */}
+          <div className="w-36 shrink-0 space-y-1.5">
+            <div className="h-3 w-24 rounded-md bg-gray-200" />
+            <div className="h-2.5 w-16 rounded-md bg-gray-100" />
+          </div>
+          {/* Subject cells */}
+          {DAYS.map((d, colIdx) => (
+            <div
+              key={d}
+              className={clsx(
+                'flex-1 h-10 rounded-xl',
+                // vary shade to give a subtle staggered shimmer feel
+                (rowIdx + colIdx) % 3 === 0 ? 'bg-gray-200' :
+                (rowIdx + colIdx) % 3 === 1 ? 'bg-gray-150' : 'bg-gray-100'
+              )}
+            />
+          ))}
+        </div>
+      ))}
+
+      {/* Break row hint */}
+      <div className="flex gap-3 items-center pt-1">
+        <div className="w-36 shrink-0 h-8 rounded-xl bg-amber-100" />
+        <div className="flex-1 h-8 rounded-xl bg-amber-50" />
+      </div>
+    </div>
+  );
+}
+
 /* ── Page ────────────────────────────────────────────────────────────────── */
 export default function StudentTimetable() {
   const [tab, setTab] = useState<'class' | 'exam'>('class');
@@ -188,7 +232,7 @@ export default function StudentTimetable() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
         {loading ? (
-          <div className="text-center text-gray-400 py-8">Loading…</div>
+          <TimetableSkeleton />
         ) : tab === 'class' ? (
           !classContent ? (
             <EmptyState icon={Calendar} message="No class timetable available." card={false} />
