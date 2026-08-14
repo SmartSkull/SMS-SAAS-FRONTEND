@@ -13,6 +13,7 @@ export default function StudentPosts() {
   const [commentText, setCommentText] = useState<Record<string, string>>({});
   const [openComment, setOpenComment] = useState<string | null>(null);
   const [postComments, setPostComments] = useState<Record<string, any[]>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
   const [editingComment, setEditingComment] = useState<{ id: string; text: string } | null>(null);
 
   const toggleComments = async (id: number) => {
@@ -20,10 +21,14 @@ export default function StudentPosts() {
     if (openComment === pid) { setOpenComment(null); return; }
     setOpenComment(pid);
     if (!postComments[pid]) {
+      setLoadingComments((p) => ({ ...p, [pid]: true }));
       try {
         const r = await api.get<any>(`/student/posts/${id}`);
         setPostComments((p) => ({ ...p, [pid]: r.data?.comments ?? [] }));
       } catch {}
+      finally {
+        setLoadingComments((p) => ({ ...p, [pid]: false }));
+      }
     }
   };
 
@@ -159,46 +164,62 @@ export default function StudentPosts() {
                   {/* Comments list + input */}
                   {isCommentOpen && (
                     <div className="mt-3 space-y-2">
-                      {(postComments[pid] ?? []).map((c: any) => {
-                        const cid = String(c.id);
-                        const isOwn = !c.optimistic && (c.author?.firstName === 'You' || String(c.authorId) === String(currentUser?.id));
-                        const isEditing = editingComment?.id === cid;
-                        return (
-                          <div key={cid} className="flex gap-2 text-xs">
-                            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                              <User size={11} className="text-gray-400" />
+                      {loadingComments[pid] ? (
+                        /* ── Comment skeleton ── */
+                        <div className="space-y-2 animate-pulse">
+                          {[...Array(3)].map((_, i) => (
+                            <div key={i} className="flex gap-2">
+                              <div className="w-6 h-6 rounded-full bg-gray-200 shrink-0 mt-0.5" />
+                              <div className="flex-1 bg-gray-100 rounded-xl px-3 py-2 space-y-1.5">
+                                <div className="h-2.5 w-1/3 rounded bg-gray-200" />
+                                <div className={clsx('h-2 rounded bg-gray-200', i === 1 ? 'w-4/5' : i === 2 ? 'w-2/3' : 'w-full')} />
+                              </div>
                             </div>
-                            <div className="bg-gray-50 rounded-xl px-3 py-1.5 flex-1">
-                              {isEditing ? (
-                                <div className="flex gap-1.5 items-center">
-                                  <input
-                                    autoFocus
-                                    value={editingComment.text}
-                                    onChange={(e) => setEditingComment({ id: cid, text: e.target.value })}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(pid, cid); if (e.key === 'Escape') setEditingComment(null); }}
-                                    className="flex-1 bg-white border border-blue-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none"
-                                  />
-                                  <button onClick={() => saveEdit(pid, cid)} className="text-blue-500 hover:text-blue-700"><Check size={12} /></button>
-                                  <button onClick={() => setEditingComment(null)} className="text-gray-400 hover:text-gray-600"><X size={12} /></button>
-                                </div>
-                              ) : (
-                                <div className="flex items-start justify-between gap-2">
-                                  <span className="text-gray-600">
-                                    <span className="font-semibold text-gray-700">{c.author?.firstName} {c.author?.lastName} </span>
-                                    {c.text}
-                                  </span>
-                                  {isOwn && (
-                                    <div className="flex gap-1 shrink-0">
-                                      <button onClick={() => setEditingComment({ id: cid, text: c.text })} className="text-gray-400 hover:text-blue-500"><Pencil size={11} /></button>
-                                      <button onClick={() => deleteComment(pid, cid)} className="text-gray-400 hover:text-red-500"><Trash2 size={11} /></button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+                          ))}
+                        </div>
+                      ) : (
+                        (postComments[pid] ?? []).map((c: any) => {
+                          const cid = String(c.id);
+                          const isOwn = !c.optimistic && (c.author?.firstName === 'You' || String(c.authorId) === String(currentUser?.id));
+                          const isEditing = editingComment?.id === cid;
+                          return (
+                            <div key={cid} className="flex gap-2 text-xs">
+                              <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
+                                <User size={11} className="text-gray-400" />
+                              </div>
+                              <div className="bg-gray-50 rounded-xl px-3 py-1.5 flex-1">
+                                {isEditing ? (
+                                  <div className="flex gap-1.5 items-center">
+                                    <input
+                                      autoFocus
+                                      value={editingComment.text}
+                                      onChange={(e) => setEditingComment({ id: cid, text: e.target.value })}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(pid, cid); if (e.key === 'Escape') setEditingComment(null); }}
+                                      className="flex-1 bg-white border border-blue-300 rounded-lg px-2 py-0.5 text-xs focus:outline-none"
+                                    />
+                                    <button onClick={() => saveEdit(pid, cid)} className="text-blue-500 hover:text-blue-700"><Check size={12} /></button>
+                                    <button onClick={() => setEditingComment(null)} className="text-gray-400 hover:text-gray-600"><X size={12} /></button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start justify-between gap-2">
+                                    <span className="text-gray-600">
+                                      <span className="font-semibold text-gray-700">{c.author?.firstName} {c.author?.lastName} </span>
+                                      {c.text}
+                                    </span>
+                                    {isOwn && (
+                                      <div className="flex gap-1 shrink-0">
+                                        <button onClick={() => setEditingComment({ id: cid, text: c.text })} className="text-gray-400 hover:text-blue-500"><Pencil size={11} /></button>
+                                        <button onClick={() => deleteComment(pid, cid)} className="text-gray-400 hover:text-red-500"><Trash2 size={11} /></button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
+                      {!loadingComments[pid] && (
                       <div className="flex gap-2 pt-1">
                         <input
                           autoFocus
@@ -216,6 +237,7 @@ export default function StudentPosts() {
                           <Send size={14} />
                         </button>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
