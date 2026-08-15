@@ -123,7 +123,7 @@ export interface Assignment {
   lastname?: string;
   status?: 'PUBLISHED' | 'HIDDEN' | string;
   createdAt?: string;
-  submission?: { submittedAt: string; note?: string; fileUrl?: string } | null;
+  submission?: { submittedAt: string; note?: string; fileUrl?: string; grade?: string | null; feedback?: string | null; gradedAt?: string | null } | null;
 }
 
 export interface LibraryItem {

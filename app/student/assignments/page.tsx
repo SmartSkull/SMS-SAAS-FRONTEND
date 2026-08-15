@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { CalendarDays, Download, FileText, UserRound, X, Search, CheckCircle2, Clock, AlertCircle, Paperclip, Send } from 'lucide-react';
+import { CalendarDays, Download, FileText, UserRound, X, Search, CheckCircle2, Clock, AlertCircle, Paperclip, Send, Award } from 'lucide-react';
 import { useAssignments } from '@/hooks/student';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { api, endpoints } from '@/lib/api';
@@ -72,7 +72,7 @@ const STATUS_STYLES = {
 /* ─── submit form ─────────────────────────────────────────────────────────── */
 function SubmitForm({ assignmentId, existing, onSubmitted }: {
   assignmentId: number;
-  existing?: { submittedAt: string; note?: string; fileUrl?: string } | null;
+  existing?: { submittedAt: string; note?: string; fileUrl?: string; grade?: string | null; feedback?: string | null; gradedAt?: string | null } | null;
   onSubmitted: () => void;
 }) {
   const toast = useToast();
@@ -106,6 +106,25 @@ function SubmitForm({ assignmentId, existing, onSubmitted }: {
         <div className="flex items-center gap-2 mb-3 text-green-700">
           <CheckCircle2 size={16} />
           <span className="text-sm font-semibold">Submitted on {formatDate(existing.submittedAt)}</span>
+        </div>
+      )}
+
+      {/* ── Grade / feedback block ── */}
+      {submitted && existing.grade && (
+        <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 space-y-1">
+          <div className="flex items-center gap-2">
+            <Award size={15} className="text-purple-600 shrink-0" />
+            <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">Teacher's Grade</span>
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-2xl font-extrabold text-purple-700">{existing.grade}</span>
+            {existing.gradedAt && (
+              <span className="text-xs text-purple-400">graded {formatDate(existing.gradedAt)}</span>
+            )}
+          </div>
+          {existing.feedback && (
+            <p className="text-sm text-purple-700 italic">"{existing.feedback}"</p>
+          )}
         </div>
       )}
       <form onSubmit={submit} className="space-y-3">
@@ -273,9 +292,16 @@ export default function StudentAssignments() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="truncate font-semibold text-gray-900">{title(a)}</h3>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${isSubmitted ? 'bg-green-100 text-green-600' : s.badge}`}>
-                        {isSubmitted ? 'Submitted' : s.label}
-                      </span>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isSubmitted ? 'bg-green-100 text-green-600' : s.badge}`}>
+                          {isSubmitted ? 'Submitted' : s.label}
+                        </span>
+                        {a.submission?.grade && (
+                          <span className="flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700">
+                            <Award size={9} /> {a.submission.grade}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <p className="mt-0.5 text-xs text-gray-500">{a.course || a.subject || 'Subject'}</p>
                     <p className="mt-1 line-clamp-2 text-xs text-gray-400">{body(a)}</p>

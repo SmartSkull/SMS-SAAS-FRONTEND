@@ -5,12 +5,22 @@ import { useToast } from '@/components/ui/Toast';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import type { ApiResponse, Assignment } from '@/types';
-import { ChevronDown, ChevronUp, Eye, EyeOff, FileText, Paperclip, Pencil, Plus, Trash2, X } from 'lucide-react';
+import clsx from 'clsx';
+import { ChevronDown, ChevronUp, Eye, EyeOff, FileText, Paperclip, Pencil, Plus, Trash2, X, Award, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const EMPTY = { subject: '', assignment: '', class: '', deadline: '', status: 'PUBLISHED' };
 
-interface Submission { id: string; studentName: string; note?: string; fileUrl?: string; submittedAt: string; }
+interface Submission {
+  id: string;
+  studentName: string;
+  note?: string;
+  fileUrl?: string;
+  submittedAt: string;
+  grade?: string | null;
+  feedback?: string | null;
+  gradedAt?: string | null;
+}
 
 export default function StaffAssignments() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -27,6 +37,44 @@ export default function StaffAssignments() {
   const [pdfPreview, setPdfPreview] = useState<string | null>(null);
   const toast = useToast();
   const { classes, subjects } = useSchoolData();
+
+  // ── Grading state ─────────────────────────────────────────────────────────
+  // gradingId: the submission currently being graded (shows the inline form)
+  const [gradingId, setGradingId] = useState<string | null>(null);
+  const [gradeInput, setGradeInput] = useState('');
+  const [feedbackInput, setFeedbackInput] = useState('');
+  const [savingGrade, setSavingGrade] = useState(false);
+
+  const openGrade = (s: Submission) => {
+    setGradingId(s.id);
+    setGradeInput(s.grade ?? '');
+    setFeedbackInput(s.feedback ?? '');
+  };
+
+  const saveGrade = async (assignmentId: string, submissionId: string) => {
+    setSavingGrade(true);
+    try {
+      await api.patch<any>(endpoints.staff.assignmentGradeSubmission(+assignmentId, submissionId), {
+        grade: gradeInput.trim(),
+        feedback: feedbackInput.trim(),
+      });
+      // Update local state so the badge reflects immediately
+      setSubmissions(prev => ({
+        ...prev,
+        [assignmentId]: prev[assignmentId].map(s =>
+          s.id === submissionId
+            ? { ...s, grade: gradeInput.trim() || null, feedback: feedbackInput.trim() || null, gradedAt: new Date().toISOString() }
+            : s
+        ),
+      }));
+      setGradingId(null);
+      toast.success('Grade saved');
+    } catch {
+      toast.error('Failed to save grade');
+    } finally {
+      setSavingGrade(false);
+    }
+  };
 
   const load = () => {
     setLoading(true);
@@ -250,24 +298,93 @@ export default function StaffAssignments() {
                     ) : (
                       <div className="space-y-2">
                         {submissions[String(a.id)].map(s => (
-                          <div key={s.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100">
-                            <div>
-                              <p className="text-sm font-medium text-gray-800">{s.studentName}</p>
-                              {s.note && <p className="text-xs text-gray-500 mt-0.5">{s.note}</p>}
-                              <p className="text-xs text-gray-400">{new Date(s.submittedAt).toLocaleString()}</p>
+                          <div key={s.id} className="bg-white rounded-lg border border-gray-100 overflow-hidden">
+                            {/* ── submission info row ── */}
+                            <div className="flex items-center justify-between px-3 py-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-sm font-medium text-gray-800">{s.studentName}</p>
+                                  {s.grade ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">
+                                      <Award size={11} /> {s.grade}
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-400">Not graded</span>
+                                  )}
+                                </div>
+                                {s.note && <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{s.note}</p>}
+                                {s.feedback && s.grade && (
+                                  <p className="text-xs text-emerald-600 mt-0.5 italic truncate max-w-xs">"{s.feedback}"</p>
+                                )}
+                                <p className="text-xs text-gray-400">{new Date(s.submittedAt).toLocaleString()}</p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 ml-3">
+                                {s.fileUrl && (
+                                  s.fileUrl.toLowerCase().includes('.pdf') ? (
+                                    <a href={s.fileUrl} target="_blank" rel="noreferrer"
+                                      className="flex items-center gap-1 text-xs bg-red-600 text-white hover:bg-red-700 px-2 py-1 rounded-lg font-medium">
+                                      <FileText size={13} /> PDF
+                                    </a>
+                                  ) : (
+                                    <a href={s.fileUrl} target="_blank" rel="noreferrer"
+                                      className="flex items-center gap-1 text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg font-medium">
+                                      <Paperclip size={13} /> File
+                                    </a>
+                                  )
+                                )}
+                                <button
+                                  onClick={() => gradingId === s.id ? setGradingId(null) : openGrade(s)}
+                                  className={clsx(
+                                    'flex items-center gap-1 text-xs px-2 py-1 rounded-lg font-medium transition-colors',
+                                    gradingId === s.id
+                                      ? 'bg-gray-100 text-gray-500'
+                                      : s.grade
+                                        ? 'text-emerald-600 hover:bg-emerald-50'
+                                        : 'text-purple-600 hover:bg-purple-50'
+                                  )}
+                                >
+                                  <Award size={13} />
+                                  {gradingId === s.id ? 'Cancel' : s.grade ? 'Edit grade' : 'Grade'}
+                                </button>
+                              </div>
                             </div>
-                            {s.fileUrl && (
-                              s.fileUrl.toLowerCase().includes('.pdf') ? (
-                                <a href={s.fileUrl} target="_blank" rel="noreferrer"
-                                  className="flex items-center gap-1 text-xs bg-red-600 text-white hover:bg-red-700 px-2 py-1 rounded-lg font-medium">
-                                  <FileText size={13} /> View PDF
-                                </a>
-                              ) : (
-                                <a href={s.fileUrl} target="_blank" rel="noreferrer"
-                                  className="flex items-center gap-1 text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg font-medium">
-                                  <Paperclip size={13} /> View File
-                                </a>
-                              )
+
+                            {/* ── inline grade form ── */}
+                            {gradingId === s.id && (
+                              <div className="border-t border-gray-100 bg-purple-50/40 px-3 py-3">
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Grade</label>
+                                    <input
+                                      autoFocus
+                                      value={gradeInput}
+                                      onChange={e => setGradeInput(e.target.value)}
+                                      placeholder="e.g. A, B+, 85/100"
+                                      className="w-32 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-purple-400 bg-white"
+                                    />
+                                  </div>
+                                  <div className="flex flex-col gap-1 flex-1">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Feedback (optional)</label>
+                                    <input
+                                      value={feedbackInput}
+                                      onChange={e => setFeedbackInput(e.target.value)}
+                                      onKeyDown={e => e.key === 'Enter' && saveGrade(String(a.id), s.id)}
+                                      placeholder="Well done! Great effort…"
+                                      className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-purple-400 bg-white"
+                                    />
+                                  </div>
+                                  <div className="flex items-end">
+                                    <button
+                                      onClick={() => saveGrade(String(a.id), s.id)}
+                                      disabled={savingGrade || !gradeInput.trim()}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-xs font-bold rounded-lg transition-colors"
+                                    >
+                                      <CheckCircle2 size={13} />
+                                      {savingGrade ? 'Saving…' : 'Save'}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
                             )}
                           </div>
                         ))}

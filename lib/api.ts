@@ -112,6 +112,9 @@ export const api = {
   put: <T>(url: string, data?: unknown) =>
     client.put<T>(url, data).then((r) => r.data),
 
+  patch: <T>(url: string, data?: unknown) =>
+    client.patch<T>(url, data).then((r) => r.data),
+
   delete: <T>(url: string, data?: unknown) =>
     client.delete<T>(url, { data }).then((r) => r.data),
 
@@ -194,6 +197,7 @@ export const endpoints = {
     assignments: '/staff/assignments',
     assignment: (id: number) => `/staff/assignments/${id}`,
     assignmentSubmissions: (id: number) => `/staff/assignments/${id}/submissions`,
+    assignmentGradeSubmission: (assignmentId: number, submissionId: string) => `/staff/assignments/${assignmentId}/submissions/${submissionId}/grade`,
     library: '/staff/library',
     libraryItem: (id: number) => `/staff/library/${id}`,
     books: '/staff/books',
