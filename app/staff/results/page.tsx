@@ -360,12 +360,12 @@ export default function StaffResults() {
         console.log('[DEBUG] Current period response:', r.data);
         const session = r.data?.session ?? '';
         const term = r.data?.term ?? '';
-        // Only set if not already populated by a restored draft
-        setUploadSession(prev => prev || session);
-        setUploadTerm(prev => prev || term);
+        // Always use API values, override any draft values
+        setUploadSession(session);
+        setUploadTerm(term);
         // Also use as fallback for the filter dropdowns (needed for comment saving)
-        if (session) setSessionFilter(prev => prev || session);
-        if (term) setTermFilter(prev => prev || term);
+        if (session) setSessionFilter(session);
+        if (term) setTermFilter(term);
         // Fetch admin-configured school days for this session/term
         if (session && term) {
           try {
