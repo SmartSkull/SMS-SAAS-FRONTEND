@@ -353,8 +353,11 @@ export default function StaffResults() {
   useEffect(() => {
     // Pass school parameter to get school-specific current period
     const params = school?.slug ? { school: school.slug } : undefined;
+    console.log('Fetching current period with params:', params, 'school:', school);
+    
     api.get<any>(endpoints.public.currentPeriod, params)
       .then(async r => {
+        console.log('Current period response:', r.data);
         const session = r.data?.session ?? '';
         const term = r.data?.term ?? '';
         // Only set if not already populated by a restored draft
@@ -374,7 +377,9 @@ export default function StaffResults() {
           } catch { setTotalSchoolDays(null); }
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Error fetching current period:', err);
+      });
   }, [school?.slug]);
 
   // Load students + pre-fill existing attendance when class changes
