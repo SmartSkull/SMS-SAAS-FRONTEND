@@ -351,7 +351,9 @@ export default function StaffResults() {
 
   // Fetch current session/term for upload modal (skip if draft already restored)
   useEffect(() => {
-    api.get<any>(endpoints.public.currentPeriod)
+    // Pass school parameter to get school-specific current period
+    const params = school?.slug ? { school: school.slug } : undefined;
+    api.get<any>(endpoints.public.currentPeriod, params)
       .then(async r => {
         const session = r.data?.session ?? '';
         const term = r.data?.term ?? '';
@@ -373,7 +375,7 @@ export default function StaffResults() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [school?.slug]);
 
   // Load students + pre-fill existing attendance when class changes
   useEffect(() => {

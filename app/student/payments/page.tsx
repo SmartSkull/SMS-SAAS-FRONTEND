@@ -160,15 +160,16 @@ export default function StudentPayments() {
   }, []);
 
   useEffect(() => {
+    const params = school?.slug ? { school: school.slug } : undefined;
     Promise.all([
-      api.get<ApiResponse<any[]>>(endpoints.public.sessions),
-      api.get<ApiResponse<{ session: string; term: string }>>(endpoints.public.currentPeriod),
+      api.get<ApiResponse<any[]>>(endpoints.public.sessions, params),
+      api.get<ApiResponse<{ session: string; term: string }>>(endpoints.public.currentPeriod, params),
     ]).then(([s, p]) => {
       setSessions(s.data);
       setSession(p.data.session);
       setTerm(p.data.term);
     }).catch(() => toast.error('Failed to load filters'));
-  }, []);
+  }, [school?.slug]);
 
   useEffect(() => {
     if (!session || !term) return;

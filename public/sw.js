@@ -1,4 +1,4 @@
-const CACHE = 'florieren-v2';
+const CACHE = 'florieren-v3';
 const APP_SHELL = ['/', '/student/dashboard'];
 
 self.addEventListener('install', (e) => {
@@ -28,8 +28,11 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          // Only cache successful responses
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
+          }
           return res;
         })
         .catch(() => caches.match(e.request).then((cached) => cached || caches.match('/')))
@@ -37,9 +40,13 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Everything else (API, images, fonts): network-first, cache fallback
+  // Everything else (API, images, fonts): network-first, never cache API calls
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request).catch(() => {
+      // Only use cache fallback for non-API requests
+      if (e.request.url.includes('/api/')) return Response.error();
+      return caches.match(e.request);
+    })
   );
 });
 
