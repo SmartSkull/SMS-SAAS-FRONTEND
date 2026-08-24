@@ -353,9 +353,11 @@ export default function StaffResults() {
   useEffect(() => {
     // Pass school parameter to get school-specific current period
     const params = school?.slug ? { school: school.slug } : undefined;
+    console.log('[DEBUG] Fetching current period with school slug:', school?.slug, 'params:', params);
     
     api.get<any>(endpoints.public.currentPeriod, params)
       .then(async r => {
+        console.log('[DEBUG] Current period response:', r.data);
         const session = r.data?.session ?? '';
         const term = r.data?.term ?? '';
         // Only set if not already populated by a restored draft
