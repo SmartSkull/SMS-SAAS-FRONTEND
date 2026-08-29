@@ -2,7 +2,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Building2, Upload } from 'lucide-react';
+import { ArrowLeft, BookOpen, Building2, MessageSquare, Shield, Upload } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse, SchoolProfile } from '@/types';
@@ -76,15 +76,14 @@ export default function RegisterSchoolPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative w-full overflow-y-auto bg-gray-950">
-      <img src="/images/studentgroup1.jpg" alt="" className="absolute inset-0 w-full h-full object-cover opacity-40 animate-[kenBurns_12s_ease-in-out_infinite_alternate]" />
-      <div className="absolute inset-0 bg-gray-950/60" />
-      <div className="w-full max-w-3xl relative z-10 py-10">
-        <Link href="/school" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-white/80 hover:text-white">
-          <ArrowLeft size={16} /> Back to school search
-        </Link>
+    <div className="min-h-screen w-full flex">
+      {/* Left side - Registration form (50% width on desktop) */}
+      <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto">
+        <div className="w-full max-w-2xl mx-auto py-6 lg:py-10">
+          <Link href="/school" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800">
+            <ArrowLeft size={16} /> Back to school search
+          </Link>
 
-        <div className="rounded-3xl overflow-hidden shadow-2xl p-6 sm:p-10" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase tracking-wider text-blue-700">School Portal</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-950">Register your school</h1>
@@ -180,6 +179,52 @@ export default function RegisterSchoolPage() {
               {submitting ? 'Submitting...' : 'Submit for approval'}
             </button>
           </form>
+        </div>
+      </div>
+
+      {/* Right side - Background image (50% width on desktop, hidden on mobile) */}
+      <div className="hidden lg:block lg:w-1/2 min-h-screen relative">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url('/images/studentgroup1.jpg')`,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+        <div className="absolute inset-0 flex items-center justify-center p-8">
+          <div className="text-white max-w-md">
+            <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
+            <p className="text-lg mb-8 text-gray-200">Join thousands of schools using our platform to manage academics, finances, and student life efficiently.</p>
+            <div className="space-y-5">
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Comprehensive Academic Management</h3>
+                  <p className="text-gray-300 text-sm">Manage grades, attendance, timetables, and curriculum all in one place.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <Shield className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Secure Financial Transactions</h3>
+                  <p className="text-gray-300 text-sm">Process payments, track expenses, and manage school finances securely.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <MessageSquare className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Real-time Communication Tools</h3>
+                  <p className="text-gray-300 text-sm">Connect with parents, staff, and students through instant messaging and notifications.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

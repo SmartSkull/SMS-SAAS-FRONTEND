@@ -4,7 +4,7 @@ import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchoo
 import { getImageUrl } from '@/lib/api';
 import type { Role } from '@/types';
 import clsx from 'clsx';
-import { Eye, EyeOff, GraduationCap, Search, ShieldCheck, Users } from 'lucide-react';
+import { BookOpen, Eye, EyeOff, GraduationCap, MessageSquare, Search, Shield, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -42,29 +42,69 @@ export default function LoginPage() {
 
   if (!school) {
     return (
-      <main
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/studentgroup2.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          backgroundColor: '#1f1f2e',
-        }}
-      >
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm p-8 text-center shadow-sm">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-            <Search size={24} />
+      <div className="portal-theme min-h-screen w-full flex">
+        {/* Left side - School selection message (50% width on desktop) */}
+        <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto">
+          <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+              <Search size={24} />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-950 text-center">Choose your school first</h1>
+            <p className="mt-2 text-sm text-slate-500 text-center">
+              Your portal branding and login access are loaded from the selected school profile.
+            </p>
+            <Link href="/school" className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800">
+              Search for school
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold text-slate-950">Choose your school first</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Your portal branding and login access are loaded from the selected school profile.
-          </p>
-          <Link href="/school" className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800">
-            Search for school
-          </Link>
         </div>
-      </main>
+
+        {/* Right side - Background image (50% width on desktop, hidden on mobile) */}
+        <div className="hidden lg:block lg:w-1/2 min-h-screen relative">
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url('/images/studentgroup2.jpg')`,
+            }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <div className="text-white max-w-md">
+              <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
+              <p className="text-lg mb-8 text-gray-200">Join thousands of schools using our platform to manage academics, finances, and student life efficiently.</p>
+              <div className="space-y-5">
+                <div className="flex items-start">
+                  <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                    <BookOpen className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Comprehensive Academic Management</h3>
+                    <p className="text-gray-300 text-sm">Manage grades, attendance, timetables, and curriculum all in one place.</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                    <Shield className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Secure Financial Transactions</h3>
+                    <p className="text-gray-300 text-sm">Process payments, track expenses, and manage school finances securely.</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                    <MessageSquare className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-1">Real-time Communication Tools</h3>
+                    <p className="text-gray-300 text-sm">Connect with parents, staff, and students through instant messaging and notifications.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -76,20 +116,12 @@ export default function LoginPage() {
   const idPlaceholder = tab === 'student' ? 'e.g. David Emmanuel' : tab === 'staff' ? 'e.g. John Smith or STF001' : 'e.g. ADM001';
 
   return (
-    <div 
-      className="portal-theme min-h-screen flex items-center justify-center p-4 relative w-full"
-      style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/studentgroup2.jpg')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#1f1f2e',
-      }}
-    >
-      <div className="w-full max-w-2xl relative z-10">
-        <div className="rounded-3xl overflow-hidden shadow-2xl" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
-          {/* Header */}
-          <div className="p-6 border-b border-gray-200">
+    <div className="portal-theme min-h-screen w-full flex">
+      {/* Left side - Login form (50% width on desktop) */}
+      <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto">
+        <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10">
+          {/* School Header */}
+          <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               {logo ? (
                 <img src={logo} alt={`${school.name} logo`} className="w-10 h-10 rounded-full object-cover" />
@@ -105,191 +137,234 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="p-8">
-            <h1 className="text-gray-900 text-3xl font-bold mb-2">
-              Welcome back <span className="animate-wave">👋</span>
-            </h1>
-            <p className="text-gray-600 text-sm mb-8">Enter your details to login</p>
+          <h1 className="text-gray-900 text-3xl font-bold mb-2">
+            Welcome back <span className="animate-wave">👋</span>
+          </h1>
+          <p className="text-gray-600 text-sm mb-8">Enter your details to login</p>
 
-            {/* Role Tabs */}
-            <div className="flex gap-3 mb-8">
-              {TABS.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => switchTab(id)}
-                  className={clsx(
-                    'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all',
-                    tab === id 
-                      ? 'text-white' 
-                      : 'text-gray-600 hover:text-gray-900',
-                  )}
-                  style={
-                    tab === id 
-                      ? { background: primary, boxShadow: `0 4px 15px ${primary}55` }
-                      : {}
-                  }
-                >
-                  <Icon size={16} />
-                  {label}
-                </button>
-              ))}
+          {/* Role Tabs */}
+          <div className="flex gap-3 mb-8">
+            {TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => switchTab(id)}
+                className={clsx(
+                  'flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all',
+                  tab === id 
+                    ? 'text-white' 
+                    : 'text-gray-600 hover:text-gray-900',
+                )}
+                style={
+                  tab === id 
+                    ? { background: primary, boxShadow: `0 4px 15px ${primary}55` }
+                    : {}
+                }
+              >
+                <Icon size={16} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* ID Input */}
+            <div>
+              <label className="text-gray-600 text-xs font-semibold uppercase tracking-wider block mb-2">{idLabel}</label>
+              <div className="relative" ref={sugRef}>
+                <input
+                  type="text"
+                  placeholder={idPlaceholder}
+                  value={form.id}
+                  onChange={(event) => handleIdChange(event.target.value)}
+                  onFocus={(event) => {
+                    event.currentTarget.style.borderColor = primary;
+                    event.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)';
+                    if (suggestions.length > 0) setShowSug(true);
+                  }}
+                  onBlur={(event) => {
+                    event.currentTarget.style.borderColor = 'rgba(229, 231, 235, 0.8)';
+                    event.currentTarget.style.background = 'rgba(249, 250, 251, 0.8)';
+                  }}
+                  required
+                  autoComplete="off"
+                  className="w-full rounded-lg px-4 py-3.5 text-gray-900 text-sm placeholder-gray-400 focus:outline-none transition-all"
+                  style={{ 
+                    background: 'rgba(249, 250, 251, 0.8)', 
+                    border: '1px solid rgba(229, 231, 235, 0.8)',
+                    color: '#111827'
+                  }}
+                />
+                {showSug && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-y-auto z-50 shadow-2xl" style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', maxHeight: '220px' }}>
+                    {suggestions.map((s) => {
+                      const isStaff = tab === 'staff';
+                      const fullName = [s.firstname, s.lastname].filter(Boolean).join(' ');
+                      const id = isStaff ? s.staff_id : s.student_id;
+                      const subtitle = isStaff ? s.role : s.class;
+                      const imgUrl = getImageUrl(s.image);
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onMouseDown={() => {
+                            // preserve the entered name for display, but store the selected unique ID for login
+                            setForm((prev) => ({ ...prev, id: fullName }));
+                            setLoginId(id);
+                            setShowSug(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
+                        >
+                          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gray-100 border border-gray-200">
+                            {imgUrl ? (
+                              <img src={imgUrl} alt={fullName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs font-bold">
+                                {fullName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-gray-900 text-sm font-medium truncate">{fullName}</p>
+                            {subtitle && <p className="text-gray-400 text-xs truncate">{subtitle}</p>}
+                            <p className="text-gray-400 text-[11px] font-mono truncate">ID: {id}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* ID Input */}
-              <div>
-                <label className="text-gray-600 text-xs font-semibold uppercase tracking-wider block mb-2">{idLabel}</label>
-                <div className="relative" ref={sugRef}>
-                  <input
-                    type="text"
-                    placeholder={idPlaceholder}
-                    value={form.id}
-                    onChange={(event) => handleIdChange(event.target.value)}
-                    onFocus={(event) => {
-                      event.currentTarget.style.borderColor = primary;
-                      event.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)';
-                      if (suggestions.length > 0) setShowSug(true);
-                    }}
-                    onBlur={(event) => {
-                      event.currentTarget.style.borderColor = 'rgba(229, 231, 235, 0.8)';
-                      event.currentTarget.style.background = 'rgba(249, 250, 251, 0.8)';
-                    }}
-                    required
-                    autoComplete="off"
-                    className="w-full rounded-lg px-4 py-3.5 text-gray-900 text-sm placeholder-gray-400 focus:outline-none transition-all"
-                    style={{ 
-                      background: 'rgba(249, 250, 251, 0.8)', 
-                      border: '1px solid rgba(229, 231, 235, 0.8)',
-                      color: '#111827'
-                    }}
-                  />
-                  {showSug && suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-y-auto z-50 shadow-2xl" style={{ background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', maxHeight: '220px' }}>
-                      {suggestions.map((s) => {
-                        const isStaff = tab === 'staff';
-                        const fullName = [s.firstname, s.lastname].filter(Boolean).join(' ');
-                        const id = isStaff ? s.staff_id : s.student_id;
-                        const subtitle = isStaff ? s.role : s.class;
-                        const imgUrl = getImageUrl(s.image);
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            onMouseDown={() => {
-                              // preserve the entered name for display, but store the selected unique ID for login
-                              setForm((prev) => ({ ...prev, id: fullName }));
-                              setLoginId(id);
-                              setShowSug(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
-                          >
-                            <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-gray-100 border border-gray-200">
-                              {imgUrl ? (
-                                <img src={imgUrl} alt={fullName} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs font-bold">
-                                  {fullName.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-gray-900 text-sm font-medium truncate">{fullName}</p>
-                              {subtitle && <p className="text-gray-400 text-xs truncate">{subtitle}</p>}
-                              <p className="text-gray-400 text-[11px] font-mono truncate">ID: {id}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Password Input */}
-              <div>
-                <label className="text-gray-600 text-xs font-semibold uppercase tracking-wider block mb-2">Password</label>
-                <div className="relative">
-                  <input
-                    type={showPw ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={form.password}
-                    onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-                    required
-                    className="w-full rounded-lg px-4 py-3.5 text-gray-900 text-sm placeholder-gray-400 focus:outline-none transition-all"
-                    style={{ 
-                      background: 'rgba(249, 250, 251, 0.8)', 
-                      border: '1px solid rgba(229, 231, 235, 0.8)',
-                      color: '#111827'
-                    }}
-                    onFocus={(event) => { 
-                      event.currentTarget.style.borderColor = primary; 
-                      event.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)'; 
-                    }}
-                    onBlur={(event) => { 
-                      event.currentTarget.style.borderColor = 'rgba(229, 231, 235, 0.8)'; 
-                      event.currentTarget.style.background = 'rgba(249, 250, 251, 0.8)'; 
-                    }}
-                  />
-                  <button type="button" onClick={() => setShowPw((value) => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors">
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Keep logged in & Forgot Password */}
-              <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    className="w-4 h-4 rounded border border-gray-300 bg-white cursor-pointer accent-current"
-                    style={{ accentColor: primary }}
-                  />
-                  <span className="text-gray-600 text-sm">Keep me logged in</span>
-                </label>
-                <button 
-                  type="button" 
-                  onClick={() => window.location.href = '/forgot-password'} 
-                  className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
-                  style={{ color: primary }}
-                >
-                  Forgot Password?
+            {/* Password Input */}
+            <div>
+              <label className="text-gray-600 text-xs font-semibold uppercase tracking-wider block mb-2">Password</label>
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                  required
+                  className="w-full rounded-lg px-4 py-3.5 text-gray-900 text-sm placeholder-gray-400 focus:outline-none transition-all"
+                  style={{ 
+                    background: 'rgba(249, 250, 251, 0.8)', 
+                    border: '1px solid rgba(229, 231, 235, 0.8)',
+                    color: '#111827'
+                  }}
+                  onFocus={(event) => { 
+                    event.currentTarget.style.borderColor = primary; 
+                    event.currentTarget.style.background = 'rgba(241, 245, 249, 0.8)'; 
+                  }}
+                  onBlur={(event) => { 
+                    event.currentTarget.style.borderColor = 'rgba(229, 231, 235, 0.8)'; 
+                    event.currentTarget.style.background = 'rgba(249, 250, 251, 0.8)'; 
+                  }}
+                />
+                <button type="button" onClick={() => setShowPw((value) => !value)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors">
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
 
-              {/* Login Button */}
+            {/* Keep logged in & Forgot Password */}
+            <div className="flex items-center justify-between pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border border-gray-300 bg-white cursor-pointer accent-current"
+                  style={{ accentColor: primary }}
+                />
+                <span className="text-gray-600 text-sm">Keep me logged in</span>
+              </label>
               <button 
-                type="submit" 
-                disabled={loading} 
-                className="w-full py-3.5 rounded-lg text-white font-bold text-sm transition-all disabled:opacity-50 mt-4" 
-                style={{ 
-                  background: primary, 
-                  boxShadow: loading ? 'none' : `0 4px 20px ${primary}66` 
-                }}
+                type="button" 
+                onClick={() => window.location.href = '/forgot-password'} 
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                style={{ color: primary }}
               >
-                {loading
-                  ? <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 
-                      Logging in...
-                    </span>
-                  : `Sign in as ${tab.charAt(0).toUpperCase() + tab.slice(1)}`}
+                Forgot Password?
               </button>
+            </div>
 
-              {/* Change School Button */}
-              <Link 
-                href="/school"
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg font-bold text-sm transition-all border mt-2"
-                style={{ 
-                  borderColor: `${primary}33`,
-                  color: primary,
-                  backgroundColor: `${primary}05`
-                }}
-              >
-                <Search size={16} />
-                Change School
-              </Link>
-            </form>
+            {/* Login Button */}
+            <button 
+              type="submit" 
+              disabled={loading} 
+              className="w-full py-3.5 rounded-lg text-white font-bold text-sm transition-all disabled:opacity-50 mt-4" 
+              style={{ 
+                background: primary, 
+                boxShadow: loading ? 'none' : `0 4px 20px ${primary}66` 
+              }}
+            >
+              {loading
+                ? <span className="flex items-center justify-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 
+                    Logging in...
+                  </span>
+                : `Sign in as ${tab.charAt(0).toUpperCase() + tab.slice(1)}`}
+            </button>
 
+            {/* Change School Button */}
+            <Link 
+              href="/school"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg font-bold text-sm transition-all border mt-2"
+              style={{ 
+                borderColor: `${primary}33`,
+                color: primary,
+                backgroundColor: `${primary}05`
+              }}
+            >
+              <Search size={16} />
+              Change School
+            </Link>
+          </form>
+        </div>
+      </div>
+
+      {/* Right side - Background image (50% width on desktop, hidden on mobile) */}
+      <div className="hidden lg:block lg:w-1/2 min-h-screen relative">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url('/images/studentgroup2.jpg')`,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+        <div className="absolute inset-0 flex items-center justify-center p-8">
+          <div className="text-white max-w-md">
+            <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
+            <p className="text-lg mb-8 text-gray-200">Join thousands of schools using our platform to manage academics, finances, and student life efficiently.</p>
+            <div className="space-y-5">
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Comprehensive Academic Management</h3>
+                  <p className="text-gray-300 text-sm">Manage grades, attendance, timetables, and curriculum all in one place.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <Shield className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Secure Financial Transactions</h3>
+                  <p className="text-gray-300 text-sm">Process payments, track expenses, and manage school finances securely.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <MessageSquare className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Real-time Communication Tools</h3>
+                  <p className="text-gray-300 text-sm">Connect with parents, staff, and students through instant messaging and notifications.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, endpoints } from '@/lib/api';
 import Link from 'next/link';
-import { KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { BookOpen, KeyRound, ArrowLeft, Eye, EyeOff, MessageSquare, Shield } from 'lucide-react';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -30,96 +30,136 @@ function ResetPasswordForm() {
   };
 
   return (
-    <main
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('/images/studentgroup2.jpg')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#1f1f2e',
-      }}
-    >
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white/95 backdrop-blur-sm p-8 shadow-sm">
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
-          <KeyRound size={24} />
-        </div>
-
-        <h1 className="text-2xl font-bold text-slate-900 text-center">Reset your password</h1>
-        <p className="mt-2 text-sm text-slate-500 text-center">
-          Enter the 6-digit code sent to your email and choose a new password.
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-              Email address
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
+    <div className="min-h-screen w-full flex">
+      {/* Left side - Reset password form (50% width on desktop) */}
+      <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto">
+        <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+            <KeyRound size={24} />
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-              Reset code
-            </label>
-            <input
-              type="text"
-              required
-              maxLength={6}
-              value={code}
-              onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="123456"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300 tracking-widest text-center font-mono text-lg"
-            />
-          </div>
+          <h1 className="text-2xl font-bold text-slate-900 text-center">Reset your password</h1>
+          <p className="mt-2 text-sm text-slate-600 text-center">
+            Enter the 6-digit code sent to your email and choose a new password.
+          </p>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-              New password
-            </label>
-            <div className="relative">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-1.5">
+                Email address
+              </label>
               <input
-                type={showPw ? 'text' : 'password'}
+                type="email"
                 required
-                minLength={6}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Min. 6 characters"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
               />
-              <button
-                type="button"
-                onClick={() => setShowPw(v => !v)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
-              >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-1.5">
+                Reset code
+              </label>
+              <input
+                type="text"
+                required
+                maxLength={6}
+                value={code}
+                onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="123456"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300 tracking-widest text-center font-mono text-lg"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-1.5">
+                New password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(v => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-blue-700 py-3 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-50 shadow-lg shadow-blue-100"
+            >
+              {loading ? 'Resetting…' : 'Reset password'}
+            </button>
+          </form>
+
+          <Link href="/login/forgot-password" className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-600 hover:text-slate-900 font-semibold">
+            <ArrowLeft size={14} /> Resend code
+          </Link>
+        </div>
+      </div>
+
+      {/* Right side - Background image (50% width on desktop, hidden on mobile) */}
+      <div className="hidden lg:block lg:w-1/2 min-h-screen relative">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url('/images/studentgroup2.jpg')`,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+        <div className="absolute inset-0 flex items-center justify-center p-8">
+          <div className="text-white max-w-md">
+            <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
+            <p className="text-lg mb-8 text-gray-200">Join thousands of schools using our platform to manage academics, finances, and student life efficiently.</p>
+            <div className="space-y-5">
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Comprehensive Academic Management</h3>
+                  <p className="text-gray-300 text-sm">Manage grades, attendance, timetables, and curriculum all in one place.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <Shield className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Secure Financial Transactions</h3>
+                  <p className="text-gray-300 text-sm">Process payments, track expenses, and manage school finances securely.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <MessageSquare className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Real-time Communication Tools</h3>
+                  <p className="text-gray-300 text-sm">Connect with parents, staff, and students through instant messaging and notifications.</p>
+                </div>
+              </div>
             </div>
           </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-blue-700 py-3 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-50"
-          >
-            {loading ? 'Resetting…' : 'Reset password'}
-          </button>
-        </form>
-
-        <Link href="/login/forgot-password" className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700">
-          <ArrowLeft size={14} /> Resend code
-        </Link>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
 

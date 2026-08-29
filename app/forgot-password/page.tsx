@@ -1,7 +1,7 @@
 'use client';
 import { api, endpoints } from '@/lib/api';
 import studentBg from '@/public/student.png';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, BookOpen, Mail, MessageSquare, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
@@ -30,18 +30,10 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4 relative w-full"
-      style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url('${studentBg.src}')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#1f1f2e',
-      }}
-    >
-      <div className="w-full max-w-md relative z-10">
-        <div className="rounded-3xl overflow-hidden shadow-2xl p-8" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}>
+    <div className="min-h-screen w-full flex">
+      {/* Left side - Forgot password form (50% width on desktop) */}
+      <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto">
+        <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10">
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
             <Mail size={24} />
           </div>
@@ -100,6 +92,52 @@ export default function ForgotPasswordPage() {
           >
             <ArrowLeft size={16} /> Back to login
           </Link>
+        </div>
+      </div>
+
+      {/* Right side - Background image (50% width on desktop, hidden on mobile) */}
+      <div className="hidden lg:block lg:w-1/2 min-h-screen relative">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: `url('${studentBg.src}')`,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+        <div className="absolute inset-0 flex items-center justify-center p-8">
+          <div className="text-white max-w-md">
+            <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
+            <p className="text-lg mb-8 text-gray-200">Join thousands of schools using our platform to manage academics, finances, and student life efficiently.</p>
+            <div className="space-y-5">
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <BookOpen className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Comprehensive Academic Management</h3>
+                  <p className="text-gray-300 text-sm">Manage grades, attendance, timetables, and curriculum all in one place.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <Shield className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Secure Financial Transactions</h3>
+                  <p className="text-gray-300 text-sm">Process payments, track expenses, and manage school finances securely.</p>
+                </div>
+              </div>
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
+                  <MessageSquare className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg mb-1">Real-time Communication Tools</h3>
+                  <p className="text-gray-300 text-sm">Connect with parents, staff, and students through instant messaging and notifications.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
