@@ -209,7 +209,7 @@ export function useStudentAttendanceHistory(month: number, year: number) {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
     api.get<ApiResponse<StudentAttendanceRecord[]>>(endpoints.student.attendanceHistory, { month, year })
       .then((r) => setRecords(r.data ?? []))
@@ -217,7 +217,9 @@ export function useStudentAttendanceHistory(month: number, year: number) {
       .finally(() => setLoading(false));
   }, [month, year]);
 
-  return { records, loading };
+  useEffect(() => { load(); }, [load]);
+
+  return { records, loading, reload: load };
 }
 
 /* ── Admin: student attendance report ─────────────────────────────────── */

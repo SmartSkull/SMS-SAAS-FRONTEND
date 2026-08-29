@@ -57,7 +57,7 @@ export default function StudentAttendancePage() {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear]   = useState(now.getFullYear());
-  const { records: history, loading: histLoading } = useStudentAttendanceHistory(month, year);
+  const { records: history, loading: histLoading, reload: reloadHistory } = useStudentAttendanceHistory(month, year);
   const [geoError, setGeoError]     = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
 
@@ -66,7 +66,13 @@ export default function StudentAttendancePage() {
     if (!navigator.geolocation) { setGeoError('Geolocation not supported by your browser'); return; }
     setGeoLoading(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => { setGeoLoading(false); clockIn(pos.coords.latitude, pos.coords.longitude); },
+      (pos) => { 
+        setGeoLoading(false); 
+        clockIn(pos.coords.latitude, pos.coords.longitude).then(() => {
+          // Refresh history to show updated record
+          reloadHistory();
+        });
+      },
       (err)  => { setGeoLoading(false); setGeoError(err.message || 'Could not get your location. Please allow location access.'); },
       { enableHighAccuracy: true, timeout: 10000 },
     );
@@ -161,7 +167,12 @@ export default function StudentAttendancePage() {
                   </button>
                 )}
                 {record?.clockIn && !record?.clockOut && (
-                  <button onClick={clockOut} disabled={busy}
+                  <button onClick={() => {
+                    clockOut().then(() => {
+                      // Refresh history to show updated record
+                      reloadHistory();
+                    });
+                  }} disabled={busy}
                     className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 font-semibold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-50">
                     {busy ? <Timer size={18} className="animate-spin" /> : <LogOut size={18} />}
                     Clock Out
