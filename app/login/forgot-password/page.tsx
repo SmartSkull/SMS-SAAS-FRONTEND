@@ -92,37 +92,37 @@ export default function ForgotPasswordPage() {
             backgroundImage: `url('/images/studentgroup2.jpg')`,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-transparent" />
+        <div className="absolute inset-0 bg-black/80" />
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <div className="text-white max-w-md">
             <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
-            <p className="text-lg mb-8 text-gray-200">Join thousands of schools using our platform to manage academics, finances, and student life efficiently.</p>
+            <p className="text-lg mb-8 text-gray-100">Join thousands of schools using our platform to manage academics, finances, and student life efficiently.</p>
             <div className="space-y-5">
               <div className="flex items-start">
                 <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
-                  <BookOpen className="w-5 h-5 text-blue-400" />
+                  <BookOpen className="w-5 h-5 text-blue-300" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-1">Comprehensive Academic Management</h3>
-                  <p className="text-gray-300 text-sm">Manage grades, attendance, timetables, and curriculum all in one place.</p>
+                  <h3 className="font-semibold text-lg mb-1 text-white">Comprehensive Academic Management</h3>
+                  <p className="text-gray-100 text-sm">Manage grades, attendance, timetables, and curriculum all in one place.</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
-                  <Shield className="w-5 h-5 text-blue-400" />
+                  <Shield className="w-5 h-5 text-blue-300" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-1">Secure Financial Transactions</h3>
-                  <p className="text-gray-300 text-sm">Process payments, track expenses, and manage school finances securely.</p>
+                  <h3 className="font-semibold text-lg mb-1 text-white">Secure Financial Transactions</h3>
+                  <p className="text-gray-100 text-sm">Process payments, track expenses, and manage school finances securely.</p>
                 </div>
               </div>
               <div className="flex items-start">
                 <div className="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mr-4 flex-shrink-0">
-                  <MessageSquare className="w-5 h-5 text-blue-400" />
+                  <MessageSquare className="w-5 h-5 text-blue-300" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-1">Real-time Communication Tools</h3>
-                  <p className="text-gray-300 text-sm">Connect with parents, staff, and students through instant messaging and notifications.</p>
+                  <h3 className="font-semibold text-lg mb-1 text-white">Real-time Communication Tools</h3>
+                  <p className="text-gray-100 text-sm">Connect with parents, staff, and students through instant messaging and notifications.</p>
                 </div>
               </div>
             </div>
