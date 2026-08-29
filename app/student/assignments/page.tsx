@@ -283,15 +283,15 @@ export default function StudentAssignments() {
             const isSubmitted = !!a.submission;
             const s = STATUS_STYLES[status];
             return (
-              <button key={a.id} type="button" onClick={() => setSelected(a)}
-                className={`card w-full rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${s.bar} ${isSubmitted ? 'opacity-70' : ''}`}>
+              <div key={a.id} 
+                className={`group card w-full rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition-all hover:shadow-lg hover:border-blue-200 ${s.bar} ${isSubmitted ? 'opacity-70' : ''}`}>
                 <div className="flex items-start gap-3">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${isSubmitted ? 'bg-green-100' : 'bg-blue-100'}`}>
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors group-hover:bg-blue-50 ${isSubmitted ? 'bg-green-100' : 'bg-blue-100'}`}>
                     {isSubmitted ? <CheckCircle2 size={18} className="text-green-600" /> : <FileText size={18} className="text-blue-600" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="truncate font-semibold text-gray-900">{title(a)}</h3>
+                      <h3 className="truncate font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{title(a)}</h3>
                       <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${isSubmitted ? 'bg-green-100 text-green-600' : s.badge}`}>
                           {isSubmitted ? 'Submitted' : s.label}
@@ -303,14 +303,24 @@ export default function StudentAssignments() {
                         )}
                       </div>
                     </div>
-                    <p className="mt-0.5 text-xs text-gray-500">{a.course || a.subject || 'Subject'}</p>
+                    <p className="mt-0.5 text-xs text-gray-500 group-hover:text-gray-600 transition-colors">{a.course || a.subject || 'Subject'}</p>
                     <p className="mt-1 line-clamp-2 text-xs text-gray-400">{body(a)}</p>
-                    <p className={`mt-2 text-xs font-semibold ${status === 'overdue' && !isSubmitted ? 'text-red-500' : status === 'soon' && !isSubmitted ? 'text-amber-500' : 'text-gray-400'}`}>
-                      {daysLabel(due(a))}
-                    </p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <p className={`text-xs font-semibold ${status === 'overdue' && !isSubmitted ? 'text-red-500' : status === 'soon' && !isSubmitted ? 'text-amber-500' : 'text-gray-400'}`}>
+                        {daysLabel(due(a))}
+                      </p>
+                      <button 
+                        type="button" 
+                        onClick={() => setSelected(a)}
+                        className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 hover:text-blue-800 active:scale-95 transition-all group-hover:bg-blue-100"
+                      >
+                        View Details
+                        <span className="text-blue-600 group-hover:translate-x-0.5 transition-transform">→</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
