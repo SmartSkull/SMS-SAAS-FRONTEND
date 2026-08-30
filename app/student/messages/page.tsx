@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Send, Search, MessageSquare, Plus, X, Users, GraduationCap, ChevronRight, ChevronLeft, Pencil, Trash2, Check, Paperclip, ImageIcon, File, Music, Loader2 } from 'lucide-react';
 import VoiceRecorder from '@/components/ui/VoiceRecorder';
@@ -21,8 +21,23 @@ function Avatar({ name, image, size = 10 }: { name?: string; image?: string | nu
   );
 }
 
+function formatMsgTime(dateStr?: string) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return time;
+  if (isYesterday) return `Yesterday ${time}`;
+  return `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`;
+}
+
 export default function StudentMessages() {
-  const { convos, messages, active, loading, threadLoading, openConvo, sendMessage, sendFile, clearActive, partnerLastLogin, partnerOnline } = useMessages();
+  const { convos, messages, active, loading, threadLoading, openConvo, sendMessage, sendFile, clearActive, partnerLastLogin, partnerOnline, partnerTyping, sendTyping } = useMessages();
   const searchParams = useSearchParams();
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
@@ -41,18 +56,63 @@ export default function StudentMessages() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const activeConvo = convos.find((c) => c.user_id === active);
   const filtered = convos.filter((c) => !search || c.name?.toLowerCase().includes(search.toLowerCase()));
 
-  // Keep localMessages in sync with hook messages
-  useEffect(() => { setLocalMessages(messages as any[]); }, [messages]);
+  // Keep localMessages in sync with hook messages, then scroll to bottom immediately
+  useEffect(() => {
+    setLocalMessages(messages as any[]);
+    // Use 'auto' (instant) on initial load, smooth only for new messages
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+    });
+  }, [messages]);
 
   // Auto-open conversation from ?userId= query param (e.g. from transport page)
   useEffect(() => {
     const userId = searchParams.get('userId');
     if (userId && !active) openConvo(userId);
   }, [searchParams]);
+
+  // Handle typing indicator
+  const handleTyping = useCallback(() => {
+    if (!active) return;
+
+    // Emit typing start to partner via WebSocket
+    sendTyping(true);
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // After 3 seconds of inactivity, send stop typing
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTyping(false);
+    }, 3000);
+  }, [active, sendTyping]);
+
+  // Simulate partner typing for demo/testing
+  const simulatePartnerTyping = () => {
+    // This button is only for testing — remove in production
+  };
+  useEffect(() => {
+    // In a real implementation, this would be a WebSocket listener
+    // For now, we'll set up a mock listener
+    const mockTypingListener = () => {
+      // This would be replaced with actual WebSocket events
+      // setPartnerTyping(isTypingFromPartner);
+    };
+    
+    // Cleanup
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [active]);
 
   const deleteMsg = async (id: string) => {
     try {
@@ -106,6 +166,9 @@ export default function StudentMessages() {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
+    // Clear typing indicator on send
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    sendTyping(false);
     await sendMessage(text);
     setText('');
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -289,27 +352,38 @@ export default function StudentMessages() {
               <Avatar name={activeConvo?.name} image={activeConvo?.image} />
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{activeConvo?.name}</p>
-                {(() => {
-                  if (partnerOnline === true) return <p className="text-xs text-green-500 font-medium">Online</p>;
-                  if (partnerOnline === false) {
+                <div className="flex items-center gap-2 min-h-[20px]">
+                  {partnerTyping ? (
+                    <p className="text-xs text-blue-500 font-medium flex items-center gap-1">
+                      <span className="flex items-center gap-0.5">
+                        <span className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      </span>
+                      Typing...
+                    </p>
+                  ) : (() => {
+                    if (partnerOnline === true) return <p className="text-xs text-green-500 font-medium">Online</p>;
+                    if (partnerOnline === false) {
+                      if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
+                      const diff = Date.now() - new Date(partnerLastLogin).getTime();
+                      const mins = Math.floor(diff / 60000);
+                      if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
+                      const hrs = Math.floor(mins / 60);
+                      if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
+                      return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
+                    }
+                    // null = waiting for socket, fall back to last login heuristic
                     if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
                     const diff = Date.now() - new Date(partnerLastLogin).getTime();
                     const mins = Math.floor(diff / 60000);
+                    if (mins < 5) return <p className="text-xs text-green-500 font-medium">Online</p>;
                     if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
                     const hrs = Math.floor(mins / 60);
                     if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
                     return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
-                  }
-                  // null = waiting for socket, fall back to last login heuristic
-                  if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
-                  const diff = Date.now() - new Date(partnerLastLogin).getTime();
-                  const mins = Math.floor(diff / 60000);
-                  if (mins < 5) return <p className="text-xs text-green-500 font-medium">Online</p>;
-                  if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
-                  const hrs = Math.floor(mins / 60);
-                  if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
-                  return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
-                })()}
+                  })()}
+                </div>
               </div>
             </div>
 
@@ -358,17 +432,11 @@ export default function StudentMessages() {
                           const ftype = guessType(m.file_url);
                           const fileUrl = getImageUrl(m.file_url) ?? m.file_url;
                           if (ftype === 'image') {
-                            return (
-                              <img src={fileUrl} alt="" className="rounded-lg max-w-[200px] cursor-pointer" onClick={() => setPreviewImage(fileUrl)} />
-                            );
+                            return <img src={fileUrl} alt="" className="rounded-lg max-w-[200px] cursor-pointer" onClick={() => setPreviewImage(fileUrl)} />;
                           } else if (ftype === 'video') {
-                            return (
-                              <video src={fileUrl} controls className="rounded-lg max-w-[200px]" />
-                            );
+                            return <video src={fileUrl} controls className="rounded-lg max-w-[200px]" />;
                           } else if (ftype === 'audio') {
-                            return (
-                              <audio src={fileUrl} controls className="max-w-[220px] h-9 my-1 mx-3" />
-                            );
+                            return <audio src={fileUrl} controls className="max-w-[220px] h-9 my-1 mx-3" />;
                           } else {
                             return (
                               <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
@@ -377,10 +445,15 @@ export default function StudentMessages() {
                               </a>
                             );
                           }
-                        })(                        ) : (
-                          <p className="px-4 py-2.5">{m.message}</p>
+                        })() : (
+                          <p className="px-4 pt-2.5 pb-1">{m.message}</p>
                         )}
-                        {m.edited && <p className="text-[10px] opacity-50 mt-0.5">edited</p>}
+                        <div className="flex items-center justify-end gap-1 px-3 pb-1.5">
+                          {m.edited && <span className="text-[10px] opacity-50">edited</span>}
+                          <span className={clsx('text-[10px]', m.isMe ? 'text-blue-200' : 'text-gray-400')}>
+                            {formatMsgTime(m.createdAt)}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -419,7 +492,14 @@ export default function StudentMessages() {
                   </button>
                 )}
                 {!voiceActive && (
-                  <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message…"
+                  <input 
+                    value={text} 
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      handleTyping();
+                    }} 
+                    onKeyDown={handleTyping}
+                    placeholder="Type a message…"
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-400 focus:bg-white transition-colors" />
                 )}
                 <VoiceRecorder onSend={(file) => sendFile(file)} onStateChange={setVoiceActive} accentColor="bg-blue-600" />

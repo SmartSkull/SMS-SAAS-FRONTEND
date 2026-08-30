@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { useMessagesSocket } from '@/hooks/useMessagesSocket';
+import { auth } from '@/lib/auth';
 import type { ApiResponse, Assignment, LibraryItem, CbtTest, Conversation, Message, Post } from '@/types';
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
@@ -143,6 +144,8 @@ export function useMessages() {
   const [active, setActive] = useState<string | null>(null);
   const activeRef = useRef<string | null>(null);
   useEffect(() => { activeRef.current = active; }, [active]);
+  const [partnerTyping, setPartnerTyping] = useState(false);
+  const partnerTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeInfo, setActiveInfo] = useState<{ name?: string; image?: string | null } | null>(null);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
   const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
@@ -165,18 +168,41 @@ export function useMessages() {
 
   useEffect(() => { loadConvos(); }, []);
 
-  const { checkPresence } = useMessagesSocket(
+  const { checkPresence, sendTyping } = useMessagesSocket(
     () => { loadConvos(true); },
     (msg) => {
+      // Append message to open thread
       setMessages((prev) => {
         const exists = prev.some((m) => String(m.id) === String(msg.id));
         if (exists) return prev;
         return [...prev, msg];
       });
+      // Bump sender's convo to the top immediately
+      const senderId = msg.isMe ? activeRef.current : (msg.senderUniqueId ?? msg.sender_id);
+      if (senderId) {
+        const now = new Date().toISOString();
+        setConvos(prev => prev.map(c =>
+          c.user_id === senderId ? { ...c, last_message: msg.message ?? '', created_at: now } : c
+        ));
+      }
     },
     activeRef,
     (userId, online) => {
       if (userId === activePartnerDbId.current) setPartnerOnline(online);
+    },
+    (fromUserId, isTyping) => {
+      // Only show typing if the event is from the currently active conversation partner
+      if (fromUserId === activePartnerDbId.current || fromUserId === activeRef.current) {
+        if (isTyping) {
+          setPartnerTyping(true);
+          // Auto-clear after 4 seconds in case stop event is missed
+          if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+          partnerTypingTimeoutRef.current = setTimeout(() => setPartnerTyping(false), 4000);
+        } else {
+          if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+          setPartnerTyping(false);
+        }
+      }
     },
   );
 
@@ -202,8 +228,11 @@ export function useMessages() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || !active) return;
-    const optimistic: Message = { id: `tmp-${Date.now()}` as any, isMe: true, message: text, deleted: false, edited: false, createdAt: new Date().toISOString() } as any;
+    const now = new Date().toISOString();
+    const optimistic: Message = { id: `tmp-${Date.now()}` as any, isMe: true, message: text, deleted: false, edited: false, createdAt: now } as any;
     setMessages(p => [...p, optimistic]);
+    // Immediately bump this convo to the top of the list
+    setConvos(prev => prev.map(c => c.user_id === active ? { ...c, last_message: text, created_at: now } : c));
     try {
       const res = await api.post<ApiResponse<any>>(endpoints.student.messages, { receiver_id: active, message: text });
       const serverId = res.data?.data?.id;
@@ -253,23 +282,34 @@ export function useMessages() {
   // Merge activeInfo into convos so the header shows the correct name even
   // before the server-side convo list has the new entry
   const mergedConvos = useMemo(() => {
-    if (!active || !activeInfo) return convos;
-    const exists = convos.some(c => c.user_id === active);
-    if (exists) return convos;
-    return [
-      ...convos,
-      {
-        user_id: active,
-        name: activeInfo.name ?? active,
-        image: activeInfo.image ?? null,
-        last_message: '',
-        unread: 0,
-        created_at: new Date().toISOString(),
-      } as Conversation,
-    ];
+    let list = convos;
+    if (active && activeInfo) {
+      const exists = convos.some(c => c.user_id === active);
+      if (!exists) {
+        list = [
+          ...convos,
+          {
+            user_id: active,
+            name: activeInfo.name ?? active,
+            image: activeInfo.image ?? null,
+            last_message: '',
+            unread: 0,
+            created_at: new Date().toISOString(),
+          } as Conversation,
+        ];
+      }
+    }
+    // Sort by most recent activity first
+    return [...list].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
   }, [convos, active, activeInfo]);
 
-  return { convos: mergedConvos, messages, active, loading, threadLoading, openConvo, sendMessage, sendFile, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin, partnerOnline };
+  return { convos: mergedConvos, messages, active, loading, threadLoading, openConvo, sendMessage, sendFile, clearActive: () => { setActive(null); setActiveInfo(null); }, partnerLastLogin, partnerOnline, partnerTyping, sendTyping: (isTyping: boolean) => {
+    const myDbId = String(auth.getUser()?.id ?? '');
+    const toId = activePartnerDbId.current;
+    if (myDbId && toId) sendTyping(toId, myDbId, isTyping);
+  } };
 }
 
 /* ── Timetable ─────────────────────────────────────────────────────────── */

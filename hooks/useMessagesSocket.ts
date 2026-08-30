@@ -7,17 +7,24 @@ export function useMessagesSocket(
   onIncomingMessage?: (msg: any) => void,
   activeConvoIdRef?: React.MutableRefObject<string | null>,
   onPresenceChange?: (userId: string, online: boolean) => void,
+  onPartnerTyping?: (fromUserId: string, isTyping: boolean) => void,
 ) {
   const socketRef = useRef<Socket | null>(null);
   const onNewMessageRef = useRef(onNewMessage);
   const onIncomingMessageRef = useRef(onIncomingMessage);
   const onPresenceChangeRef = useRef(onPresenceChange);
+  const onPartnerTypingRef = useRef(onPartnerTyping);
   onNewMessageRef.current = onNewMessage;
   onIncomingMessageRef.current = onIncomingMessage;
   onPresenceChangeRef.current = onPresenceChange;
+  onPartnerTypingRef.current = onPartnerTyping;
 
   const checkPresence = useCallback((userId: string) => {
     socketRef.current?.emit('user:status', { userId });
+  }, []);
+
+  const sendTyping = useCallback((toUserId: string, fromUserId: string, isTyping: boolean) => {
+    socketRef.current?.emit('user:typing', { toUserId, fromUserId, isTyping });
   }, []);
 
   useEffect(() => {
@@ -80,11 +87,16 @@ export function useMessagesSocket(
       onPresenceChangeRef.current?.(userId, online);
     });
 
+    // Typing indicator events
+    socket.on('user:typing', ({ fromUserId, isTyping }: { fromUserId: string; isTyping: boolean }) => {
+      onPartnerTypingRef.current?.(fromUserId, isTyping);
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
     };
   }, []);
 
-  return { checkPresence };
+  return { checkPresence, sendTyping };
 }

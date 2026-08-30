@@ -5,6 +5,7 @@ import VoiceRecorder from '@/components/ui/VoiceRecorder';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import { guessType } from '@/lib/messages';
 import { readSelectedSchool } from '@/hooks/useSelectedSchool';
+import { auth } from '@/lib/auth';
 import type { ApiResponse } from '@/types';
 import { useToast } from '@/components/ui/Toast';
 import { useMessagesSocket } from '@/hooks/useMessagesSocket';
@@ -21,6 +22,21 @@ function Avatar({ name, image, size = 10 }: { name?: string; image?: string | nu
   );
 }
 
+function formatMsgTime(dateStr?: string) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return time;
+  if (isYesterday) return `Yesterday ${time}`;
+  return `${d.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`;
+}
+
 const MESSAGES_EP = '/admin/messages';
 const USERS_EP = '/admin/users';
 
@@ -32,7 +48,10 @@ export default function AdminMessages() {
   useEffect(() => { activeRef.current = active; }, [active]);
   const [partnerLastLogin, setPartnerLastLogin] = useState<string | null>(null);
   const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
+  const [partnerTyping, setPartnerTyping] = useState(false);
   const activePartnerDbId = useRef<string | null>(null);
+  const partnerTypingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
@@ -54,8 +73,12 @@ export default function AdminMessages() {
   const audioInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
+  // Sort convos by most recent activity
+  const sortedConvos = [...convos].sort((a, b) =>
+    new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
+  );
   const activeConvo = convos.find(c => c.user_id === active);
-  const filtered = convos.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()));
+  const filtered = sortedConvos.filter(c => !search || c.name?.toLowerCase().includes(search.toLowerCase()));
 
   const loadConvos = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -69,11 +92,16 @@ export default function AdminMessages() {
     }
   }, [toast]);
 
-  useEffect(() => {
-    loadConvos();
-  }, [loadConvos]);
+  useEffect(() => { loadConvos(); }, [loadConvos]);
 
-  const { checkPresence } = useMessagesSocket(
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' });
+    });
+  }, [messages]);
+
+  const { checkPresence, sendTyping } = useMessagesSocket(
     () => { loadConvos(true); },
     (msg) => {
       setMessages((prev) => {
@@ -81,17 +109,49 @@ export default function AdminMessages() {
         if (exists) return prev;
         return [...prev, msg];
       });
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      // Bump sender's convo to top
+      const senderId = msg.isMe ? activeRef.current : (msg.senderUniqueId ?? msg.sender_id);
+      if (senderId) {
+        const now = new Date().toISOString();
+        setConvos(prev => prev.map(c =>
+          c.user_id === senderId ? { ...c, last_message: msg.message ?? '', created_at: now } : c
+        ));
+      }
     },
     activeRef,
     (userId, online) => {
       if (userId === activePartnerDbId.current) setPartnerOnline(online);
     },
+    (fromUserId, isTyping) => {
+      if (fromUserId === activePartnerDbId.current || fromUserId === activeRef.current) {
+        if (isTyping) {
+          setPartnerTyping(true);
+          if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+          partnerTypingTimeoutRef.current = setTimeout(() => setPartnerTyping(false), 4000);
+        } else {
+          if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+          setPartnerTyping(false);
+        }
+      }
+    },
   );
+
+  const handleTyping = useCallback(() => {
+    if (!active) return;
+    const myDbId = String(auth.getUser()?.id ?? '');
+    const toId = activePartnerDbId.current;
+    if (myDbId && toId) sendTyping(toId, myDbId, true);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      const toId2 = activePartnerDbId.current;
+      if (myDbId && toId2) sendTyping(toId2, myDbId, false);
+    }, 3000);
+  }, [active, sendTyping]);
 
   const openConvo = async (userId: string) => {
     setActive(userId);
     setPartnerOnline(null);
+    setPartnerTyping(false);
     activePartnerDbId.current = null;
     setThreadLoading(true);
     setMessages([]);
@@ -104,7 +164,6 @@ export default function AdminMessages() {
         activePartnerDbId.current = String(partnerDbId);
         checkPresence(String(partnerDbId));
       }
-      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch { toast.error('Failed to load conversation'); }
     finally { setThreadLoading(false); }
   };
@@ -112,12 +171,18 @@ export default function AdminMessages() {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() || !active) return;
-    const optimistic = { id: `tmp-${Date.now()}`, isMe: true, message: text, deleted: false, edited: false, createdAt: new Date().toISOString() };
+    const now = new Date().toISOString();
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    const myDbId = String(auth.getUser()?.id ?? '');
+    const toId = activePartnerDbId.current;
+    if (myDbId && toId) sendTyping(toId, myDbId, false);
+    const optimistic = { id: `tmp-${Date.now()}`, isMe: true, message: text, deleted: false, edited: false, createdAt: now };
     setMessages(p => [...p, optimistic]);
+    setConvos(prev => prev.map(c => c.user_id === active ? { ...c, last_message: text, created_at: now } : c));
     setText('');
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     try {
       await api.post(MESSAGES_EP, { receiver_id: active, message: optimistic.message });
+      loadConvos(true);
     } catch {
       setMessages(p => p.filter(m => m.id !== optimistic.id));
       toast.error('Failed to send');
@@ -133,7 +198,6 @@ export default function AdminMessages() {
     const isImage = file.type.startsWith('image/');
     const optimistic = { id: tmpId, isMe: true, message: caption || file.name, file_url: isImage ? localUrl : undefined, deleted: false, edited: false, createdAt: new Date().toISOString() };
     setMessages(p => [...p, optimistic]);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
     try {
       const form = new FormData();
       form.append('file', file);
@@ -174,7 +238,6 @@ export default function AdminMessages() {
     } catch {}
   };
 
-  // Load classes when student role selected
   useEffect(() => {
     if (newRole !== 'student') return;
     const school = readSelectedSchool();
@@ -185,7 +248,6 @@ export default function AdminMessages() {
       .catch(() => {});
   }, [newRole]);
 
-  // Load users when role/class selected
   useEffect(() => {
     if (!newRole) return;
     if (newRole === 'student' && !newClass) return;
@@ -282,7 +344,6 @@ export default function AdminMessages() {
                   ))}
                 </div>
               </div>
-
               {newRole === 'student' && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Select Class</p>
@@ -297,7 +358,6 @@ export default function AdminMessages() {
                   </div>
                 </div>
               )}
-
               {((newRole === 'staff') || (newRole === 'student' && newClass)) && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
@@ -345,26 +405,37 @@ export default function AdminMessages() {
               <Avatar name={activeConvo?.name} image={activeConvo?.image} />
               <div>
                 <p className="font-semibold text-gray-900 text-sm">{activeConvo?.name}</p>
-                {(() => {
-                  if (partnerOnline === true) return <p className="text-xs text-green-500 font-medium">Online</p>;
-                  if (partnerOnline === false) {
+                <div className="min-h-[20px] flex items-center">
+                  {partnerTyping ? (
+                    <p className="text-xs text-purple-500 font-medium flex items-center gap-1">
+                      <span className="flex items-center gap-0.5">
+                        <span className="w-1 h-1 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1 h-1 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1 h-1 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </span>
+                      Typing...
+                    </p>
+                  ) : (() => {
+                    if (partnerOnline === true) return <p className="text-xs text-green-500 font-medium">Online</p>;
+                    if (partnerOnline === false) {
+                      if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
+                      const diff = Date.now() - new Date(partnerLastLogin).getTime();
+                      const mins = Math.floor(diff / 60000);
+                      if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
+                      const hrs = Math.floor(mins / 60);
+                      if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
+                      return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
+                    }
                     if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
                     const diff = Date.now() - new Date(partnerLastLogin).getTime();
                     const mins = Math.floor(diff / 60000);
+                    if (mins < 5) return <p className="text-xs text-green-500 font-medium">Online</p>;
                     if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
                     const hrs = Math.floor(mins / 60);
                     if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
                     return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
-                  }
-                  if (!partnerLastLogin) return <p className="text-xs text-gray-400">Offline</p>;
-                  const diff = Date.now() - new Date(partnerLastLogin).getTime();
-                  const mins = Math.floor(diff / 60000);
-                  if (mins < 5) return <p className="text-xs text-green-500 font-medium">Online</p>;
-                  if (mins < 60) return <p className="text-xs text-gray-400">Last seen {mins}m ago</p>;
-                  const hrs = Math.floor(mins / 60);
-                  if (hrs < 24) return <p className="text-xs text-gray-400">Last seen {hrs}h ago</p>;
-                  return <p className="text-xs text-gray-400">Last seen {new Date(partnerLastLogin).toLocaleDateString()}</p>;
-                })()}
+                  })()}
+                </div>
               </div>
             </div>
 
@@ -407,30 +478,24 @@ export default function AdminMessages() {
                         {m.file_url ? (() => {
                           const ftype = guessType(m.file_url);
                           const fileUrl = getImageUrl(m.file_url) ?? m.file_url;
-                          if (ftype === 'image') {
-                            return (
-                              <img src={fileUrl} alt="" className="rounded-lg max-w-[200px] cursor-pointer" onClick={() => setPreviewImage(fileUrl)} />
-                            );
-                          } else if (ftype === 'video') {
-                            return (
-                              <video src={fileUrl} controls className="rounded-lg max-w-[200px]" />
-                            );
-                          } else if (ftype === 'audio') {
-                            return (
-                              <audio src={fileUrl} controls className="max-w-[220px] h-9 my-1 mx-3" />
-                            );
-                          } else {
-                            return (
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
-                                <File size={16} className="shrink-0" />
-                                <span className="truncate text-sm">{m.message || 'Document'}</span>
-                              </a>
-                            );
-                          }
-                        })(                        ) : (
-                          <p className="px-4 py-2.5">{m.message}</p>
+                          if (ftype === 'image') return <img src={fileUrl} alt="" className="rounded-lg max-w-[200px] cursor-pointer" onClick={() => setPreviewImage(fileUrl)} />;
+                          if (ftype === 'video') return <video src={fileUrl} controls className="rounded-lg max-w-[200px]" />;
+                          if (ftype === 'audio') return <audio src={fileUrl} controls className="max-w-[220px] h-9 my-1 mx-3" />;
+                          return (
+                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 no-underline px-4 py-2.5 min-w-[140px] max-w-[220px]">
+                              <File size={16} className="shrink-0" />
+                              <span className="truncate text-sm">{m.message || 'Document'}</span>
+                            </a>
+                          );
+                        })() : (
+                          <p className="px-4 pt-2.5 pb-1">{m.message}</p>
                         )}
-                        {m.edited && <p className="text-[10px] opacity-50 mt-0.5">edited</p>}
+                        <div className="flex items-center justify-end gap-1 px-3 pb-1.5">
+                          {m.edited && <span className="text-[10px] opacity-50">edited</span>}
+                          <span className={clsx('text-[10px]', m.isMe ? 'text-purple-200' : 'text-gray-400')}>
+                            {formatMsgTime(m.createdAt)}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -443,21 +508,15 @@ export default function AdminMessages() {
               {showAttach && (
                 <div className="px-5 py-4 flex gap-4 border-b border-gray-100 bg-gray-50">
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
-                    <div className="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center">
-                      <ImageIcon size={20} className="text-purple-600" />
-                    </div>
+                    <div className="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center"><ImageIcon size={20} className="text-purple-600" /></div>
                     <span className="text-[11px] text-gray-500 font-medium">Photo / Video</span>
                   </button>
                   <button type="button" onClick={() => docInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
-                    <div className="w-11 h-11 rounded-xl bg-yellow-50 flex items-center justify-center">
-                      <File size={20} className="text-yellow-600" />
-                    </div>
+                    <div className="w-11 h-11 rounded-xl bg-yellow-50 flex items-center justify-center"><File size={20} className="text-yellow-600" /></div>
                     <span className="text-[11px] text-gray-500 font-medium">Document</span>
                   </button>
                   <button type="button" onClick={() => audioInputRef.current?.click()} className="flex flex-col items-center gap-2 p-4 rounded-2xl hover:bg-white transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm">
-                    <div className="w-11 h-11 rounded-xl bg-pink-50 flex items-center justify-center">
-                      <Music size={20} className="text-pink-600" />
-                    </div>
+                    <div className="w-11 h-11 rounded-xl bg-pink-50 flex items-center justify-center"><Music size={20} className="text-pink-600" /></div>
                     <span className="text-[11px] text-gray-500 font-medium">Audio</span>
                   </button>
                 </div>
@@ -469,8 +528,13 @@ export default function AdminMessages() {
                   </button>
                 )}
                 {!voiceActive && (
-                  <input value={text} onChange={e => setText(e.target.value)} placeholder="Type a message…"
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-400 focus:bg-white transition-colors" />
+                  <input
+                    value={text}
+                    onChange={e => { setText(e.target.value); handleTyping(); }}
+                    onKeyDown={handleTyping}
+                    placeholder="Type a message…"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-400 focus:bg-white transition-colors"
+                  />
                 )}
                 <VoiceRecorder onSend={(file) => sendFile(file)} onStateChange={setVoiceActive} accentColor="bg-purple-600" />
                 {!voiceActive && (
@@ -488,9 +552,7 @@ export default function AdminMessages() {
             {previewImage && (
               <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setPreviewImage(null)}>
                 <img src={previewImage} alt="" className="max-w-full max-h-full" />
-                <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 text-white p-2">
-                  <X size={24} />
-                </button>
+                <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 text-white p-2"><X size={24} /></button>
               </div>
             )}
           </>
