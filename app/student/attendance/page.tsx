@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   MapPin, Clock, LogIn, LogOut, AlertCircle, CheckCircle,
   Timer, CalendarDays, ChevronDown, ChevronUp,
   CheckCircle2, AlertOctagon, TrendingUp, QrCode,
+  Download, FileDown,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useStudentAttendance, useStudentAttendanceHistory } from '@/hooks/attendance';
@@ -439,6 +440,7 @@ function QRCard({ school }: { school: any }) {
   );
   const logo    = normalizeSchoolLogo(school?.logo);
   const primary = school?.primaryColor || '#2563eb';
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Fetch fresh profile image in case the cookie copy is stale
   useEffect(() => {
@@ -452,7 +454,192 @@ function QRCard({ school }: { school: any }) {
 
   if (!baseUser?.uniqueId) return null;
 
-  const initials = `${baseUser.firstname?.[0] ?? ''}${baseUser.lastname?.[0] ?? ''}`.toUpperCase();
+  const initials    = `${baseUser.firstname?.[0] ?? ''}${baseUser.lastname?.[0] ?? ''}`.toUpperCase();
+  const fullName    = `${baseUser.firstname} ${baseUser.lastname}`;
+  const schoolName  = school?.name || 'Student Portal';
+
+  /* ── helpers ── */
+
+  /** Load an image URL as an HTMLImageElement, resolving CORS via a canvas round-trip if needed */
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload  = () => resolve(img);
+      img.onerror = () => {
+        // Retry without crossOrigin (some servers reject the header)
+        const img2 = new Image();
+        img2.onload  = () => resolve(img2);
+        img2.onerror = reject;
+        img2.src = src;
+      };
+      img.src = src;
+    });
+
+  /** Get the raw QR SVG element that qrcode.react rendered */
+  const getQRSvgEl = (): SVGSVGElement | null =>
+    cardRef.current?.querySelector('svg') ?? null;
+
+  /** Serialise the QR SVG to a data URL */
+  const svgToDataUrl = (svgEl: SVGSVGElement): string => {
+    const serialised = new XMLSerializer().serializeToString(svgEl);
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(serialised)));
+  };
+
+  /** Build the full card on an off-screen canvas and return it */
+  const buildCanvas = async (): Promise<HTMLCanvasElement> => {
+    const W = 480, H = 600;
+    const R = 24; // corner radius
+    const canvas = document.createElement('canvas');
+    canvas.width  = W * 2;  // 2× for retina
+    canvas.height = H * 2;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(2, 2);
+
+    /* ── background card ── */
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, W, H, R);
+    ctx.fill();
+
+    /* ── gradient header strip ── */
+    const grad = ctx.createLinearGradient(0, 0, W, 80);
+    grad.addColorStop(0, primary);
+    grad.addColorStop(1, shadeColor(primary, -30));
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, W, 90, [R, R, 0, 0]);
+    ctx.fill();
+
+    /* ── school name in header ── */
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = 'bold 13px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(schoolName.toUpperCase(), W / 2, 28);
+
+    /* ── "ATTENDANCE ID" label ── */
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.fillText('ATTENDANCE ID', W / 2, 46);
+
+    /* ── student name in header ── */
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillText(fullName, W / 2, 72);
+
+    /* ── profile photo ── */
+    const avatarSize = 80;
+    const avatarX    = W / 2 - avatarSize / 2;
+    const avatarY    = 90 - avatarSize / 2; // straddles the header
+    ctx.save();
+    // white border ring
+    ctx.beginPath();
+    ctx.arc(W / 2, avatarY + avatarSize / 2, avatarSize / 2 + 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    // clip circle for photo
+    ctx.beginPath();
+    ctx.arc(W / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+    ctx.clip();
+    if (profileImage) {
+      try {
+        const img = await loadImage(profileImage);
+        ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
+      } catch {
+        drawInitialsCircle(ctx, W / 2, avatarY + avatarSize / 2, avatarSize / 2, initials, primary);
+      }
+    } else {
+      drawInitialsCircle(ctx, W / 2, avatarY + avatarSize / 2, avatarSize / 2, initials, primary);
+    }
+    ctx.restore();
+
+    /* ── QR code ── */
+    const qrSize = 220;
+    const qrX    = W / 2 - qrSize / 2;
+    const qrY    = avatarY + avatarSize + 28;
+    // white QR background box
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(qrX - 16, qrY - 16, qrSize + 32, qrSize + 32, 16);
+    ctx.fill();
+    ctx.stroke();
+    // draw QR svg
+    const svgEl = getQRSvgEl();
+    if (svgEl) {
+      const qrDataUrl = svgToDataUrl(svgEl);
+      try {
+        const qrImg = await loadImage(qrDataUrl);
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+      } catch { /* skip if SVG fails */ }
+    }
+
+    /* ── uniqueId badge ── */
+    const badgeY = qrY + qrSize + 32 + 16;
+    ctx.fillStyle = '#f1f5f9';
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - 100, badgeY - 14, 200, 28, 8);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#475569';
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(baseUser.uniqueId!, W / 2, badgeY + 5);
+
+    /* ── footer ── */
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Scan this code to mark attendance', W / 2, H - 20);
+
+    /* ── card border ── */
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(0.5, 0.5, W - 1, H - 1, R);
+    ctx.stroke();
+
+    return canvas;
+  };
+
+  const handleDownloadImage = async () => {
+    try {
+      const canvas = await buildCanvas();
+      const link   = document.createElement('a');
+      link.download = `attendance-qr-${baseUser.uniqueId}.png`;
+      link.href     = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      console.error('Download failed', e);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const canvas  = await buildCanvas();
+      const dataUrl = canvas.toDataURL('image/png');
+      const win     = window.open('', '_blank');
+      if (!win) return;
+      win.document.write(`<!DOCTYPE html><html><head><title>Attendance QR – ${fullName}</title>
+        <style>
+          *{margin:0;padding:0;box-sizing:border-box}
+          body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9}
+          img{width:480px;height:600px;border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+          @media print{
+            body{background:#fff;margin:0}
+            img{width:90vmin;height:auto;box-shadow:none}
+          }
+        </style></head>
+        <body><img src="${dataUrl}" /></body></html>`);
+      win.document.close();
+      win.onload = () => win.print();
+    } catch (e) {
+      console.error('PDF failed', e);
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -468,11 +655,7 @@ function QRCard({ school }: { school: any }) {
         {/* Student name pill */}
         <div className="flex items-center gap-2 shrink-0">
           {profileImage ? (
-            <img
-              src={profileImage}
-              alt=""
-              className="w-7 h-7 rounded-full object-cover border border-gray-200"
-            />
+            <img src={profileImage} alt="" className="w-7 h-7 rounded-full object-cover border border-gray-200" />
           ) : (
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
@@ -481,26 +664,20 @@ function QRCard({ school }: { school: any }) {
               {initials}
             </div>
           )}
-          <span className="text-sm font-bold text-gray-800">
-            {baseUser.firstname} {baseUser.lastname}
-          </span>
+          <span className="text-sm font-bold text-gray-800">{fullName}</span>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-6 p-6">
-        {/* Left: student photo + QR stacked */}
+      {/* Body */}
+      <div ref={cardRef} className="flex flex-col sm:flex-row items-center gap-6 p-6">
+        {/* Left: photo + QR */}
         <div className="flex flex-col items-center gap-3 shrink-0">
-          {/* Avatar */}
           <div
             className="w-20 h-20 rounded-2xl overflow-hidden border-4 shadow-md"
             style={{ borderColor: primary }}
           >
             {profileImage ? (
-              <img
-                src={profileImage}
-                alt={`${baseUser.firstname} ${baseUser.lastname}`}
-                className="w-full h-full object-cover"
-              />
+              <img src={profileImage} alt={fullName} className="w-full h-full object-cover" />
             ) : (
               <div
                 className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
@@ -510,8 +687,6 @@ function QRCard({ school }: { school: any }) {
               </div>
             )}
           </div>
-
-          {/* QR Code */}
           <div className="p-3 rounded-2xl border-2 border-gray-100 bg-white shadow-inner">
             <QRCodeSVG
               value={baseUser.uniqueId}
@@ -522,34 +697,70 @@ function QRCard({ school }: { school: any }) {
           </div>
         </div>
 
-        {/* Right: name, school, ID badge, hint */}
+        {/* Right: info */}
         <div className="flex flex-col gap-3 text-center sm:text-left">
           <div>
-            <p className="text-xl font-black text-gray-900 leading-tight">
-              {baseUser.firstname} {baseUser.lastname}
-            </p>
-            <p
-              className="text-xs font-bold tracking-widest uppercase mt-1"
-              style={{ color: primary }}
-            >
-              {school?.name || 'Student Portal'}
+            <p className="text-xl font-black text-gray-900 leading-tight">{fullName}</p>
+            <p className="text-xs font-bold tracking-widest uppercase mt-1" style={{ color: primary }}>
+              {schoolName}
             </p>
           </div>
-
           <div className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 w-fit mx-auto sm:mx-0">
             <QrCode size={13} className="text-gray-400 shrink-0" />
             <span className="font-mono text-sm font-bold text-gray-700 tracking-wider">
               {baseUser.uniqueId}
             </span>
           </div>
-
           <p className="text-xs text-gray-400 leading-relaxed max-w-[220px]">
             Staff or admin will scan this code to mark you as present automatically.
           </p>
+
+          {/* Download buttons */}
+          <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-1">
+            <button
+              onClick={handleDownloadImage}
+              className="flex items-center gap-1.5 px-4 py-2 btn-brand text-white text-xs font-bold rounded-xl shadow hover:shadow-md transition-shadow"
+            >
+              <Download size={13} /> Save as Image
+            </button>
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
+            >
+              <FileDown size={13} /> Save as PDF
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+/** Darken/lighten a hex color by `amount` (negative = darker) */
+function shadeColor(hex: string, amount: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r   = Math.min(255, Math.max(0, (num >> 16) + amount));
+  const g   = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + amount));
+  const b   = Math.min(255, Math.max(0, (num & 0xff) + amount));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+/** Draw initials text centred in a filled circle on a canvas */
+function drawInitialsCircle(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, r: number,
+  text: string, color: string,
+) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font      = `bold ${r * 0.7}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, cx, cy);
+  ctx.textBaseline = 'alphabetic';
 }
 
 /* ─────────────────────────────────────────────
