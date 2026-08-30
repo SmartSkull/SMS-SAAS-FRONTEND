@@ -438,25 +438,36 @@ function QRCard({ school }: { school: any }) {
   const [profileImage, setProfileImage] = useState<string | null>(
     getImageUrl(baseUser?.image ?? null),
   );
+  const [firstName, setFirstName] = useState<string>(
+    baseUser?.firstname ?? (baseUser as any)?.firstName ?? '',
+  );
+  const [lastName, setLastName] = useState<string>(
+    baseUser?.lastname ?? (baseUser as any)?.lastName ?? '',
+  );
   const logo    = normalizeSchoolLogo(school?.logo);
   const primary = school?.primaryColor || '#2563eb';
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Fetch fresh profile image in case the cookie copy is stale
+  // Fetch fresh profile — normalises both firstName/firstname variants
   useEffect(() => {
     api.get<ApiResponse<any>>(endpoints.student.profile)
       .then(r => {
-        const img = getImageUrl(r.data?.image ?? null);
+        const d = r.data;
+        const img = getImageUrl(d?.image ?? null);
         if (img) setProfileImage(img);
+        const fn = d?.firstName ?? d?.firstname;
+        const ln = d?.lastName  ?? d?.lastname;
+        if (fn) setFirstName(fn);
+        if (ln) setLastName(ln);
       })
       .catch(() => {});
   }, []);
 
   if (!baseUser?.uniqueId) return null;
 
-  const initials    = `${baseUser.firstname?.[0] ?? ''}${baseUser.lastname?.[0] ?? ''}`.toUpperCase();
-  const fullName    = `${baseUser.firstname} ${baseUser.lastname}`;
-  const schoolName  = school?.name || 'Student Portal';
+  const fullName   = `${firstName} ${lastName}`.trim() || 'Student';
+  const initials   = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
+  const schoolName = school?.name || 'Student Portal';
 
   /* ── helpers ── */
 
