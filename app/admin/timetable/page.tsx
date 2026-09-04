@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Calendar, Clock, User, BookOpen, GraduationCap, Plus, Trash2,
   Save, Sparkles, ArrowLeft, CheckCircle, AlertCircle, X, ChevronDown,
+  Download, FileImage,
 } from 'lucide-react';
 import type { AdminClassTimetable, AdminExamTimetable } from '@/hooks/admin';
 import { api, endpoints, getImageUrl } from '@/lib/api';
@@ -209,6 +210,58 @@ function deserialize(content: string): { rows: PeriodRow[]; grid: Record<string,
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   EXPORT UTILITY
+   PNG: html-to-image captures the DOM node as a PNG and triggers download.
+   PDF: opens a minimal print window containing just the timetable table so
+        the user can save as PDF from the browser print dialog.
+═══════════════════════════════════════════════════════════════════════════ */
+async function exportAsPng(node: HTMLElement, filename: string) {
+  const { toPng } = await import('html-to-image');
+  const dataUrl = await toPng(node, {
+    backgroundColor: '#ffffff',
+    pixelRatio: 2,
+    cacheBust: true,
+    skipFonts: true,       // avoids CORS errors loading external fonts
+    includeQueryParams: true,
+  });
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `${filename.replace(/[^a-z0-9 _-]/gi, '_')}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function exportAsPdf(node: HTMLElement, title: string) {
+  const html = node.outerHTML;
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html><html><head>
+    <title>${title}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: system-ui, sans-serif; padding: 24px; background: #fff; color: #111; }
+      h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th, td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: center; }
+      th { background: #f9fafb; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: .05em; color: #6b7280; }
+      td:first-child { text-align: left; font-weight: 600; color: #374151; white-space: nowrap; }
+      .break-row td { background: #fffbeb; color: #b45309; font-weight: 600; }
+      .subject-cell { border-radius: 6px; padding: 4px 6px; color: #fff; font-weight: 700; display: inline-block; width: 100%; }
+      @media print {
+        @page { margin: 15mm; size: A4 landscape; }
+        body { padding: 0; }
+      }
+    </style>
+  </head><body>
+    <h2>${title}</h2>
+    ${html}
+    <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    SEEDED PSEUDO-RANDOM (no external dep)
    Deterministic shuffle per class so each class gets a different layout.
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -356,10 +409,29 @@ function TimetableGrid({ content }: { content: string }) {
    A day selector at the top switches which day's column is shown.
    Each cell shows the subject for that class on that day at that period.
 ═══════════════════════════════════════════════════════════════════════════ */
-function CombinedTimetableGrid({ entries }: {
+function CombinedTimetableGrid({ entries, exportTitle }: {
   entries: { label: string; content: string }[];
+  exportTitle?: string;
 }) {
   const [activeDay, setActiveDay] = useState<Day>('Monday');
+  const [exporting, setExporting] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
+
+  const handleExport = async (format: 'png' | 'pdf') => {
+    if (!gridRef.current) return;
+    setExporting(true);
+    try {
+      const title = exportTitle ?? 'All Classes Timetable';
+      if (format === 'png') await exportAsPng(gridRef.current, title);
+      else exportAsPdf(gridRef.current, `${title} — ${activeDay}`);
+    } catch (e) {
+      console.error('Export error:', e);
+      toast.error('Export failed — check browser console for details');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Parse all entries
   const parsed = entries.map(e => ({ label: e.label, ...deserialize(e.content) }));
@@ -373,21 +445,37 @@ function CombinedTimetableGrid({ entries }: {
 
   return (
     <div className="space-y-3">
-      {/* Day tabs */}
-      <div className="flex gap-1.5 flex-wrap">
-        {DAYS.map(d => (
-          <button key={d} onClick={() => setActiveDay(d)}
-            className={clsx(
-              'px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all',
-              activeDay === d
-                ? 'border-blue-500 bg-blue-500 text-white'
-                : 'border-gray-200 text-gray-500 bg-white hover:border-blue-300'
-            )}>
-            {d}
+      {/* Day tabs + export */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex gap-1.5 flex-wrap">
+          {DAYS.map(d => (
+            <button key={d} onClick={() => setActiveDay(d)}
+              className={clsx(
+                'px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all',
+                activeDay === d
+                  ? 'border-blue-500 bg-blue-500 text-white'
+                  : 'border-gray-200 text-gray-500 bg-white hover:border-blue-300'
+              )}>
+              {d}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => handleExport('png')} disabled={exporting}
+            title="Download as PNG"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-colors disabled:opacity-40">
+            <FileImage size={13} /> PNG
           </button>
-        ))}
+          <button onClick={() => handleExport('pdf')} disabled={exporting}
+            title="Print / Save as PDF"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-500 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-40">
+            <Download size={13} /> PDF
+          </button>
+        </div>
       </div>
 
+      {/* Grid */}
+      <div ref={gridRef}>
       {/* Combined grid */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse" style={{ minWidth: `${180 + entries.length * 110}px` }}>
@@ -449,6 +537,7 @@ function CombinedTimetableGrid({ entries }: {
             })}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );
@@ -610,7 +699,36 @@ function TimetableCard({ title, icon: Icon, iconColor, content, teacher, updated
   const [saving, setSaving]     = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [pendingExport, setPendingExport] = useState<'png' | 'pdf' | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
+
+  // Fires after expanded=true causes gridRef.current to be populated
+  useEffect(() => {
+    if (!pendingExport || !gridRef.current) return;
+    const format = pendingExport;
+    setPendingExport(null);
+    setExporting(true);
+    (async () => {
+      try {
+        if (format === 'png') await exportAsPng(gridRef.current!, title);
+        else exportAsPdf(gridRef.current!, title);
+      } catch (e) {
+        console.error('Export error:', e);
+        toast.error('Export failed — check browser console for details');
+      } finally {
+        setExporting(false);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingExport, expanded]);
+
+  const handleExport = (format: 'png' | 'pdf') => {
+    setExpanded(true);
+    setMode('view');
+    setPendingExport(format);
+  };
 
   const handleSave = async (newContent: string) => {
     setSaving(true);
@@ -671,6 +789,24 @@ function TimetableCard({ title, icon: Icon, iconColor, content, teacher, updated
         <div className="flex items-center gap-3 shrink-0 ml-4">
           <TeacherBadge teacher={teacher} />
 
+          {/* Export buttons */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleExport('png')}
+              disabled={exporting}
+              title="Download as PNG image"
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-colors disabled:opacity-40">
+              <FileImage size={14} />
+            </button>
+            <button
+              onClick={() => handleExport('pdf')}
+              disabled={exporting}
+              title="Print / Save as PDF"
+              className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-40">
+              <Download size={14} />
+            </button>
+          </div>
+
           {/* Edit button */}
           <button
             onClick={() => { setExpanded(true); setMode(m => m === 'edit' ? 'view' : 'edit'); setConfirmDelete(false); }}
@@ -717,7 +853,7 @@ function TimetableCard({ title, icon: Icon, iconColor, content, teacher, updated
 
       {/* Body */}
       {expanded && (
-        <div className="p-5">
+        <div className="p-5" ref={gridRef}>
           {mode === 'view'
             ? <TimetableGrid content={content} />
             : <TimetableEditor
@@ -1822,6 +1958,7 @@ export default function AdminTimetablePage() {
               <div className="p-5">
                 <CombinedTimetableGrid
                   entries={classTimetables.map(t => ({ label: t.classRoom, content: t.content }))}
+                  exportTitle="All Classes Timetable"
                 />
               </div>
             </div>
