@@ -655,88 +655,94 @@ function QRCard({ school }: { school: any }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       {/* Card header */}
-      <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-3">
+      <div className="px-4 py-4 border-b border-gray-50 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
           <QrCode size={15} className="text-blue-600" />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-gray-800">My Attendance QR</h3>
-          <p className="text-[10px] text-gray-400">Show this to staff or admin to clock you in</p>
+          <p className="text-[10px] text-gray-400 truncate">Show this to staff or admin to clock you in</p>
         </div>
-        {/* Student name pill */}
+        {/* Avatar only on mobile to save space; full name shown on sm+ */}
         <div className="flex items-center gap-2 shrink-0">
           {profileImage ? (
             <img src={profileImage} alt="" className="w-7 h-7 rounded-full object-cover border border-gray-200" />
           ) : (
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black text-white shrink-0"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black text-white"
               style={{ background: `linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary} 70%, black) 100%)` }}
             >
               {initials}
             </div>
           )}
-          <span className="text-sm font-bold text-gray-800">{fullName}</span>
+          <span className="hidden sm:block text-sm font-bold text-gray-800 truncate max-w-[120px]">{fullName}</span>
         </div>
       </div>
 
-      {/* Body */}
-      <div ref={cardRef} className="flex flex-col sm:flex-row items-center gap-6 p-6">
-        {/* Left: photo + QR */}
-        <div className="flex flex-col items-center gap-3 shrink-0">
+      {/* Body — stacks vertically on mobile, side-by-side on sm+ */}
+      <div ref={cardRef} className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-4 sm:p-6">
+
+        {/* QR + photo — centred column */}
+        <div className="flex flex-col items-center gap-3 w-full sm:w-auto shrink-0">
+          {/* Profile photo */}
           <div
-            className="w-20 h-20 rounded-2xl overflow-hidden border-4 shadow-md"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-4 shadow-md"
             style={{ borderColor: primary }}
           >
             {profileImage ? (
               <img src={profileImage} alt={fullName} className="w-full h-full object-cover" />
             ) : (
               <div
-                className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
+                className="w-full h-full flex items-center justify-center text-xl sm:text-2xl font-black text-white"
                 style={{ background: `linear-gradient(135deg, ${primary} 0%, color-mix(in srgb, ${primary} 70%, black) 100%)` }}
               >
                 {initials}
               </div>
             )}
           </div>
+
+          {/* QR code */}
           <div className="p-3 rounded-2xl border-2 border-gray-100 bg-white shadow-inner">
             <QRCodeSVG
               value={baseUser.uniqueId}
-              size={148}
+              size={180}
               level="H"
               imageSettings={logo ? { src: logo, height: 28, width: 28, excavate: true } : undefined}
             />
           </div>
         </div>
 
-        {/* Right: info */}
-        <div className="flex flex-col gap-3 text-center sm:text-left">
+        {/* Info — centred on mobile, left-aligned on sm+ */}
+        <div className="flex flex-col gap-3 text-center sm:text-left w-full sm:w-auto">
           <div>
-            <p className="text-xl font-black text-gray-900 leading-tight">{fullName}</p>
+            <p className="text-lg sm:text-xl font-black text-gray-900 leading-tight">{fullName}</p>
             <p className="text-xs font-bold tracking-widest uppercase mt-1" style={{ color: primary }}>
               {schoolName}
             </p>
           </div>
+
           <div className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 w-fit mx-auto sm:mx-0">
             <QrCode size={13} className="text-gray-400 shrink-0" />
             <span className="font-mono text-sm font-bold text-gray-700 tracking-wider">
               {baseUser.uniqueId}
             </span>
           </div>
-          <p className="text-xs text-gray-400 leading-relaxed max-w-[220px]">
+
+          <p className="text-xs text-gray-400 leading-relaxed max-w-xs mx-auto sm:mx-0">
             Staff or admin will scan this code to mark you as present automatically.
           </p>
 
-          {/* Download buttons */}
-          <div className="flex flex-wrap gap-2 justify-center sm:justify-start mt-1">
+          {/* Download buttons — stack on very small screens */}
+          <div className="flex flex-col xs:flex-row flex-wrap gap-2 items-center sm:items-start mt-1">
             <button
               onClick={handleDownloadImage}
-              className="flex items-center gap-1.5 px-4 py-2 btn-brand text-white text-xs font-bold rounded-xl shadow hover:shadow-md transition-shadow"
+              className="w-full xs:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 btn-brand text-white text-xs font-bold rounded-xl shadow hover:shadow-md transition-shadow"
             >
               <Download size={13} /> Save as Image
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
+              className="w-full xs:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-xs font-semibold rounded-xl shadow-sm hover:bg-gray-50 transition-colors"
             >
               <FileDown size={13} /> Save as PDF
             </button>
