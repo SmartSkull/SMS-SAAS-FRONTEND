@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
+import { getDeviceId } from '@/lib/deviceId';
 import type { ApiResponse, AttendanceLocation, StaffAttendanceRecord, StaffAttendanceReportItem, StudentAttendanceRecord, StudentAttendanceReportItem } from '@/types';
 
 /* ── Staff: today status + clock in/out ───────────────────────────────── */
@@ -166,7 +167,13 @@ export function useStudentAttendance() {
   const clockIn = async (latitude: number, longitude: number) => {
     setActing(true);
     try {
-      const r = await api.post<ApiResponse<StudentAttendanceRecord>>(endpoints.student.attendanceClockIn, { latitude, longitude });
+      // Generate stable device fingerprint — included on every clock-in so
+      // the backend can reject attempts from a different device.
+      const deviceId = await getDeviceId();
+      const r = await api.post<ApiResponse<StudentAttendanceRecord>>(
+        endpoints.student.attendanceClockIn,
+        { latitude, longitude, deviceId },
+      );
       toast.success(r.message ?? 'Clocked in');
       load();
     } catch (e: any) {
