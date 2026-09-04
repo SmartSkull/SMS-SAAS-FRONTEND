@@ -1,10 +1,10 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapPin, Clock, LogIn, LogOut, AlertCircle, CheckCircle,
   Timer, CalendarDays, ChevronDown, ChevronUp,
   CheckCircle2, AlertOctagon, TrendingUp, QrCode,
-  Download, FileDown,
+  Download, FileDown, Navigation,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useStudentAttendance, useStudentAttendanceHistory } from '@/hooks/attendance';
@@ -86,6 +86,215 @@ function LiveClock() {
 }
 
 /* ─────────────────────────────────────────────
+   Haversine distance (metres between two coords)
+───────────────────────────────────────────── */
+function haversineMetres(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function fmtDistance(m: number): string {
+  if (m < 1000) return `${Math.round(m)} m`;
+  return `${(m / 1000).toFixed(2)} km`;
+}
+
+/* ─────────────────────────────────────────────
+   Proximity Map
+   Shows school location + allowed radius circle,
+   student's current position, and a dashed line
+   between them with a distance label.
+───────────────────────────────────────────── */
+function ProximityMap({
+  schoolLat, schoolLng, radiusMeters,
+  studentLat, studentLng,
+  primaryColor,
+}: {
+  schoolLat: number; schoolLng: number; radiusMeters: number;
+  studentLat: number | null; studentLng: number | null;
+  primaryColor: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef       = useRef<any>(null);
+  const sourceReady  = useRef(false);
+
+  // Initialise map once
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    let map: any;
+
+    import('maplibre-gl').then(({ Map: MLMap, AttributionControl }) => {
+      import('maplibre-gl/dist/maplibre-gl.css');
+      map = new MLMap({
+        container: containerRef.current!,
+        style: 'https://tiles.openfreemap.org/styles/liberty',
+        center: [schoolLng, schoolLat],
+        zoom: 15,
+        attributionControl: false,
+      });
+      map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+      mapRef.current = map;
+
+      map.on('load', () => {
+        // ── Radius fill circle (GeoJSON) ──
+        map.addSource('radius', {
+          type: 'geojson',
+          data: makeCircleGeoJSON(schoolLat, schoolLng, radiusMeters),
+        });
+        map.addLayer({
+          id: 'radius-fill',
+          type: 'fill',
+          source: 'radius',
+          paint: { 'fill-color': primaryColor, 'fill-opacity': 0.12 },
+        });
+        map.addLayer({
+          id: 'radius-outline',
+          type: 'line',
+          source: 'radius',
+          paint: { 'line-color': primaryColor, 'line-width': 2, 'line-dasharray': [3, 2] },
+        });
+
+        // ── School marker (flag pin) ──
+        const schoolEl = document.createElement('div');
+        schoolEl.style.cssText = `
+          width:32px; height:32px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+          background:${primaryColor}; border:3px solid white;
+          box-shadow:0 2px 8px rgba(0,0,0,.3); cursor:default;
+        `;
+        import('maplibre-gl').then(({ Marker }) => {
+          new Marker({ element: schoolEl, anchor: 'bottom' })
+            .setLngLat([schoolLng, schoolLat])
+            .addTo(map);
+        });
+
+        // ── Line source (school → student) ──
+        map.addSource('line', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [[schoolLng, schoolLat], [schoolLng, schoolLat]] }, properties: {} },
+        });
+        map.addLayer({
+          id: 'proximity-line',
+          type: 'line',
+          source: 'line',
+          paint: {
+            'line-color': '#6366f1',
+            'line-width': 2.5,
+            'line-dasharray': [4, 3],
+            'line-opacity': 0.85,
+          },
+        });
+
+        // ── Student dot source ──
+        map.addSource('student', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: { type: 'Point', coordinates: [schoolLng, schoolLat] }, properties: {} },
+        });
+        map.addLayer({
+          id: 'student-dot-outer',
+          type: 'circle',
+          source: 'student',
+          paint: { 'circle-radius': 10, 'circle-color': '#6366f1', 'circle-opacity': 0.25 },
+        });
+        map.addLayer({
+          id: 'student-dot',
+          type: 'circle',
+          source: 'student',
+          paint: { 'circle-radius': 6, 'circle-color': '#6366f1', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 },
+        });
+
+        sourceReady.current = true;
+      });
+    });
+
+    return () => { map?.remove(); mapRef.current = null; sourceReady.current = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Update student position and line when coords change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !sourceReady.current) return;
+    if (studentLat === null || studentLng === null) return;
+
+    const studentCoord: [number, number] = [studentLng!, studentLat!];
+    const schoolCoord:  [number, number] = [schoolLng,    schoolLat];
+
+    map.getSource('student')?.setData({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: studentCoord },
+      properties: {},
+    });
+    map.getSource('line')?.setData({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [schoolCoord, studentCoord] },
+      properties: {},
+    });
+
+    // Fit map to show both points
+    const bounds = [
+      [Math.min(schoolLng, studentLng!) - 0.002, Math.min(schoolLat, studentLat!) - 0.002],
+      [Math.max(schoolLng, studentLng!) + 0.002, Math.max(schoolLat, studentLat!) + 0.002],
+    ] as [[number, number], [number, number]];
+    map.fitBounds(bounds, { padding: 48, maxZoom: 17, duration: 800 });
+  }, [studentLat, studentLng, schoolLat, schoolLng]);
+
+  const distance = studentLat !== null && studentLng !== null
+    ? haversineMetres(schoolLat, schoolLng, studentLat, studentLng)
+    : null;
+  const withinRadius = distance !== null && distance <= radiusMeters;
+
+  return (
+    <div className="relative rounded-xl overflow-hidden border border-white/20" style={{ height: 200 }}>
+      <div ref={containerRef} className="absolute inset-0" />
+
+      {/* Distance badge overlay */}
+      {distance !== null ? (
+        <div className={clsx(
+          'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold shadow-lg backdrop-blur-sm border',
+          withinRadius
+            ? 'bg-emerald-500/90 text-white border-emerald-400/50'
+            : 'bg-white/90 text-gray-800 border-gray-200/50'
+        )}>
+          <Navigation size={11} className={withinRadius ? 'text-white' : 'text-indigo-500'} />
+          {withinRadius ? '✓ Within range — ' : ''}{fmtDistance(distance)} away
+        </div>
+      ) : (
+        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-black/40 text-white backdrop-blur-sm">
+          <Navigation size={11} className="animate-pulse" /> Getting your location…
+        </div>
+      )}
+
+      {/* Radius label */}
+      <div className="absolute top-2 right-2 rounded-lg px-2.5 py-1 text-[10px] font-semibold bg-black/40 text-white backdrop-blur-sm">
+        Allowed zone: {radiusMeters}m
+      </div>
+    </div>
+  );
+}
+
+/** Generate a GeoJSON polygon approximating a circle */
+function makeCircleGeoJSON(lat: number, lng: number, radiusM: number) {
+  const points = 64;
+  const coords: [number, number][] = [];
+  for (let i = 0; i <= points; i++) {
+    const angle = (i / points) * 2 * Math.PI;
+    const dLat  = (radiusM / 111_320) * Math.cos(angle);
+    const dLng  = (radiusM / (111_320 * Math.cos((lat * Math.PI) / 180))) * Math.sin(angle);
+    coords.push([lng + dLng, lat + dLat]);
+  }
+  return {
+    type: 'Feature' as const,
+    geometry: { type: 'Polygon' as const, coordinates: [coords] },
+    properties: {},
+  };
+}
+
+/* ─────────────────────────────────────────────
    Hero Banner (Today card)
 ───────────────────────────────────────────── */
 function TodayHero({
@@ -98,6 +307,7 @@ function TodayHero({
   onClockIn,
   onClockOut,
   school,
+  studentCoords,
 }: {
   record: any;
   location: any;
@@ -108,6 +318,7 @@ function TodayHero({
   onClockIn: () => void;
   onClockOut: () => void;
   school: any;
+  studentCoords: { lat: number; lng: number } | null;
 }) {
   const primary = school?.primaryColor || '#2563eb';
   const statusCfg = record?.status ? STATUS_CFG[record.status as AttendanceStatus] : null;
@@ -193,6 +404,18 @@ function TodayHero({
                 <AlertCircle size={15} className="shrink-0" />
                 No attendance location set by admin yet.
               </div>
+            )}
+
+            {/* Proximity map — shown when a location is configured */}
+            {location && (
+              <ProximityMap
+                schoolLat={location.latitude}
+                schoolLng={location.longitude}
+                radiusMeters={location.radiusMeters}
+                studentLat={studentCoords?.lat ?? null}
+                studentLng={studentCoords?.lng ?? null}
+                primaryColor={primary}
+              />
             )}
 
             {/* Geo error */}
@@ -790,8 +1013,20 @@ export default function StudentAttendancePage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear]   = useState(now.getFullYear());
   const { records: history, loading: histLoading, reload: reloadHistory } = useStudentAttendanceHistory(month, year);
-  const [geoError, setGeoError]     = useState('');
-  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError]         = useState('');
+  const [geoLoading, setGeoLoading]     = useState(false);
+  const [studentCoords, setStudentCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Watch position continuously so the map updates live
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    const watchId = navigator.geolocation.watchPosition(
+      pos => setStudentCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 5000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   const handleClockIn = () => {
     setGeoError('');
@@ -800,6 +1035,7 @@ export default function StudentAttendancePage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGeoLoading(false);
+        setStudentCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         clockIn(pos.coords.latitude, pos.coords.longitude).then(() => reloadHistory());
       },
       (err) => {
@@ -839,6 +1075,7 @@ export default function StudentAttendancePage() {
         onClockIn={handleClockIn}
         onClockOut={handleClockOut}
         school={school}
+        studentCoords={studentCoords}
       />
 
       {/* Summary + History side-by-side on larger screens */}
