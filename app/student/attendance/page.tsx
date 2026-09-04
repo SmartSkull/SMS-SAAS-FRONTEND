@@ -14,6 +14,7 @@ import { auth } from '@/lib/auth';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { ApiResponse, AttendanceStatus } from '@/types';
 import clsx from 'clsx';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 const STATUS_CFG: Record<AttendanceStatus, {
   badge: string; dot: string; bg: string; color: string; label: string;
@@ -106,176 +107,7 @@ function fmtDistance(m: number): string {
 
 /* ─────────────────────────────────────────────
    Proximity Map
-   Shows school location + allowed radius circle,
-   student's current position, and a dashed line
-   between them with a distance label.
 ───────────────────────────────────────────── */
-function ProximityMap({
-  schoolLat, schoolLng, radiusMeters,
-  studentLat, studentLng,
-  primaryColor,
-}: {
-  schoolLat: number; schoolLng: number; radiusMeters: number;
-  studentLat: number | null; studentLng: number | null;
-  primaryColor: string;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef       = useRef<any>(null);
-  const sourceReady  = useRef(false);
-
-  // Initialise map once
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    let map: any;
-
-    import('maplibre-gl').then(({ Map: MLMap, AttributionControl }) => {
-      import('maplibre-gl/dist/maplibre-gl.css');
-      map = new MLMap({
-        container: containerRef.current!,
-        style: 'https://tiles.openfreemap.org/styles/liberty',
-        center: [schoolLng, schoolLat],
-        zoom: 15,
-        attributionControl: false,
-      });
-      map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
-      mapRef.current = map;
-
-      map.on('load', () => {
-        // ── Radius fill circle (GeoJSON) ──
-        map.addSource('radius', {
-          type: 'geojson',
-          data: makeCircleGeoJSON(schoolLat, schoolLng, radiusMeters),
-        });
-        map.addLayer({
-          id: 'radius-fill',
-          type: 'fill',
-          source: 'radius',
-          paint: { 'fill-color': primaryColor, 'fill-opacity': 0.12 },
-        });
-        map.addLayer({
-          id: 'radius-outline',
-          type: 'line',
-          source: 'radius',
-          paint: { 'line-color': primaryColor, 'line-width': 2, 'line-dasharray': [3, 2] },
-        });
-
-        // ── School marker (flag pin) ──
-        const schoolEl = document.createElement('div');
-        schoolEl.style.cssText = `
-          width:32px; height:32px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
-          background:${primaryColor}; border:3px solid white;
-          box-shadow:0 2px 8px rgba(0,0,0,.3); cursor:default;
-        `;
-        import('maplibre-gl').then(({ Marker }) => {
-          new Marker({ element: schoolEl, anchor: 'bottom' })
-            .setLngLat([schoolLng, schoolLat])
-            .addTo(map);
-        });
-
-        // ── Line source (school → student) ──
-        map.addSource('line', {
-          type: 'geojson',
-          data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [[schoolLng, schoolLat], [schoolLng, schoolLat]] }, properties: {} },
-        });
-        map.addLayer({
-          id: 'proximity-line',
-          type: 'line',
-          source: 'line',
-          paint: {
-            'line-color': '#6366f1',
-            'line-width': 2.5,
-            'line-dasharray': [4, 3],
-            'line-opacity': 0.85,
-          },
-        });
-
-        // ── Student dot source ──
-        map.addSource('student', {
-          type: 'geojson',
-          data: { type: 'Feature', geometry: { type: 'Point', coordinates: [schoolLng, schoolLat] }, properties: {} },
-        });
-        map.addLayer({
-          id: 'student-dot-outer',
-          type: 'circle',
-          source: 'student',
-          paint: { 'circle-radius': 10, 'circle-color': '#6366f1', 'circle-opacity': 0.25 },
-        });
-        map.addLayer({
-          id: 'student-dot',
-          type: 'circle',
-          source: 'student',
-          paint: { 'circle-radius': 6, 'circle-color': '#6366f1', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 },
-        });
-
-        sourceReady.current = true;
-      });
-    });
-
-    return () => { map?.remove(); mapRef.current = null; sourceReady.current = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Update student position and line when coords change
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !sourceReady.current) return;
-    if (studentLat === null || studentLng === null) return;
-
-    const studentCoord: [number, number] = [studentLng!, studentLat!];
-    const schoolCoord:  [number, number] = [schoolLng,    schoolLat];
-
-    map.getSource('student')?.setData({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: studentCoord },
-      properties: {},
-    });
-    map.getSource('line')?.setData({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: [schoolCoord, studentCoord] },
-      properties: {},
-    });
-
-    // Fit map to show both points
-    const bounds = [
-      [Math.min(schoolLng, studentLng!) - 0.002, Math.min(schoolLat, studentLat!) - 0.002],
-      [Math.max(schoolLng, studentLng!) + 0.002, Math.max(schoolLat, studentLat!) + 0.002],
-    ] as [[number, number], [number, number]];
-    map.fitBounds(bounds, { padding: 48, maxZoom: 17, duration: 800 });
-  }, [studentLat, studentLng, schoolLat, schoolLng]);
-
-  const distance = studentLat !== null && studentLng !== null
-    ? haversineMetres(schoolLat, schoolLng, studentLat, studentLng)
-    : null;
-  const withinRadius = distance !== null && distance <= radiusMeters;
-
-  return (
-    <div className="relative rounded-xl overflow-hidden border border-white/20" style={{ height: 200 }}>
-      <div ref={containerRef} className="absolute inset-0" />
-
-      {/* Distance badge overlay */}
-      {distance !== null ? (
-        <div className={clsx(
-          'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold shadow-lg backdrop-blur-sm border',
-          withinRadius
-            ? 'bg-emerald-500/90 text-white border-emerald-400/50'
-            : 'bg-white/90 text-gray-800 border-gray-200/50'
-        )}>
-          <Navigation size={11} className={withinRadius ? 'text-white' : 'text-indigo-500'} />
-          {withinRadius ? '✓ Within range — ' : ''}{fmtDistance(distance)} away
-        </div>
-      ) : (
-        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-black/40 text-white backdrop-blur-sm">
-          <Navigation size={11} className="animate-pulse" /> Getting your location…
-        </div>
-      )}
-
-      {/* Radius label */}
-      <div className="absolute top-2 right-2 rounded-lg px-2.5 py-1 text-[10px] font-semibold bg-black/40 text-white backdrop-blur-sm">
-        Allowed zone: {radiusMeters}m
-      </div>
-    </div>
-  );
-}
 
 /** Generate a GeoJSON polygon approximating a circle */
 function makeCircleGeoJSON(lat: number, lng: number, radiusM: number) {
@@ -292,6 +124,181 @@ function makeCircleGeoJSON(lat: number, lng: number, radiusM: number) {
     geometry: { type: 'Polygon' as const, coordinates: [coords] },
     properties: {},
   };
+}
+
+function ProximityMap({
+  schoolLat, schoolLng, radiusMeters,
+  studentLat, studentLng,
+  primaryColor,
+}: {
+  schoolLat: number; schoolLng: number; radiusMeters: number;
+  studentLat: number | null; studentLng: number | null;
+  primaryColor: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef       = useRef<any>(null);
+  const readyRef     = useRef(false);
+  // Buffer student coords that arrive before map is ready
+  const pendingRef   = useRef<{ lat: number; lng: number } | null>(null);
+
+  /* ── Init map once on mount ── */
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    // maplibre-gl is already installed; import synchronously via require to
+    // avoid the async-import-CSS problem. The CSS is imported at file top.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const maplibre = require('maplibre-gl');
+    const { Map: MLMap, AttributionControl, Marker } = maplibre;
+
+    const map = new MLMap({
+      container: containerRef.current,
+      style: 'https://tiles.openfreemap.org/styles/liberty',
+      center:  [schoolLng, schoolLat],
+      zoom:    15,
+      attributionControl: false,
+    });
+    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+    mapRef.current = map;
+
+    map.on('load', () => {
+      /* Radius fill */
+      map.addSource('radius', {
+        type: 'geojson',
+        data: makeCircleGeoJSON(schoolLat, schoolLng, radiusMeters),
+      });
+      map.addLayer({ id: 'radius-fill', type: 'fill', source: 'radius',
+        paint: { 'fill-color': primaryColor, 'fill-opacity': 0.15 } });
+      map.addLayer({ id: 'radius-line', type: 'line', source: 'radius',
+        paint: { 'line-color': primaryColor, 'line-width': 2, 'line-dasharray': [3, 2] } });
+
+      /* School pin */
+      const pin = document.createElement('div');
+      pin.style.cssText = [
+        'width:26px', 'height:26px',
+        'background:' + primaryColor,
+        'border:3px solid #fff',
+        'border-radius:50% 50% 50% 0',
+        'transform:rotate(-45deg)',
+        'box-shadow:0 2px 6px rgba(0,0,0,.4)',
+      ].join(';');
+      new Marker({ element: pin, anchor: 'bottom' })
+        .setLngLat([schoolLng, schoolLat])
+        .addTo(map);
+
+      /* Line school → student */
+      map.addSource('line', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [[schoolLng, schoolLat], [schoolLng, schoolLat]] },
+          properties: {},
+        },
+      });
+      map.addLayer({ id: 'prox-line', type: 'line', source: 'line',
+        paint: { 'line-color': '#6366f1', 'line-width': 2.5,
+                 'line-dasharray': [4, 3], 'line-opacity': 0.9 } });
+
+      /* Student dot */
+      map.addSource('student', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [schoolLng, schoolLat] },
+          properties: {},
+        },
+      });
+      map.addLayer({ id: 'student-halo', type: 'circle', source: 'student',
+        paint: { 'circle-radius': 12, 'circle-color': '#6366f1', 'circle-opacity': 0.2 } });
+      map.addLayer({ id: 'student-dot', type: 'circle', source: 'student',
+        paint: { 'circle-radius': 7, 'circle-color': '#6366f1',
+                 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } });
+
+      readyRef.current = true;
+
+      // Apply any buffered student position
+      if (pendingRef.current) {
+        applyStudentCoords(map, pendingRef.current.lat, pendingRef.current.lng);
+        pendingRef.current = null;
+      }
+    });
+
+    return () => {
+      readyRef.current = false;
+      map.remove();
+      mapRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ── Helper: update sources + fit bounds ── */
+  function applyStudentCoords(map: any, sLat: number, sLng: number) {
+    const sCoord: [number, number] = [sLng, sLat];
+    const hCoord: [number, number] = [schoolLng, schoolLat];
+
+    map.getSource('student')?.setData({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: sCoord },
+      properties: {},
+    });
+    map.getSource('line')?.setData({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [hCoord, sCoord] },
+      properties: {},
+    });
+
+    const pad = 0.003;
+    map.fitBounds(
+      [[Math.min(schoolLng, sLng) - pad, Math.min(schoolLat, sLat) - pad],
+       [Math.max(schoolLng, sLng) + pad, Math.max(schoolLat, sLat) + pad]],
+      { padding: 40, maxZoom: 17, duration: 700 },
+    );
+  }
+
+  /* ── Update when student coords arrive ── */
+  useEffect(() => {
+    if (studentLat === null || studentLng === null) return;
+    if (!readyRef.current || !mapRef.current) {
+      // Map not ready yet — buffer the position
+      pendingRef.current = { lat: studentLat, lng: studentLng };
+      return;
+    }
+    applyStudentCoords(mapRef.current, studentLat, studentLng);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentLat, studentLng]);
+
+  const distance = studentLat !== null && studentLng !== null
+    ? haversineMetres(schoolLat, schoolLng, studentLat, studentLng)
+    : null;
+  const withinRadius = distance !== null && distance <= radiusMeters;
+
+  return (
+    <div className="relative rounded-xl overflow-hidden border border-white/20" style={{ height: 200 }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+
+      {/* Distance badge */}
+      {distance !== null ? (
+        <div className={clsx(
+          'absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold shadow-lg backdrop-blur-sm border',
+          withinRadius
+            ? 'bg-emerald-500/90 text-white border-emerald-400/40'
+            : 'bg-white/90 text-gray-800 border-gray-200/50',
+        )}>
+          <Navigation size={11} className={withinRadius ? 'text-white' : 'text-indigo-500'} />
+          {withinRadius ? '✓ Within range · ' : ''}{fmtDistance(distance)} away
+        </div>
+      ) : (
+        <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-black/50 text-white backdrop-blur-sm">
+          <Navigation size={11} className="animate-pulse" /> Getting your location…
+        </div>
+      )}
+
+      {/* Zone label */}
+      <div className="absolute top-2 right-2 rounded-lg px-2.5 py-1 text-[10px] font-semibold bg-black/50 text-white backdrop-blur-sm">
+        Allowed zone: {radiusMeters}m
+      </div>
+    </div>
+  );
 }
 
 /* ─────────────────────────────────────────────
