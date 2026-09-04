@@ -28,7 +28,8 @@ export function useStaffAttendance() {
   const clockIn = async (latitude: number, longitude: number) => {
     setActing(true);
     try {
-      const r = await api.post<ApiResponse<StaffAttendanceRecord>>(endpoints.staff.attendanceClockIn, { latitude, longitude });
+      const deviceId = await getDeviceId();
+      const r = await api.post<ApiResponse<StaffAttendanceRecord>>(endpoints.staff.attendanceClockIn, { latitude, longitude, deviceId });
       toast.success(r.message ?? 'Clocked in');
       load();
     } catch (e: any) {
