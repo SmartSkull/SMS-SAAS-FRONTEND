@@ -1,111 +1,106 @@
 /**
  * Stable device fingerprint for attendance clock-in enforcement.
  *
- * The fingerprint is based purely on device/browser signals — NOT on the
- * logged-in user — so that two different accounts on the same physical
- * device produce the SAME fingerprint. This is what allows the backend to
- * detect "this device was already used by another student today".
+ * Works on both HTTP and HTTPS:
+ *  - HTTPS / secure context: SHA-256 via crypto.subtle (best quality)
+ *  - HTTP / insecure context: djb2 hash (good enough for device distinction)
  *
- * The localStorage cache key is per-user so one account's cache entry does
- * not overwrite another's, but every account on the same device will compute
- * and cache the same 64-char hex value.
+ * The fingerprint is device-only (no userId) so every account on the same
+ * physical device produces the same value, enabling the backend to block
+ * multi-account clock-in on the same device.
  *
- * Signals: userAgent · screen dimensions · colorDepth · timezone offset ·
- *          language · hardwareConcurrency · canvas pixel rendering
- *
- * NOTE: iOS Safari limits canvas fingerprinting (noise injection). The
- * remaining signals (userAgent, screen, timezone) are still sufficient to
- * distinguish different physical iOS devices from each other.
+ * Cached in localStorage under a shared key so computation only happens once.
  */
 
 import { auth } from '@/lib/auth';
 
-/** Per-user cache key — prevents one account's entry overwriting another's */
-const cacheKey = (userId: string) => `florieren_device_fp_${userId}`;
-
-/** Global cache key — shared across all users; set on first computation */
 const SHARED_KEY = 'florieren_device_fp';
+const cacheKey   = (userId: string) => `florieren_device_fp_${userId}`;
 
-/** SHA-256 a string → 64-char hex digest */
-async function sha256(text: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-  const buf  = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+// ── Hashing ──────────────────────────────────────────────────────────────
+
+/** djb2 hash — synchronous, works everywhere, returns a 16-char hex string */
+function djb2(text: string): string {
+  let hash = 5381;
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) + hash) ^ text.charCodeAt(i);
+    hash = hash >>> 0; // keep 32-bit unsigned
+  }
+  // Return as 16-char hex by repeating with a seed variation for more bits
+  const h2 = (hash * 0x9e3779b9) >>> 0;
+  return (
+    hash.toString(16).padStart(8, '0') +
+    h2.toString(16).padStart(8, '0')
+  ).repeat(4).slice(0, 64); // pad to 64 chars to match SHA-256 output length
 }
 
-/** Canvas pixel rendering fingerprint */
-function canvasFingerprint(): string {
+/** SHA-256 via crypto.subtle — only available in secure contexts (HTTPS) */
+async function sha256(text: string): Promise<string | null> {
+  if (typeof crypto === 'undefined' || !crypto.subtle) return null;
   try {
-    const c   = document.createElement('canvas');
-    c.width   = 240;
-    c.height  = 60;
-    const ctx = c.getContext('2d');
-    if (!ctx) return 'no-canvas';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle    = '#f8f8f8';
-    ctx.fillRect(0, 0, 240, 60);
-    ctx.fillStyle    = '#1a56db';
-    ctx.font         = '16px -apple-system, Arial';
-    ctx.fillText('Florieren Attendance 🏫', 8, 32);
-    ctx.fillStyle    = 'rgba(34,197,94,0.8)';
-    ctx.font         = '14px Georgia, serif';
-    ctx.fillText('Device Check 2025', 30, 52);
-    return c.toDataURL('image/png');
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return Array.from(new Uint8Array(buf))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
   } catch {
-    return 'canvas-blocked';
+    return null;
   }
 }
 
-/**
- * Collect device-only signals — intentionally NO user-specific data.
- * Every account on the same device must produce the same string.
- */
-function collectDeviceSignals(): string {
+// ── Signal collection ─────────────────────────────────────────────────────
+
+function canvasFingerprint(): string {
+  try {
+    const c = document.createElement('canvas');
+    c.width = 200; c.height = 50;
+    const ctx = c.getContext('2d');
+    if (!ctx) return 'nc';
+    ctx.fillStyle = '#f0f0f0'; ctx.fillRect(0, 0, 200, 50);
+    ctx.fillStyle = '#1a56db'; ctx.font = '14px Arial';
+    ctx.fillText('Florieren', 10, 30);
+    return c.toDataURL();
+  } catch {
+    return 'cb';
+  }
+}
+
+function collectSignals(): string {
   return [
     navigator.userAgent,
     screen.width,
     screen.height,
     screen.colorDepth,
-    screen.pixelDepth,
     new Date().getTimezoneOffset(),
     navigator.language,
-    navigator.languages?.join(',') ?? '',
     navigator.hardwareConcurrency ?? 0,
-    // navigator.deviceMemory is Chrome-only; use 0 if unavailable
-    (navigator as any).deviceMemory ?? 0,
     canvasFingerprint(),
-  ].join('||');
+  ].join('|');
 }
 
+// ── Public API ────────────────────────────────────────────────────────────
+
 /**
- * Returns the device fingerprint for this physical device.
- *
- * - Same value for ALL accounts on the same device
- * - Different value on a different device
- * - Cached in localStorage (both a shared key and a per-user key)
+ * Returns a stable 64-char hex device fingerprint.
+ * Never throws — falls back to djb2 if crypto.subtle is unavailable.
+ * Cached in localStorage after first call (sub-millisecond on repeat calls).
  */
 export async function getDeviceId(): Promise<string> {
-  // 1. Try the shared key first (fastest path, set on any previous visit)
+  // Fast path — already computed on a previous call
   const shared = localStorage.getItem(SHARED_KEY);
   if (shared && shared.length === 64) return shared;
 
-  // 2. Try the per-user key (set on a previous login for this account)
-  const user   = auth.getUser();
-  const userId = user?.uniqueId ?? 'guest';
+  const user    = auth.getUser();
+  const userId  = user?.uniqueId ?? 'guest';
   const perUser = localStorage.getItem(cacheKey(userId));
   if (perUser && perUser.length === 64) {
-    // Back-fill the shared key so other accounts benefit immediately
     localStorage.setItem(SHARED_KEY, perUser);
     return perUser;
   }
 
-  // 3. Compute from scratch
-  const hash = await sha256(collectDeviceSignals());
+  // Compute fingerprint
+  const signals = collectSignals();
+  const hash    = (await sha256(signals)) ?? djb2(signals);
 
-  // Store under both keys
   localStorage.setItem(SHARED_KEY, hash);
   localStorage.setItem(cacheKey(userId), hash);
   return hash;

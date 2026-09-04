@@ -5,6 +5,18 @@ import { useToast } from '@/components/ui/Toast';
 import { getDeviceId } from '@/lib/deviceId';
 import type { ApiResponse, AttendanceLocation, StaffAttendanceRecord, StaffAttendanceReportItem, StudentAttendanceRecord, StudentAttendanceReportItem } from '@/types';
 
+/** Wraps getDeviceId with a 2s timeout — never blocks the clock-in flow */
+async function safeGetDeviceId(): Promise<string | undefined> {
+  try {
+    return await Promise.race([
+      getDeviceId(),
+      new Promise<undefined>(resolve => setTimeout(() => resolve(undefined), 2000)),
+    ]);
+  } catch {
+    return undefined;
+  }
+}
+
 /* ── Staff: today status + clock in/out ───────────────────────────────── */
 export function useStaffAttendance() {
   const [record, setRecord] = useState<StaffAttendanceRecord | null>(null);
@@ -28,7 +40,7 @@ export function useStaffAttendance() {
   const clockIn = async (latitude: number, longitude: number) => {
     setActing(true);
     try {
-      const deviceId = await getDeviceId();
+      const deviceId = await safeGetDeviceId();
       const r = await api.post<ApiResponse<StaffAttendanceRecord>>(endpoints.staff.attendanceClockIn, { latitude, longitude, deviceId });
       toast.success(r.message ?? 'Clocked in');
       load();
@@ -170,7 +182,7 @@ export function useStudentAttendance() {
     try {
       // Generate stable device fingerprint — included on every clock-in so
       // the backend can reject attempts from a different device.
-      const deviceId = await getDeviceId();
+      const deviceId = await safeGetDeviceId();
       const r = await api.post<ApiResponse<StudentAttendanceRecord>>(
         endpoints.student.attendanceClockIn,
         { latitude, longitude, deviceId },
