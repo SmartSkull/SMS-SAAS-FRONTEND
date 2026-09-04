@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/Toast';
 import BarcodeScanner from '@/components/ui/BarcodeScanner';
 import type { AttendanceStatus } from '@/types';
 import clsx from 'clsx';
+import { OSM_RASTER_STYLE } from '@/lib/mapStyle';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const STATUS_CFG: Record<AttendanceStatus, {
@@ -126,7 +127,7 @@ function ProximityMap({
       if (cancelled || !containerRef.current) return;
       const map = new MLMap({
         container: containerRef.current,
-        style: 'https://tiles.openfreemap.org/styles/bright',
+        style: OSM_RASTER_STYLE,
         center: [Number(schoolLng), Number(schoolLat)],
         zoom: 15,
         attributionControl: false,

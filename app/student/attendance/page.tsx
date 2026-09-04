@@ -14,6 +14,7 @@ import { auth } from '@/lib/auth';
 import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { ApiResponse, AttendanceStatus } from '@/types';
 import clsx from 'clsx';
+import { OSM_RASTER_STYLE } from '@/lib/mapStyle';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 const STATUS_CFG: Record<AttendanceStatus, {
@@ -153,8 +154,7 @@ function ProximityMap({
 
       const map = new MLMap({
         container: containerRef.current,
-        // Use the 'bright' style — no terrain, avoids the null-number tile worker error
-        style: 'https://tiles.openfreemap.org/styles/bright',
+        style: OSM_RASTER_STYLE,
         center:  [schoolLng, schoolLat],
         zoom:    15,
         attributionControl: false,
