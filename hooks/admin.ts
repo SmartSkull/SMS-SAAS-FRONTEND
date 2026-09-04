@@ -398,6 +398,38 @@ export function useAdminSettings() {
   return { records, form, setForm, loading, saving, save, remove };
 }
 
+/* ── Timetable (read-only overview with teacher info) ──────────────────── */
+interface TimetableTeacher { name: string; uniqueId: string; image: string | null; }
+
+export interface AdminClassTimetable {
+  id: string; classRoomId: string; classRoom: string;
+  content: string; createdAt: string; updatedAt: string;
+  teacher: TimetableTeacher | null;
+}
+
+export interface AdminExamTimetable {
+  id: string; level: string;
+  content: string; createdAt: string; updatedAt: string;
+  teacher: TimetableTeacher | null;
+}
+
+export function useAdminTimetable(tab: 'class' | 'exam') {
+  const [data, setData] = useState<AdminClassTimetable[] | AdminExamTimetable[]>([]);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+
+  useEffect(() => {
+    setLoading(true);
+    const ep = tab === 'class' ? endpoints.admin.adminClassTimetable : endpoints.admin.adminExamTimetable;
+    api.get<ApiResponse<AdminClassTimetable[] | AdminExamTimetable[]>>(ep)
+      .then((r) => setData((r.data as any) ?? []))
+      .catch(() => toast.error('Failed to load timetables'))
+      .finally(() => setLoading(false));
+  }, [tab]);
+
+  return { data, loading };
+}
+
 /* ── Settings Config (principal, signature, class-teacher) ─────────────── */
 export interface ClassTeacherSetting {
   id: string;

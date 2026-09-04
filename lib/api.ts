@@ -373,6 +373,8 @@ export const endpoints = {
     transportRouteBroadcasts: (routeId: string) => `/admin/transport/routes/${routeId}/broadcasts`,
     transportCreateBroadcast: (routeId: string) => `/admin/transport/routes/${routeId}/broadcast`,
     transportParentTrackingLink: (studentUniqueId: string) => `/admin/transport/students/${studentUniqueId}/parent-location`,
+    adminClassTimetable: '/admin/timetable/class',
+    adminExamTimetable: '/admin/timetable/exam',
   },
   public: {
     currentPeriod: '/public/current-period',
