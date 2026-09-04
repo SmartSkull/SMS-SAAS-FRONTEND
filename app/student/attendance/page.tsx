@@ -144,97 +144,106 @@ function ProximityMap({
   /* ── Init map once on mount ── */
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    let cancelled = false;
 
-    // maplibre-gl is already installed; import synchronously via require to
-    // avoid the async-import-CSS problem. The CSS is imported at file top.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const maplibre = require('maplibre-gl');
-    const { Map: MLMap, AttributionControl, Marker } = maplibre;
+    // Use dynamic import() — same as CampusMap which works correctly.
+    // The CSS is already imported at file top level.
+    import('maplibre-gl').then(({ Map: MLMap, AttributionControl, Marker }) => {
+      if (cancelled || !containerRef.current) return;
 
-    const map = new MLMap({
-      container: containerRef.current,
-      style: 'https://tiles.openfreemap.org/styles/liberty',
-      center:  [schoolLng, schoolLat],
-      zoom:    15,
-      attributionControl: false,
-    });
-    map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
-    mapRef.current = map;
-
-    map.on('load', () => {
-      /* Radius fill */
-      map.addSource('radius', {
-        type: 'geojson',
-        data: makeCircleGeoJSON(schoolLat, schoolLng, radiusMeters),
+      const map = new MLMap({
+        container: containerRef.current,
+        // Use the 'bright' style — no terrain, avoids the null-number tile worker error
+        style: 'https://tiles.openfreemap.org/styles/bright',
+        center:  [schoolLng, schoolLat],
+        zoom:    15,
+        attributionControl: false,
       });
-      map.addLayer({ id: 'radius-fill', type: 'fill', source: 'radius',
-        paint: { 'fill-color': primaryColor, 'fill-opacity': 0.15 } });
-      map.addLayer({ id: 'radius-line', type: 'line', source: 'radius',
-        paint: { 'line-color': primaryColor, 'line-width': 2, 'line-dasharray': [3, 2] } });
+      map.addControl(new AttributionControl({ compact: true }), 'bottom-right');
+      mapRef.current = map;
 
-      /* School pin */
-      const pin = document.createElement('div');
-      pin.style.cssText = [
-        'width:26px', 'height:26px',
-        'background:' + primaryColor,
-        'border:3px solid #fff',
-        'border-radius:50% 50% 50% 0',
-        'transform:rotate(-45deg)',
-        'box-shadow:0 2px 6px rgba(0,0,0,.4)',
-      ].join(';');
-      new Marker({ element: pin, anchor: 'bottom' })
-        .setLngLat([schoolLng, schoolLat])
-        .addTo(map);
+      map.on('load', () => {
+        if (cancelled) return;
 
-      /* Line school → student */
-      map.addSource('line', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: [[schoolLng, schoolLat], [schoolLng, schoolLat]] },
-          properties: {},
-        },
+        /* Radius fill */
+        map.addSource('radius', {
+          type: 'geojson',
+          data: makeCircleGeoJSON(
+            Number(schoolLat), Number(schoolLng), Number(radiusMeters)
+          ),
+        });
+        map.addLayer({ id: 'radius-fill', type: 'fill', source: 'radius',
+          paint: { 'fill-color': primaryColor, 'fill-opacity': 0.15 } });
+        map.addLayer({ id: 'radius-line', type: 'line', source: 'radius',
+          paint: { 'line-color': primaryColor, 'line-width': 2, 'line-dasharray': [3, 2] } });
+
+        /* School pin */
+        const pin = document.createElement('div');
+        pin.style.cssText = [
+          'width:26px', 'height:26px',
+          'background:' + primaryColor,
+          'border:3px solid #fff',
+          'border-radius:50% 50% 50% 0',
+          'transform:rotate(-45deg)',
+          'box-shadow:0 2px 6px rgba(0,0,0,.4)',
+        ].join(';');
+        new Marker({ element: pin, anchor: 'bottom' })
+          .setLngLat([Number(schoolLng), Number(schoolLat)])
+          .addTo(map);
+
+        /* Line school → student */
+        map.addSource('line', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: [
+              [Number(schoolLng), Number(schoolLat)],
+              [Number(schoolLng), Number(schoolLat)],
+            ]},
+            properties: {},
+          },
+        });
+        map.addLayer({ id: 'prox-line', type: 'line', source: 'line',
+          paint: { 'line-color': '#6366f1', 'line-width': 2.5,
+                   'line-dasharray': [4, 3], 'line-opacity': 0.9 } });
+
+        /* Student dot */
+        map.addSource('student', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [Number(schoolLng), Number(schoolLat)] },
+            properties: {},
+          },
+        });
+        map.addLayer({ id: 'student-halo', type: 'circle', source: 'student',
+          paint: { 'circle-radius': 12, 'circle-color': '#6366f1', 'circle-opacity': 0.2 } });
+        map.addLayer({ id: 'student-dot', type: 'circle', source: 'student',
+          paint: { 'circle-radius': 7, 'circle-color': '#6366f1',
+                   'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } });
+
+        readyRef.current = true;
+
+        // Apply any buffered student position
+        if (pendingRef.current) {
+          applyStudentCoords(map, pendingRef.current.lat, pendingRef.current.lng);
+          pendingRef.current = null;
+        }
       });
-      map.addLayer({ id: 'prox-line', type: 'line', source: 'line',
-        paint: { 'line-color': '#6366f1', 'line-width': 2.5,
-                 'line-dasharray': [4, 3], 'line-opacity': 0.9 } });
-
-      /* Student dot */
-      map.addSource('student', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [schoolLng, schoolLat] },
-          properties: {},
-        },
-      });
-      map.addLayer({ id: 'student-halo', type: 'circle', source: 'student',
-        paint: { 'circle-radius': 12, 'circle-color': '#6366f1', 'circle-opacity': 0.2 } });
-      map.addLayer({ id: 'student-dot', type: 'circle', source: 'student',
-        paint: { 'circle-radius': 7, 'circle-color': '#6366f1',
-                 'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } });
-
-      readyRef.current = true;
-
-      // Apply any buffered student position
-      if (pendingRef.current) {
-        applyStudentCoords(map, pendingRef.current.lat, pendingRef.current.lng);
-        pendingRef.current = null;
-      }
     });
 
     return () => {
+      cancelled = true;
       readyRef.current = false;
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* ── Helper: update sources + fit bounds ── */
   function applyStudentCoords(map: any, sLat: number, sLng: number) {
-    const sCoord: [number, number] = [sLng, sLat];
-    const hCoord: [number, number] = [schoolLng, schoolLat];
+    const sCoord: [number, number] = [Number(sLng), Number(sLat)];
+    const hCoord: [number, number] = [Number(schoolLng), Number(schoolLat)];
 
     map.getSource('student')?.setData({
       type: 'Feature',
@@ -249,8 +258,8 @@ function ProximityMap({
 
     const pad = 0.003;
     map.fitBounds(
-      [[Math.min(schoolLng, sLng) - pad, Math.min(schoolLat, sLat) - pad],
-       [Math.max(schoolLng, sLng) + pad, Math.max(schoolLat, sLat) + pad]],
+      [[Math.min(Number(schoolLng), sLng) - pad, Math.min(Number(schoolLat), sLat) - pad],
+       [Math.max(Number(schoolLng), sLng) + pad, Math.max(Number(schoolLat), sLat) + pad]],
       { padding: 40, maxZoom: 17, duration: 700 },
     );
   }
