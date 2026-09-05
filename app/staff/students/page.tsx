@@ -310,7 +310,7 @@ export default function StaffStudents() {
                         <button
                           onClick={() => setViewingId(s.student_id)}
                           title="View student details"
-                          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 opacity-0 group-hover:opacity-100"
+                          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
                         >
                           <Eye size={13} /> View
                         </button>
