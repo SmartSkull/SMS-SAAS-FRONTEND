@@ -10,14 +10,15 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieCh
 
 function StatCard({ icon: Icon, label, value, color }: { icon: React.ComponentType<{ size?: number | string; className?: string }>; label: string; value: string | number; color: string }) {
   return (
-    <div className="bg-white rounded-2xl card shadow-sm p-6 flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-        <Icon size={22} className="text-white" />
+    <div className="relative bg-white rounded-2xl card shadow-sm border border-gray-100 p-5 overflow-hidden">
+      <div className="absolute right-0 top-0 bottom-0 hidden md:flex items-center justify-end opacity-[0.06] pointer-events-none translate-x-4">
+        <Icon size={120} />
       </div>
-      <div>
-        <p className="text-sm text-gray-500">{label}</p>
-        <p className="text-2xl font-bold text-gray-800">{value}</p>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
+        <Icon size={20} />
       </div>
+      <p className="text-2xl font-bold text-gray-800">{value}</p>
+      <p className="text-sm text-gray-500">{label}</p>
     </div>
   );
 }
@@ -45,14 +46,12 @@ export default function StaffDashboard() {
       </div>
 
       {/* Stats cards skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl card shadow-sm p-6 flex items-center gap-4">
-            <div className="shimmer w-12 h-12 rounded-xl" />
-            <div className="flex-1">
-              <div className="shimmer h-4 w-24 mb-2" />
-              <div className="shimmer h-8 w-12" />
-            </div>
+          <div key={i} className="bg-white rounded-2xl card shadow-sm border border-gray-100 p-5 space-y-3">
+            <div className="shimmer w-10 h-10 rounded-xl" />
+            <div className="shimmer h-8 w-12" />
+            <div className="shimmer h-4 w-24" />
           </div>
         ))}
       </div>
@@ -104,10 +103,10 @@ export default function StaffDashboard() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Users} label="Total Students" value={data?.total_students ?? data?.student_count ?? 0} color="bg-blue-600" />
-        <StatCard icon={BookOpen} label="Assignments" value={data?.total_assignments ?? data?.analytics?.assignments?.total ?? 0} color="bg-blue-600" />
-        <StatCard icon={TrendingUp} label="Library Docs" value={data?.total_library ?? data?.analytics?.library?.total ?? 0} color="bg-purple-600" />
-        <StatCard icon={Calendar} label="Current Term" value={data?.current_term ?? '—'} color="bg-rose-500" />
+        <StatCard icon={Users}     label="Total Students" value={data?.total_students ?? data?.student_count ?? 0}                     color="bg-blue-100 text-blue-600" />
+        <StatCard icon={BookOpen}  label="Assignments"    value={data?.total_assignments ?? data?.analytics?.assignments?.total ?? 0}   color="bg-blue-100 text-blue-600" />
+        <StatCard icon={TrendingUp} label="Library Docs"  value={data?.total_library ?? data?.analytics?.library?.total ?? 0}           color="bg-purple-100 text-purple-600" />
+        <StatCard icon={Calendar}  label="Current Term"   value={data?.current_term ?? '—'}                                             color="bg-rose-100 text-rose-500" />
       </div>
 
       {/* Quick Actions */}
