@@ -4,8 +4,10 @@ import {
   MapPin, Clock, LogIn, LogOut, AlertCircle, CheckCircle,
   Timer, CalendarDays, ChevronDown, ChevronUp,
   CheckCircle2, AlertOctagon, TrendingUp, QrCode,
-  Download, FileDown, Navigation,
+  Download, FileDown, Navigation, ScanFace,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const FaceAttendanceModal = dynamic(() => import('@/components/ui/FaceAttendanceModal'), { ssr: false });
 import { QRCodeSVG } from 'qrcode.react';
 import { useStudentAttendance, useStudentAttendanceHistory } from '@/hooks/attendance';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -324,6 +326,7 @@ function TodayHero({
   onClockOut,
   school,
   studentCoords,
+  onFaceClockIn,
 }: {
   record: any;
   location: any;
@@ -335,6 +338,7 @@ function TodayHero({
   onClockOut: () => void;
   school: any;
   studentCoords: { lat: number; lng: number } | null;
+  onFaceClockIn: () => void;
 }) {
   const primary = school?.primaryColor || '#2563eb';
   const statusCfg = record?.status ? STATUS_CFG[record.status as AttendanceStatus] : null;
@@ -443,14 +447,23 @@ function TodayHero({
 
             {/* CTA buttons */}
             {!record?.clockIn && (
-              <button
-                onClick={onClockIn}
-                disabled={busy || !location}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-white text-gray-900 py-3.5 font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {busy ? <Timer size={17} className="animate-spin" /> : <LogIn size={17} />}
-                {geoLoading ? 'Getting location…' : 'Clock In'}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={onClockIn}
+                  disabled={busy || !location}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white text-gray-900 py-3.5 font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {busy ? <Timer size={17} className="animate-spin" /> : <LogIn size={17} />}
+                  {geoLoading ? 'Getting location…' : 'Clock In with Location'}
+                </button>
+                <button
+                  onClick={onFaceClockIn}
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/20 border border-white/30 text-white py-3 font-bold text-sm hover:bg-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur"
+                >
+                  <ScanFace size={17} /> Clock In with Face
+                </button>
+              </div>
             )}
             {record?.clockIn && !record?.clockOut && (
               <button
@@ -1029,9 +1042,10 @@ export default function StudentAttendancePage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear]   = useState(now.getFullYear());
   const { records: history, loading: histLoading, reload: reloadHistory } = useStudentAttendanceHistory(month, year);
-  const [geoError, setGeoError]         = useState('');
-  const [geoLoading, setGeoLoading]     = useState(false);
+  const [geoError, setGeoError]           = useState('');
+  const [geoLoading, setGeoLoading]       = useState(false);
   const [studentCoords, setStudentCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showFaceModal, setShowFaceModal] = useState(false);
 
   // Watch position continuously so the map updates live
   useEffect(() => {
@@ -1092,7 +1106,20 @@ export default function StudentAttendancePage() {
         onClockOut={handleClockOut}
         school={school}
         studentCoords={studentCoords}
+        onFaceClockIn={() => setShowFaceModal(true)}
       />
+
+      {/* Face Attendance Modal */}
+      {showFaceModal && (
+        <FaceAttendanceModal
+          primaryColor={school?.primaryColor}
+          onClose={() => setShowFaceModal(false)}
+          onClockedIn={(msg) => {
+            setShowFaceModal(false);
+            reloadHistory();
+          }}
+        />
+      )}
 
       {/* Summary + History side-by-side on larger screens */}
       <QRCard school={school} />

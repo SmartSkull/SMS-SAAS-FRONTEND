@@ -182,6 +182,8 @@ export const endpoints = {
     attendanceClockOut: '/attendance/student/clock-out',
     attendanceToday: '/attendance/student/today',
     attendanceHistory: '/attendance/student/history',
+    attendanceFaceClockIn: '/attendance/student/face-clock-in',
+    attendanceFaceEnroll: '/attendance/student/face-enroll',
   },
   staff: {
     dashboard: '/staff/dashboard',
