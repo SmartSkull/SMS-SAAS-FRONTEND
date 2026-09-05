@@ -172,20 +172,56 @@ function StudentDetailModal({ studentId, onClose }: { studentId: string; onClose
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Recent Results</p>
                   <div className="rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
-                    {results.map((r, i) => (
-                      <div key={i} className="flex items-center justify-between px-4 py-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                            <BookOpen size={13} className="text-blue-600" />
+                    {results.map((r, i) => {
+                      // Clean up hyphenated subject names e.g. "Agricultural-Science" → "Agricultural Science"
+                      const subjectName = (r.subject ?? 'Unknown').replace(/-/g, ' ');
+                      const total = r.totalScore ?? 0;
+                      const hasScore = total > 0 || r.testScore > 0 || r.examScore > 0;
+                      return (
+                        <div key={i} className="px-4 py-3">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                <BookOpen size={13} className="text-blue-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-800 truncate">{subjectName}</p>
+                                {(r.session || r.term) && (
+                                  <p className="text-[10px] text-gray-400 truncate">{[r.term, r.session].filter(Boolean).join(' · ')}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className={`text-sm font-bold ${hasScore ? 'text-gray-700' : 'text-gray-400'}`}>
+                                {total}%
+                              </span>
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-lg ${gradeColor(r.grade)}`}>
+                                {r.grade ?? '—'}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-sm font-medium text-gray-800 truncate">{r.subject}</p>
+                          {/* Test / Exam breakdown */}
+                          {hasScore && (
+                            <div className="flex gap-4 pl-9">
+                              <span className="text-[11px] text-gray-400">
+                                CA: <span className="font-semibold text-gray-600">{r.testScore ?? 0}</span>
+                              </span>
+                              <span className="text-[11px] text-gray-400">
+                                Exam: <span className="font-semibold text-gray-600">{r.examScore ?? 0}</span>
+                              </span>
+                              {r.remark && (
+                                <span className="text-[11px] text-gray-400 truncate">
+                                  {r.remark}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {!hasScore && (
+                            <p className="text-[11px] text-amber-500 pl-9">Score not yet entered</p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-sm font-bold text-gray-700">{r.totalScore}%</span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-lg ${gradeColor(r.grade)}`}>{r.grade ?? '—'}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
