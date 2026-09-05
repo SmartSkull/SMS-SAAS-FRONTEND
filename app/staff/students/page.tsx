@@ -1,9 +1,12 @@
 'use client';
 import { EmptyState } from '@/components/ui/StateDisplay';
 import { useToast } from '@/components/ui/Toast';
-import { api, endpoints } from '@/lib/api';
+import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { ApiResponse, Student } from '@/types';
-import { ChevronLeft, ChevronRight, GraduationCap, Plus, Search, X } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, GraduationCap, Plus, Search, X,
+  User, Mail, Phone, BookOpen, Hash, Calendar, Eye,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 interface StudentsData {
@@ -30,6 +33,127 @@ const AVATAR_COLORS = [
   'bg-rose-100 text-rose-700',
 ];
 
+/* ─────────────────────────────────────────────
+   Student Detail Modal
+───────────────────────────────────────────── */
+function StudentDetailModal({ studentId, onClose }: { studentId: string; onClose: () => void }) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const toast = useToast();
+
+  useEffect(() => {
+    api.get<ApiResponse<any>>(endpoints.staff.student(studentId))
+      .then(r => setData(r.data ?? r))
+      .catch(() => toast.error('Failed to load student details'))
+      .finally(() => setLoading(false));
+  }, [studentId]);
+
+  const imgUrl = getImageUrl(data?.image ?? data?.user?.image ?? null);
+  const fullName = `${data?.firstname ?? data?.firstName ?? ''} ${data?.lastname ?? data?.lastName ?? ''}`.trim();
+  const initials = `${(data?.firstname ?? data?.firstName ?? '?')[0]}${(data?.lastname ?? data?.lastName ?? '')[0]}`.toUpperCase();
+
+  const fields = [
+    { icon: Hash,      label: 'Student ID',      value: data?.student_id ?? data?.uniqueId ?? '—' },
+    { icon: GraduationCap, label: 'Class',        value: data?.class ?? data?.className ?? '—' },
+    { icon: Mail,      label: 'Email',            value: data?.email ?? '—' },
+    { icon: Phone,     label: 'Phone',            value: data?.phone ?? data?.telephone ?? '—' },
+    { icon: Calendar,  label: 'Admission Year',   value: data?.admissionYear ?? '—' },
+    { icon: User,      label: 'Father\'s Name',   value: data?.fatherName ?? '—' },
+    { icon: User,      label: 'Mother\'s Name',   value: data?.motherName ?? '—' },
+    { icon: BookOpen,  label: 'Blood Group',      value: data?.bloodGroup ?? '—' },
+    { icon: Calendar,  label: 'Date of Birth',    value: data?.dateOfBirth ? new Date(data.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+    { icon: User,      label: 'State of Origin',  value: data?.stateOfOrigin ?? '—' },
+    { icon: User,      label: 'Home Address',     value: data?.homeAddress ?? '—' },
+    { icon: Mail,      label: 'Parent Email',     value: data?.parentEmail ?? '—' },
+    { icon: User,      label: 'Religion',         value: data?.religion ?? '—' },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="font-bold text-gray-900 text-base">Student Details</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+            <div className="flex items-center gap-4">
+              <div className="shimmer w-16 h-16 rounded-full shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="shimmer h-5 w-40" />
+                <div className="shimmer h-4 w-28" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="shimmer h-3 w-20" />
+                  <div className="shimmer h-4 w-32" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto">
+            {/* Profile banner */}
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 px-6 py-5">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/20 border-2 border-white/30 shrink-0 flex items-center justify-center">
+                  {imgUrl
+                    ? <img src={imgUrl} alt={fullName} className="w-full h-full object-cover" />
+                    : <span className="text-xl font-black text-white">{initials}</span>}
+                </div>
+                <div>
+                  <p className="text-lg font-black text-white leading-tight">{fullName || '—'}</p>
+                  <p className="text-sm text-blue-200 mt-0.5">{data?.class ?? '—'}</p>
+                  <span className="inline-block mt-1.5 bg-white/20 text-white text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg">
+                    {data?.student_id ?? data?.uniqueId ?? '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Fields grid */}
+            <div className="p-5 grid grid-cols-2 gap-4">
+              {fields.map(({ icon: Icon, label, value }) => (
+                value && value !== '—' ? (
+                  <div key={label} className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Icon size={11} className="text-gray-400 shrink-0" />
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 truncate">{label}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-800 break-words">{value}</p>
+                  </div>
+                ) : null
+              ))}
+            </div>
+
+            {/* About section */}
+            {data?.about && (
+              <div className="px-5 pb-5">
+                <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">About</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{data.about}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Main Page
+───────────────────────────────────────────── */
 export default function StaffStudents() {
   const [students, setStudents] = useState<Student[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
@@ -45,6 +169,9 @@ export default function StaffStudents() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+
+  // View student detail
+  const [viewingId, setViewingId] = useState<string | null>(null);
 
   const load = (p = 1) => {
     setLoading(true);
@@ -156,11 +283,12 @@ export default function StaffStudents() {
                     <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Student ID</th>
                     <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Class</th>
                     <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Email</th>
+                    <th className="pb-3 text-[11px] font-bold uppercase tracking-wider text-gray-400"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {students.length === 0 ? (
-                    <tr><td colSpan={4}><EmptyState icon={GraduationCap} message="No students found." card={false} /></td></tr>
+                    <tr><td colSpan={5}><EmptyState icon={GraduationCap} message="No students found." card={false} /></td></tr>
                   ) : students.map((s, idx) => (
                     <tr key={s.student_id} className="group transition-colors hover:bg-blue-50/40">
                       <td className="py-3.5 pl-1">
@@ -178,6 +306,15 @@ export default function StaffStudents() {
                         <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600">{s.class}</span>
                       </td>
                       <td className="py-3.5 text-gray-500">{s.email ?? '—'}</td>
+                      <td className="py-3.5">
+                        <button
+                          onClick={() => setViewingId(s.student_id)}
+                          title="View student details"
+                          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 opacity-0 group-hover:opacity-100"
+                        >
+                          <Eye size={13} /> View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -205,6 +342,14 @@ export default function StaffStudents() {
           </>
         )}
       </div>
+
+      {/* Student Detail Modal */}
+      {viewingId && (
+        <StudentDetailModal
+          studentId={viewingId}
+          onClose={() => setViewingId(null)}
+        />
+      )}
 
       {/* Add Student Modal */}
       {modal && (
