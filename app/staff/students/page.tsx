@@ -48,34 +48,48 @@ function StudentDetailModal({ studentId, onClose }: { studentId: string; onClose
       .finally(() => setLoading(false));
   }, [studentId]);
 
-  const imgUrl = getImageUrl(data?.image ?? data?.user?.image ?? null);
-  const fullName = `${data?.firstname ?? data?.firstName ?? ''} ${data?.lastname ?? data?.lastName ?? ''}`.trim();
-  const initials = `${(data?.firstname ?? data?.firstName ?? '?')[0]}${(data?.lastname ?? data?.lastName ?? '')[0]}`.toUpperCase();
+  const imgUrl   = getImageUrl(data?.image ?? data?.user?.image ?? null);
+  const fullName = `${data?.firstName ?? data?.firstname ?? ''} ${data?.lastName ?? data?.lastname ?? ''}`.trim();
+  const initials = `${(data?.firstName ?? data?.firstname ?? '?')[0]}${(data?.lastName ?? data?.lastname ?? '')[0]}`.toUpperCase();
+  const cls      = data?.student?.classRoom?.name ?? data?.class ?? '—';
+  const uid      = data?.uniqueId ?? data?.student_id ?? '—';
 
-  const fields = [
-    { icon: Hash,      label: 'Student ID',      value: data?.student_id ?? data?.uniqueId ?? '—' },
-    { icon: GraduationCap, label: 'Class',        value: data?.class ?? data?.className ?? '—' },
+  const personalFields = [
+    { icon: Hash,      label: 'Student ID',      value: uid },
+    { icon: GraduationCap, label: 'Class',        value: cls },
     { icon: Mail,      label: 'Email',            value: data?.email ?? '—' },
-    { icon: Phone,     label: 'Phone',            value: data?.phone ?? data?.telephone ?? '—' },
-    { icon: Calendar,  label: 'Admission Year',   value: data?.admissionYear ?? '—' },
-    { icon: User,      label: 'Father\'s Name',   value: data?.fatherName ?? '—' },
-    { icon: User,      label: 'Mother\'s Name',   value: data?.motherName ?? '—' },
-    { icon: BookOpen,  label: 'Blood Group',      value: data?.bloodGroup ?? '—' },
-    { icon: Calendar,  label: 'Date of Birth',    value: data?.dateOfBirth ? new Date(data.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
-    { icon: User,      label: 'State of Origin',  value: data?.stateOfOrigin ?? '—' },
-    { icon: User,      label: 'Home Address',     value: data?.homeAddress ?? '—' },
-    { icon: Mail,      label: 'Parent Email',     value: data?.parentEmail ?? '—' },
-    { icon: User,      label: 'Religion',         value: data?.religion ?? '—' },
-  ];
+    { icon: Phone,     label: 'Phone',            value: data?.telephone ?? data?.phone ?? '—' },
+    { icon: Calendar,  label: 'Date of Birth',    value: data?.student?.dateOfBirth ? new Date(data.student.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+    { icon: Calendar,  label: 'Admission Year',   value: data?.student?.admissionYear ?? '—' },
+    { icon: User,      label: 'State of Origin',  value: data?.student?.stateOfOrigin ?? '—' },
+    { icon: User,      label: 'Religion',         value: data?.student?.religion ?? '—' },
+    { icon: BookOpen,  label: 'Blood Group',      value: data?.student?.bloodGroup ?? '—' },
+    { icon: User,      label: 'Father\'s Name',   value: data?.student?.fatherName ?? '—' },
+    { icon: User,      label: 'Mother\'s Name',   value: data?.student?.motherName ?? '—' },
+    { icon: Mail,      label: 'Parent Email',     value: data?.student?.parentEmail ?? '—' },
+    { icon: User,      label: 'Home Address',     value: data?.student?.homeAddress ?? '—' },
+  ].filter(f => f.value && f.value !== '—');
+
+  const att = data?.attendanceSummary;
+  const results: any[] = data?.recentResults ?? [];
+  const assignmentCount: number = data?.assignmentCount ?? 0;
+
+  const gradeColor = (g: string) => {
+    if (!g) return 'bg-gray-100 text-gray-600';
+    if (g === 'A') return 'bg-emerald-100 text-emerald-700';
+    if (g === 'B') return 'bg-blue-100 text-blue-700';
+    if (g === 'C') return 'bg-amber-100 text-amber-700';
+    return 'bg-red-100 text-red-600';
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <h2 className="font-bold text-gray-900 text-base">Student Details</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X size={18} />
@@ -86,64 +100,125 @@ function StudentDetailModal({ studentId, onClose }: { studentId: string; onClose
           <div className="flex-1 p-6 space-y-4 overflow-y-auto">
             <div className="flex items-center gap-4">
               <div className="shimmer w-16 h-16 rounded-full shrink-0" />
-              <div className="space-y-2 flex-1">
-                <div className="shimmer h-5 w-40" />
-                <div className="shimmer h-4 w-28" />
-              </div>
+              <div className="space-y-2 flex-1"><div className="shimmer h-5 w-40" /><div className="shimmer h-4 w-28" /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {[...Array(8)].map((_, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="shimmer h-3 w-20" />
-                  <div className="shimmer h-4 w-32" />
-                </div>
+                <div key={i} className="space-y-1.5"><div className="shimmer h-3 w-20" /><div className="shimmer h-4 w-32" /></div>
               ))}
             </div>
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto">
+
             {/* Profile banner */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 px-6 py-5">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 px-6 py-5 shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white/20 border-2 border-white/30 shrink-0 flex items-center justify-center">
                   {imgUrl
                     ? <img src={imgUrl} alt={fullName} className="w-full h-full object-cover" />
                     : <span className="text-xl font-black text-white">{initials}</span>}
                 </div>
+                <div className="min-w-0">
+                  <p className="text-lg font-black text-white leading-tight truncate">{fullName || '—'}</p>
+                  <p className="text-sm text-blue-200 mt-0.5">{cls}</p>
+                  <span className="inline-block mt-1.5 bg-white/20 text-white text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg">{uid}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 space-y-6">
+
+              {/* ── Attendance Summary ── */}
+              {att && att.total > 0 && (
                 <div>
-                  <p className="text-lg font-black text-white leading-tight">{fullName || '—'}</p>
-                  <p className="text-sm text-blue-200 mt-0.5">{data?.class ?? '—'}</p>
-                  <span className="inline-block mt-1.5 bg-white/20 text-white text-xs font-mono font-semibold px-2.5 py-0.5 rounded-lg">
-                    {data?.student_id ?? data?.uniqueId ?? '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Fields grid */}
-            <div className="p-5 grid grid-cols-2 gap-4">
-              {fields.map(({ icon: Icon, label, value }) => (
-                value && value !== '—' ? (
-                  <div key={label} className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <Icon size={11} className="text-gray-400 shrink-0" />
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 truncate">{label}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-800 break-words">{value}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Attendance This Month</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'Present', value: att.present, color: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+                      { label: 'Late',    value: att.late,    color: 'bg-amber-50 text-amber-700 border-amber-100' },
+                      { label: 'Absent',  value: att.absent,  color: 'bg-red-50 text-red-600 border-red-100' },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className={`rounded-xl border p-3 text-center ${color}`}>
+                        <p className="text-2xl font-black">{value}</p>
+                        <p className="text-xs font-semibold mt-0.5 opacity-80">{label}</p>
+                      </div>
+                    ))}
                   </div>
-                ) : null
-              ))}
-            </div>
+                  {att.total > 0 && (
+                    <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden flex">
+                      <div className="bg-emerald-500 h-full transition-all" style={{ width: `${(att.present / att.total) * 100}%` }} />
+                      <div className="bg-amber-400 h-full transition-all" style={{ width: `${(att.late / att.total) * 100}%` }} />
+                      <div className="bg-red-400 h-full transition-all" style={{ width: `${(att.absent / att.total) * 100}%` }} />
+                    </div>
+                  )}
+                </div>
+              )}
 
-            {/* About section */}
-            {data?.about && (
-              <div className="px-5 pb-5">
-                <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1.5">About</p>
-                  <p className="text-sm text-gray-700 leading-relaxed">{data.about}</p>
+              {/* ── Quick stats ── */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-blue-50 border border-blue-100 p-3.5">
+                  <p className="text-2xl font-black text-blue-700">{assignmentCount}</p>
+                  <p className="text-xs font-semibold text-blue-500 mt-0.5">Class Assignments</p>
+                </div>
+                <div className="rounded-xl bg-purple-50 border border-purple-100 p-3.5">
+                  <p className="text-2xl font-black text-purple-700">{results.length}</p>
+                  <p className="text-xs font-semibold text-purple-500 mt-0.5">Result Records</p>
                 </div>
               </div>
-            )}
+
+              {/* ── Recent Results ── */}
+              {results.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Recent Results</p>
+                  <div className="rounded-xl border border-gray-100 overflow-hidden divide-y divide-gray-50">
+                    {results.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                            <BookOpen size={13} className="text-blue-600" />
+                          </div>
+                          <p className="text-sm font-medium text-gray-800 truncate">{r.subject}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-sm font-bold text-gray-700">{r.totalScore}%</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-lg ${gradeColor(r.grade)}`}>{r.grade ?? '—'}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Personal Info ── */}
+              {personalFields.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Personal Information</p>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    {personalFields.map(({ icon: Icon, label, value }) => (
+                      <div key={label} className="min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Icon size={11} className="text-gray-400 shrink-0" />
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+                        </div>
+                        <p className="text-sm font-semibold text-gray-800 break-words">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── About ── */}
+              {data?.student?.about && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">About</p>
+                  <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
+                    <p className="text-sm text-gray-700 leading-relaxed">{data.student.about}</p>
+                  </div>
+                </div>
+              )}
+
+            </div>
           </div>
         )}
       </div>
