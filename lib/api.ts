@@ -242,6 +242,8 @@ export const endpoints = {
     attendanceStudents: '/attendance/staff/students',
     attendanceStudentsDates: '/attendance/staff/students/history-dates',
     attendanceScanClockIn: '/attendance/staff/scan-clock-in',
+    attendanceFaceClockIn: '/attendance/face-clock-in',
+    attendanceFaceEnroll: '/attendance/face-enroll',
     leaveRequest: '/leave/request',
     leaveMyLeaves: '/leave/my',
     leaveBalance: '/leave/balance',

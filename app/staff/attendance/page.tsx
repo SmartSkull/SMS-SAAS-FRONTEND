@@ -4,8 +4,10 @@ import {
   MapPin, Clock, LogIn, LogOut, AlertCircle, CheckCircle, Timer,
   Users, Loader2, CalendarDays, ChevronRight, History,
   CheckCircle2, AlertOctagon, TrendingUp, ChevronDown, ChevronUp,
-  ScanLine, Navigation,
+  ScanLine, Navigation, ScanFace,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+const FaceAttendanceModal = dynamic(() => import('@/components/ui/FaceAttendanceModal'), { ssr: false });
 import { useStaffAttendance, useStaffAttendanceHistory } from '@/hooks/attendance';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -246,12 +248,13 @@ function ProximityMap({
 ───────────────────────────────────────────── */
 function TodayHero({
   record, location, loading, busy, geoLoading, geoError,
-  onClockIn, onClockOut, school, staffCoords,
+  onClockIn, onClockOut, school, staffCoords, onFaceClockIn,
 }: {
   record: any; location: any; loading: boolean; busy: boolean;
   geoLoading: boolean; geoError: string;
   onClockIn: () => void; onClockOut: () => void; school: any;
   staffCoords: { lat: number; lng: number } | null;
+  onFaceClockIn: () => void;
 }) {
   const primary = school?.primaryColor || '#2563eb';
   const statusCfg = record?.status ? STATUS_CFG[record.status as AttendanceStatus] : null;
@@ -348,14 +351,23 @@ function TodayHero({
             )}
 
             {!record?.clockIn && (
-              <button
-                onClick={onClockIn}
-                disabled={busy || !location}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-white text-gray-900 py-3.5 font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {busy ? <Timer size={17} className="animate-spin" /> : <LogIn size={17} />}
-                {geoLoading ? 'Getting location…' : 'Clock In'}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={onClockIn}
+                  disabled={busy || !location}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white text-gray-900 py-3.5 font-bold text-sm shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {busy ? <Timer size={17} className="animate-spin" /> : <LogIn size={17} />}
+                  {geoLoading ? 'Getting location…' : 'Clock In with Location'}
+                </button>
+                <button
+                  onClick={onFaceClockIn}
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/20 border border-white/30 text-white py-3 font-bold text-sm hover:bg-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed backdrop-blur"
+                >
+                  <ScanFace size={17} /> Clock In with Face
+                </button>
+              </div>
             )}
             {record?.clockIn && !record?.clockOut && (
               <button
@@ -878,6 +890,7 @@ export default function StaffAttendancePage() {
   const [geoError, setGeoError]       = useState('');
   const [geoLoading, setGeoLoading]   = useState(false);
   const [staffCoords, setStaffCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [showFaceModal, setShowFaceModal] = useState(false);
 
   // Watch position continuously so the map updates live
   useEffect(() => {
@@ -931,7 +944,19 @@ export default function StaffAttendancePage() {
         onClockOut={clockOut}
         school={school}
         staffCoords={staffCoords}
+        onFaceClockIn={() => setShowFaceModal(true)}
       />
+
+      {/* Face Attendance Modal */}
+      {showFaceModal && (
+        <FaceAttendanceModal
+          primaryColor={school?.primaryColor}
+          clockInEndpoint={endpoints.staff.attendanceFaceClockIn}
+          enrollEndpoint={endpoints.staff.attendanceFaceEnroll}
+          onClose={() => setShowFaceModal(false)}
+          onClockedIn={() => setShowFaceModal(false)}
+        />
+      )}
 
       {/* Summary + Personal History */}
       <div className="grid gap-5 lg:grid-cols-3">

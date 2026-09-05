@@ -18,9 +18,12 @@ interface Props {
   onClose: () => void;
   onClockedIn: (message: string) => void;
   primaryColor?: string;
+  /** Override default student endpoints for staff use */
+  clockInEndpoint?: string;
+  enrollEndpoint?: string;
 }
 
-export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor = '#2563eb' }: Props) {
+export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor = '#2563eb', clockInEndpoint, enrollEndpoint }: Props) {
   const videoRef  = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -131,7 +134,7 @@ export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor
     try {
       const form = new FormData();
       form.append('photo', blob, 'face.jpg');
-      const res = await api.upload<any>(endpoints.student.attendanceFaceClockIn, form);
+      const res = await api.upload<any>(clockInEndpoint ?? endpoints.student.attendanceFaceClockIn, form);
       if (res?.enrolled === false) { setStage('not_enrolled'); setMessage(res.message ?? 'Face not registered.'); return; }
       if (res?.alreadyClockedIn)   { setStage('success');      setMessage('You have already clocked in today.'); return; }
       setStage('success');
@@ -161,7 +164,7 @@ export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor
     try {
       const form = new FormData();
       form.append('photo', blob, 'face.jpg');
-      const res = await api.upload<any>(endpoints.student.attendanceFaceEnroll, form);
+      const res = await api.upload<any>(enrollEndpoint ?? endpoints.student.attendanceFaceEnroll, form);
       setStage('enrolled');
       setMessage(res?.message ?? 'Face enrolled! You can now clock in with your face.');
     } catch (e: any) {
