@@ -72,38 +72,44 @@ function BubbleField() {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
 
   useEffect(() => {
-    // Generate an initial set of bubbles staggered across the panel
-    const initial: Bubble[] = Array.from({ length: 14 }, (_, i) => ({
+    // Start with just 5 bubbles, staggered so they're already mid-flight
+    const initial: Bubble[] = Array.from({ length: 5 }, (_, i) => ({
       id: i,
-      text: FACTS[i % FACTS.length],
-      left: 4 + (i * 7) % 90,
-      size: 70 + Math.floor((i * 37) % 80),
-      duration: 12 + (i * 3) % 14,
-      delay: -(i * 2.1),   // negative delay = already in progress
-      opacity: 0.18 + (i % 5) * 0.07,
+      text: FACTS[(i * 6) % FACTS.length],
+      left: 8 + i * 17,          // evenly spread: 8, 25, 42, 59, 76
+      size: 80 + (i % 3) * 25,   // 80, 105, 130, 80, 105
+      duration: 16 + i * 3,
+      delay: -(4 + i * 3),       // already in progress
+      opacity: 0.20 + (i % 3) * 0.06,
     }));
     setBubbles(initial);
 
-    // Periodically add new bubbles
-    let counter = 14;
+    // Add one new bubble every 7 seconds
+    let counter = 5;
     const interval = setInterval(() => {
       setBubbles(prev => {
-        // Remove bubbles that have been alive long enough
-        const next = prev.filter(b => b.delay >= 0 || Math.abs(b.delay) < b.duration);
         const fact = FACTS[counter % FACTS.length];
         counter++;
-        next.push({
-          id: counter,
-          text: fact,
-          left: 4 + Math.floor(Math.random() * 88),
-          size: 72 + Math.floor(Math.random() * 76),
-          duration: 13 + Math.floor(Math.random() * 12),
-          delay: 0,
-          opacity: 0.18 + Math.random() * 0.28,
-        });
-        return next.slice(-20); // cap at 20 bubbles
+        const size = 80 + Math.floor(Math.random() * 60); // 80–140px
+        // Keep bubble fully inside: max left = 100 - size/containerWidth*100
+        // Approximate container as 50vw → size/(.5vw). Simpler: clamp to 75%
+        const maxLeft = Math.max(5, 78 - Math.round((size / 600) * 100));
+        const left = 5 + Math.floor(Math.random() * maxLeft);
+        const next = [
+          ...prev,
+          {
+            id: counter,
+            text: fact,
+            left,
+            size,
+            duration: 15 + Math.floor(Math.random() * 10),
+            delay: 0,
+            opacity: 0.20 + Math.random() * 0.22,
+          },
+        ];
+        return next.slice(-8); // never more than 8 at once
       });
-    }, 4000);
+    }, 7000);
 
     return () => clearInterval(interval);
   }, []);
@@ -112,13 +118,13 @@ function BubbleField() {
     <>
       <style>{`
         @keyframes bubbleRise {
-          0%   { transform: translateY(0) scale(1); opacity: var(--op); }
-          10%  { opacity: calc(var(--op) * 1.4); }
+          0%   { transform: translateY(0) scale(1);    opacity: var(--op); }
+          12%  { opacity: calc(var(--op) * 1.3); }
           80%  { opacity: var(--op); }
-          100% { transform: translateY(-110vh) scale(0.85); opacity: 0; }
+          100% { transform: translateY(-105vh) scale(0.8); opacity: 0; }
         }
       `}</style>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
         {bubbles.map(b => (
           <div
             key={b.id}
@@ -128,7 +134,7 @@ function BubbleField() {
               width:  b.size,
               height: b.size,
               '--op': b.opacity,
-              background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.22), rgba(255,255,255,0.06))`,
+              background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.20), rgba(255,255,255,0.05))`,
               border: '1px solid rgba(255,255,255,0.18)',
               backdropFilter: 'blur(2px)',
               animation: `bubbleRise ${b.duration}s linear ${b.delay}s both`,
