@@ -379,6 +379,8 @@ export const endpoints = {
     transportParentTrackingLink: (studentUniqueId: string) => `/admin/transport/students/${studentUniqueId}/parent-location`,
     adminClassTimetable: '/admin/timetable/class',
     adminExamTimetable: '/admin/timetable/exam',
+    adminCurriculumLessonPlans: '/admin/curriculum/lesson-plans',
+    adminCurriculumReview: (id: string) => `/admin/curriculum/lesson-plans/${id}/review`,
   },
   public: {
     currentPeriod: '/public/current-period',

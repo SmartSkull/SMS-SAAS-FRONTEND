@@ -281,6 +281,10 @@ export interface LessonPlan {
   resources?: string; evaluation?: string; date?: string; duration?: number;
   topic?: string; topicId?: string; subject?: string; subjectId?: string;
   classRoom?: string; classRoomId?: string;
+  status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'NEEDS_REVISION';
+  reviewComment?: string | null;
+  reviewedAt?: string | null;
+  staffName?: string;
 }
 export interface WeeklyScheme {
   id: string; week: number; term: string; session: string; content: string;
@@ -316,9 +320,10 @@ export function useCurriculum() {
 
   const saveLessonPlan = async (body: any) => { await api.post(endpoints.staff.curriculumLessonPlans, body); await loadAll(); };
   const deleteLessonPlan = async (id: string) => { await api.delete(`${endpoints.staff.curriculumLessonPlans}/${id}`); await loadAll(); };
+  const submitLessonPlan = async (id: string) => { await api.post(`${endpoints.staff.curriculumLessonPlans}/${id}/submit`, {}); await loadAll(); };
 
   const saveWeeklyScheme = async (body: any) => { await api.post(endpoints.staff.curriculumWeeklySchemes, body); await loadAll(); };
   const deleteWeeklyScheme = async (id: string) => { await api.delete(`${endpoints.staff.curriculumWeeklySchemes}/${id}`); await loadAll(); };
 
-  return { topics, lessonPlans, weeklySchemes, loading, loadAll, saveTopic, deleteTopic, saveLessonPlan, deleteLessonPlan, saveWeeklyScheme, deleteWeeklyScheme };
+  return { topics, lessonPlans, weeklySchemes, loading, loadAll, saveTopic, deleteTopic, saveLessonPlan, deleteLessonPlan, submitLessonPlan, saveWeeklyScheme, deleteWeeklyScheme };
 }

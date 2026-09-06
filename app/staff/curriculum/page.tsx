@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import {
   BookOpen, FileText, CalendarDays, Plus, Trash2, Save, X,
   Search, ChevronDown, ChevronUp, Clock, Tag, GraduationCap,
-  ListChecks, Layers, Edit2, AlertCircle,
+  ListChecks, Layers, Edit2, AlertCircle, Send, CheckCircle2,
+  RefreshCw, MessageSquare,
 } from 'lucide-react';
 import { useCurriculum, type CurriculumTopic, type LessonPlan, type WeeklyScheme } from '@/hooks/staff';
 import { useSchoolData } from '@/hooks/useSchoolData';
@@ -39,6 +40,27 @@ function Badge({ children, color = 'gray' }: { children: React.ReactNode; color?
   return (
     <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold ${map[color] ?? map.gray}`}>
       {children}
+    </span>
+  );
+}
+
+/* ─── Status Badge ────────────────────────────────────────────────────── */
+type PlanStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'NEEDS_REVISION';
+
+const STATUS_CFG: Record<PlanStatus, { label: string; icon: React.ElementType; cls: string }> = {
+  DRAFT:          { label: 'Draft',           icon: Edit2,         cls: 'bg-gray-100 text-gray-600' },
+  SUBMITTED:      { label: 'Under Review',    icon: Clock,         cls: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  APPROVED:       { label: 'Approved',        icon: CheckCircle2,  cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+  NEEDS_REVISION: { label: 'Needs Revision',  icon: RefreshCw,     cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
+};
+
+function StatusBadge({ status }: { status?: string }) {
+  const s = (status ?? 'DRAFT') as PlanStatus;
+  const cfg = STATUS_CFG[s] ?? STATUS_CFG.DRAFT;
+  const Icon = cfg.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold ${cfg.cls}`}>
+      <Icon size={10} /> {cfg.label}
     </span>
   );
 }
@@ -109,7 +131,7 @@ function FormShell({
 ═══════════════════════════════════════════════════════════════════════ */
 export default function CurriculumPage() {
   const toast = useToast();
-  const { topics, lessonPlans, weeklySchemes, loading, saveTopic, deleteTopic, saveLessonPlan, deleteLessonPlan, saveWeeklyScheme, deleteWeeklyScheme } = useCurriculum();
+  const { topics, lessonPlans, weeklySchemes, loading, saveTopic, deleteTopic, saveLessonPlan, deleteLessonPlan, submitLessonPlan, saveWeeklyScheme, deleteWeeklyScheme } = useCurriculum();
   const schoolData = useSchoolData();
   const [tab, setTab] = useState<Tab>('topics');
   // Classes and subjects still come from staff-specific endpoints (scoped to teacher's school + class)
@@ -437,34 +459,67 @@ export default function CurriculumPage() {
               <Empty icon={FileText} label={search ? 'No lesson plans match your search.' : 'No lesson plans yet. Add one above.'} />
             ) : (
               <div className="space-y-3">
-                {filteredLessons.map(p => (
-                  <div key={p.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:border-blue-100 transition-colors group">
+                {filteredLessons.map(p => {
+                    const isEditable = !p.status || p.status === 'DRAFT' || p.status === 'NEEDS_REVISION';
+                    return (
+                  <div key={p.id} className={clsx(
+                    'bg-white rounded-2xl border shadow-sm p-4 transition-colors group',
+                    p.status === 'NEEDS_REVISION' ? 'border-amber-200 bg-amber-50/20' :
+                    p.status === 'APPROVED'       ? 'border-emerald-200 bg-emerald-50/10' :
+                    p.status === 'SUBMITTED'      ? 'border-blue-200' : 'border-gray-100 hover:border-blue-100'
+                  )}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1.5">
                           <p className="font-semibold text-gray-900 text-sm">{p.title}</p>
-                          {p.subject    && <Badge color="green"><Tag size={9} /> {p.subject}</Badge>}
-                          {p.classRoom  && <Badge color="amber"><GraduationCap size={9} /> {p.classRoom}</Badge>}
-                          {p.duration   && <Badge color="blue"><Clock size={9} /> {p.duration} mins</Badge>}
+                          <StatusBadge status={p.status} />
+                          {p.subject   && <Badge color="green"><Tag size={9} /> {p.subject}</Badge>}
+                          {p.classRoom && <Badge color="amber"><GraduationCap size={9} /> {p.classRoom}</Badge>}
+                          {p.duration  && <Badge color="blue"><Clock size={9} /> {p.duration} mins</Badge>}
                         </div>
                         {p.date && <p className="text-xs text-gray-400 mb-1.5">{new Date(p.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</p>}
                         {p.topic && <p className="text-xs text-gray-400 mb-1"><span className="font-medium text-gray-500">Topic:</span> {p.topic}</p>}
                         {p.objectives && <p className="text-sm text-gray-500 line-clamp-2"><span className="font-medium text-gray-600">Objectives:</span> {p.objectives}</p>}
+                        {/* Review comment from admin */}
+                        {p.reviewComment && (
+                          <div className="mt-2 flex items-start gap-1.5 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
+                            <MessageSquare size={13} className="text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-0.5">Admin Review</p>
+                              <p className="text-xs text-amber-800">{p.reviewComment}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => { setLessonForm({ id: p.id, title: p.title, objectives: p.objectives ?? '', content: p.content ?? '', resources: p.resources ?? '', evaluation: p.evaluation ?? '', date: p.date ?? '', duration: p.duration?.toString() ?? '', topicId: p.topicId ?? '', subjectId: p.subjectId ?? '', classRoomId: p.classRoomId ?? '' }); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                          className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition">
-                          <Edit2 size={12} /> Edit
-                        </button>
-                        <button onClick={() => handleDelete(p.id, deleteLessonPlan)} disabled={deleting === p.id}
-                          className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
-                          <Trash2 size={14} />
-                        </button>
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        {/* Submit for review — only for DRAFT or NEEDS_REVISION */}
+                        {isEditable && (
+                          <button
+                            onClick={() => handle(() => submitLessonPlan(p.id))}
+                            disabled={saving}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                          >
+                            <Send size={11} /> Submit
+                          </button>
+                        )}
+                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {isEditable && (
+                            <button
+                              onClick={() => { setLessonForm({ id: p.id, title: p.title, objectives: p.objectives ?? '', content: p.content ?? '', resources: p.resources ?? '', evaluation: p.evaluation ?? '', date: p.date ?? '', duration: p.duration?.toString() ?? '', topicId: p.topicId ?? '', subjectId: p.subjectId ?? '', classRoomId: p.classRoomId ?? '' }); setFormOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                              className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition">
+                              <Edit2 size={12} /> Edit
+                            </button>
+                          )}
+                          <button onClick={() => handleDelete(p.id, deleteLessonPlan)} disabled={deleting === p.id}
+                            className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                ))}
+                    );
+                  })}
               </div>
             )}
           </>

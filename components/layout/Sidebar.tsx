@@ -73,6 +73,7 @@ const MENUS = {
     { icon: Newspaper, label: 'Posts', path: '/admin/posts' },
     { icon: Mail, label: 'Messages', path: '/admin/messages' },
     { icon: Bell, label: 'Notifications', path: '/admin/notifications' },
+    { icon: BookCopy, label: 'Curriculum', path: '/admin/curriculum' },
     { icon: School, label: 'School Info', path: '/admin/school' },
     { icon: Settings, label: 'Settings', path: '/admin/settings' },
   ],

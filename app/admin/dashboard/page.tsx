@@ -1,5 +1,5 @@
 'use client';
-import { Users, UserCheck, Activity, User, UserPlus, BookOpen, ClipboardList, CreditCard, MessageSquare, Settings, GraduationCap, Bell, BarChart2, CheckSquare, CalendarDays, Library, Calendar } from 'lucide-react';
+import { Users, UserCheck, Activity, User, UserPlus, BookOpen, ClipboardList, CreditCard, MessageSquare, Settings, GraduationCap, Bell, BarChart2, CheckSquare, CalendarDays, Library, Calendar, FileText } from 'lucide-react';
 import { useAdminDashboard } from '@/hooks/admin';
 import { useAuth } from '@/hooks/useAuth';
 import { getImageUrl } from '@/lib/api';
@@ -19,6 +19,7 @@ const QUICK_ACTIONS = [
   { label: 'CBT',            href: '/admin/cbt',          icon: BookOpen,      color: 'bg-rose-600 hover:bg-rose-700 text-white' },
   { label: 'Notifications',  href: '/admin/notifications',icon: Bell,          color: 'bg-amber-500 hover:bg-amber-600 text-white' },
   { label: 'Timetable',      href: '/admin/timetable',    icon: Calendar,      color: 'bg-sky-600 hover:bg-sky-700 text-white' },
+  { label: 'Curriculum',     href: '/admin/curriculum',   icon: FileText,      color: 'bg-violet-600 hover:bg-violet-700 text-white' },
   { label: 'Settings',       href: '/admin/settings',     icon: Settings,      color: 'bg-gray-700 hover:bg-gray-800 text-white' },
 ];
 
