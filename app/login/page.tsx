@@ -15,6 +15,143 @@ const TABS: { id: Role; label: string; icon: React.ComponentType<{ size?: number
   { id: 'admin', label: 'Admin', icon: ShieldCheck },
 ];
 
+/* ──────────────────────────────────────────────────────────────
+   KNOWLEDGE BUBBLES
+   Float from the bottom to the top of the right panel carrying
+   educational facts across different school subjects.
+────────────────────────────────────────────────────────────── */
+const FACTS = [
+  '1 + 1 = 2',
+  'A noun is a name of a person, place or thing',
+  'CO₂ is Carbon Dioxide',
+  'Water boils at 100°C',
+  'The Earth orbits the Sun',
+  'Photosynthesis makes food for plants',
+  'H₂O is the formula for water',
+  'Africa has 54 countries',
+  'The speed of light is 3×10⁸ m/s',
+  'Shakespeare wrote Hamlet',
+  'Gravity pulls objects downward',
+  'DNA carries genetic information',
+  'Nigeria gained independence in 1960',
+  'The heart pumps blood around the body',
+  '2 × 2 = 4',
+  'An adjective describes a noun',
+  'The Amazon is the world\'s largest rainforest',
+  'Sound travels at 343 m/s in air',
+  'Chlorophyll gives leaves their green colour',
+  'A verb is an action word',
+  '3² = 9',
+  'Mammals are warm-blooded',
+  'The Sahara is the largest hot desert',
+  'Osmosis is movement of water across a membrane',
+  'A triangle has 3 sides',
+  'NaCl is table salt',
+  'Romeo and Juliet is a tragedy',
+  'Mitosis produces identical cells',
+  'The Pacific Ocean is the largest ocean',
+  'π ≈ 3.14159',
+  'Light travels faster than sound',
+  'A polygon has straight sides',
+  'Prokaryotes have no nucleus',
+  'An ecosystem includes living and non-living things',
+  'Alliteration repeats initial consonant sounds',
+];
+
+interface Bubble {
+  id: number;
+  text: string;
+  left: number;       // % from left
+  size: number;       // px diameter
+  duration: number;   // animation seconds
+  delay: number;      // animation delay seconds
+  opacity: number;
+}
+
+function BubbleField() {
+  const [bubbles, setBubbles] = useState<Bubble[]>([]);
+
+  useEffect(() => {
+    // Generate an initial set of bubbles staggered across the panel
+    const initial: Bubble[] = Array.from({ length: 14 }, (_, i) => ({
+      id: i,
+      text: FACTS[i % FACTS.length],
+      left: 4 + (i * 7) % 90,
+      size: 70 + Math.floor((i * 37) % 80),
+      duration: 12 + (i * 3) % 14,
+      delay: -(i * 2.1),   // negative delay = already in progress
+      opacity: 0.18 + (i % 5) * 0.07,
+    }));
+    setBubbles(initial);
+
+    // Periodically add new bubbles
+    let counter = 14;
+    const interval = setInterval(() => {
+      setBubbles(prev => {
+        // Remove bubbles that have been alive long enough
+        const next = prev.filter(b => b.delay >= 0 || Math.abs(b.delay) < b.duration);
+        const fact = FACTS[counter % FACTS.length];
+        counter++;
+        next.push({
+          id: counter,
+          text: fact,
+          left: 4 + Math.floor(Math.random() * 88),
+          size: 72 + Math.floor(Math.random() * 76),
+          duration: 13 + Math.floor(Math.random() * 12),
+          delay: 0,
+          opacity: 0.18 + Math.random() * 0.28,
+        });
+        return next.slice(-20); // cap at 20 bubbles
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <>
+      <style>{`
+        @keyframes bubbleRise {
+          0%   { transform: translateY(0) scale(1); opacity: var(--op); }
+          10%  { opacity: calc(var(--op) * 1.4); }
+          80%  { opacity: var(--op); }
+          100% { transform: translateY(-110vh) scale(0.85); opacity: 0; }
+        }
+      `}</style>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {bubbles.map(b => (
+          <div
+            key={b.id}
+            className="absolute bottom-0 rounded-full flex items-center justify-center text-center"
+            style={{
+              left: `${b.left}%`,
+              width:  b.size,
+              height: b.size,
+              '--op': b.opacity,
+              background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.22), rgba(255,255,255,0.06))`,
+              border: '1px solid rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(2px)',
+              animation: `bubbleRise ${b.duration}s linear ${b.delay}s both`,
+              padding: '8px',
+            } as React.CSSProperties}
+          >
+            <span
+              className="font-semibold leading-tight select-none"
+              style={{
+                fontSize: b.size < 90 ? '9px' : b.size < 120 ? '10px' : '11px',
+                color: 'rgba(255,255,255,0.82)',
+                textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+              }}
+            >
+              {b.text}
+            </span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export default function LoginPage() {
   const { tab, switchTab, loading, form, setForm, loginId, setLoginId, suggestions, showSug, setShowSug, handleIdChange, handleSubmit } = useLogin();
   const { school } = useSelectedSchool();
@@ -68,6 +205,7 @@ export default function LoginPage() {
             }}
           />
           <div className="absolute inset-0 bg-black/80" />
+          <BubbleField />
           <div className="absolute inset-0 flex items-center justify-center p-8">
             <div className="text-white max-w-md">
               <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
@@ -332,6 +470,7 @@ export default function LoginPage() {
           }}
         />
         <div className="absolute inset-0 bg-black/80" />
+        <BubbleField />
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <div className="text-white max-w-md">
             <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
