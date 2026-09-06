@@ -121,13 +121,38 @@ export default function CurriculumPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   useEffect(() => setMounted(true), []);
 
-  const emptyTopic  = { id: '', title: '', description: '', week: '', term: '', session: '', subjectId: '', classRoomId: '' };
-  const emptyLesson = { id: '', title: '', objectives: '', content: '', resources: '', evaluation: '', date: '', duration: '', topicId: '', subjectId: '', classRoomId: '' };
-  const emptyScheme = { id: '', week: '', term: '', session: '', content: '', subjectId: '', classRoomId: '' };
+  // ── Shared context — carries class/subject/term/session across all tabs ──
+  const [ctx, setCtx] = useState({ classRoomId: '', subjectId: '', term: '', session: '' });
 
-  const [topicForm,  setTopicForm]  = useState(emptyTopic);
-  const [lessonForm, setLessonForm] = useState(emptyLesson);
-  const [schemeForm, setSchemeForm] = useState(emptyScheme);
+  const emptyTopic  = () => ({ id: '', title: '', description: '', week: '', term: ctx.term, session: ctx.session, subjectId: ctx.subjectId, classRoomId: ctx.classRoomId });
+  const emptyLesson = () => ({ id: '', title: '', objectives: '', content: '', resources: '', evaluation: '', date: '', duration: '', topicId: '', subjectId: ctx.subjectId, classRoomId: ctx.classRoomId });
+  const emptyScheme = () => ({ id: '', week: '', term: ctx.term, session: ctx.session, content: '', subjectId: ctx.subjectId, classRoomId: ctx.classRoomId });
+
+  const [topicForm,  setTopicForm]  = useState(() => emptyTopic());
+  const [lessonForm, setLessonForm] = useState(() => emptyLesson());
+  const [schemeForm, setSchemeForm] = useState(() => emptyScheme());
+
+  // When shared ctx changes, push it into whichever form is active
+  // (only if that form field is currently empty — don't overwrite user edits)
+  useEffect(() => {
+    setTopicForm(f  => ({ ...f, classRoomId: f.classRoomId || ctx.classRoomId, subjectId: f.subjectId || ctx.subjectId, term: f.term || ctx.term, session: f.session || ctx.session }));
+    setLessonForm(f => ({ ...f, classRoomId: f.classRoomId || ctx.classRoomId, subjectId: f.subjectId || ctx.subjectId }));
+    setSchemeForm(f => ({ ...f, classRoomId: f.classRoomId || ctx.classRoomId, subjectId: f.subjectId || ctx.subjectId, term: f.term || ctx.term, session: f.session || ctx.session }));
+  }, [ctx]);
+
+  // Helper: update a context field and sync back
+  const setTopicCtxField = (key: keyof typeof ctx, value: string) => {
+    setCtx(c => ({ ...c, [key]: value }));
+    setTopicForm(f => ({ ...f, [key]: value }));
+  };
+  const setLessonCtxField = (key: 'classRoomId' | 'subjectId', value: string) => {
+    setCtx(c => ({ ...c, [key]: value }));
+    setLessonForm(f => ({ ...f, [key]: value }));
+  };
+  const setSchemeCtxField = (key: keyof typeof ctx, value: string) => {
+    setCtx(c => ({ ...c, [key]: value }));
+    setSchemeForm(f => ({ ...f, [key]: value }));
+  };
 
   useEffect(() => {
     api.get<any>(endpoints.staff.classes).then(r => setClasses((r.data ?? []).map((c: any) => ({ id: c.id.toString(), name: c.name }))));
@@ -138,7 +163,15 @@ export default function CurriculumPage() {
 
   const handle = async (fn: () => Promise<void>) => {
     setSaving(true);
-    try { await fn(); toast.success('Saved successfully'); setFormOpen(false); }
+    try {
+      await fn();
+      toast.success('Saved successfully');
+      setFormOpen(false);
+      // Reset forms but keep the shared context pre-filled
+      setTopicForm(emptyTopic());
+      setLessonForm(emptyLesson());
+      setSchemeForm(emptyScheme());
+    }
     catch { toast.error('Failed to save'); }
     finally { setSaving(false); }
   };
@@ -180,7 +213,7 @@ export default function CurriculumPage() {
         {TABS.map(([key, Icon, label, count]) => (
           <button
             key={key}
-            onClick={() => { setTab(key); setSearch(''); }}
+            onClick={() => { setTab(key); setSearch(''); setFormOpen(true); }}
             className={clsx(
               'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all',
               tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
@@ -198,6 +231,40 @@ export default function CurriculumPage() {
         ))}
       </div>
 
+      {/* Context strip — shows active selections shared across all tabs */}
+      {(ctx.classRoomId || ctx.subjectId || ctx.term || ctx.session) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-blue-50 border border-blue-100 px-4 py-2.5">
+          <span className="text-xs font-semibold text-blue-600 shrink-0">Active context:</span>
+          {ctx.classRoomId && (
+            <span className="flex items-center gap-1 text-xs bg-white border border-blue-200 text-blue-700 rounded-lg px-2.5 py-1 font-semibold">
+              <GraduationCap size={11} />
+              {classes.find(c => c.id === ctx.classRoomId)?.name ?? ctx.classRoomId}
+              <button onClick={() => setCtx(c => ({ ...c, classRoomId: '' }))} className="ml-1 text-blue-400 hover:text-blue-700"><X size={10} /></button>
+            </span>
+          )}
+          {ctx.subjectId && (
+            <span className="flex items-center gap-1 text-xs bg-white border border-blue-200 text-blue-700 rounded-lg px-2.5 py-1 font-semibold">
+              <Tag size={11} />
+              {subjects.find(s => s.id === ctx.subjectId)?.course ?? ctx.subjectId}
+              <button onClick={() => setCtx(c => ({ ...c, subjectId: '' }))} className="ml-1 text-blue-400 hover:text-blue-700"><X size={10} /></button>
+            </span>
+          )}
+          {ctx.term && (
+            <span className="flex items-center gap-1 text-xs bg-white border border-blue-200 text-blue-700 rounded-lg px-2.5 py-1 font-semibold">
+              {ctx.term}
+              <button onClick={() => setCtx(c => ({ ...c, term: '' }))} className="ml-1 text-blue-400 hover:text-blue-700"><X size={10} /></button>
+            </span>
+          )}
+          {ctx.session && (
+            <span className="flex items-center gap-1 text-xs bg-white border border-blue-200 text-blue-700 rounded-lg px-2.5 py-1 font-semibold">
+              {ctx.session}
+              <button onClick={() => setCtx(c => ({ ...c, session: '' }))} className="ml-1 text-blue-400 hover:text-blue-700"><X size={10} /></button>
+            </span>
+          )}
+          <span className="text-[10px] text-blue-400 ml-auto">Applied to all sections</span>
+        </div>
+      )}
+
       {/* Content */}
       <div className="space-y-4">
 
@@ -207,8 +274,8 @@ export default function CurriculumPage() {
             <FormShell
               title="Topic" icon={BookOpen}
               open={formOpen} onToggle={() => setFormOpen(v => !v)}
-              onSave={() => handle(() => saveTopic(topicForm).then(() => setTopicForm(emptyTopic)))}
-              onCancel={() => { setTopicForm(emptyTopic); setFormOpen(false); }}
+              onSave={() => handle(() => saveTopic(topicForm).then(() => setTopicForm(emptyTopic())))}
+              onCancel={() => { setTopicForm(emptyTopic()); setFormOpen(false); }}
               saving={saving} canSave={!!topicForm.title} editMode={!!topicForm.id}
             >
               <Field label="Topic Title *">
@@ -221,13 +288,13 @@ export default function CurriculumPage() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Class">
-                  <select value={topicForm.classRoomId} onChange={e => setTopicForm(f => ({ ...f, classRoomId: e.target.value }))} className={inputCls}>
+                  <select value={topicForm.classRoomId} onChange={e => setTopicCtxField('classRoomId', e.target.value)} className={inputCls}>
                     <option value="">All classes</option>
                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </Field>
                 <Field label="Subject">
-                  <select value={topicForm.subjectId} onChange={e => setTopicForm(f => ({ ...f, subjectId: e.target.value }))} className={inputCls}>
+                  <select value={topicForm.subjectId} onChange={e => setTopicCtxField('subjectId', e.target.value)} className={inputCls}>
                     <option value="">All subjects</option>
                     {subjects.map(s => <option key={s.id} value={s.id}>{s.course}</option>)}
                   </select>
@@ -239,13 +306,13 @@ export default function CurriculumPage() {
                   </select>
                 </Field>
                 <Field label="Term">
-                  <select value={topicForm.term} onChange={e => setTopicForm(f => ({ ...f, term: e.target.value }))} className={inputCls}>
+                  <select value={topicForm.term} onChange={e => setTopicCtxField('term', e.target.value)} className={inputCls}>
                     <option value="">Select term</option>
                     {terms.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </Field>
                 <Field label="Session">
-                  <select value={topicForm.session} onChange={e => setTopicForm(f => ({ ...f, session: e.target.value }))} className={inputCls}>
+                  <select value={topicForm.session} onChange={e => setTopicCtxField('session', e.target.value)} className={inputCls}>
                     <option value="">Select session</option>
                     {sessions.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
@@ -308,8 +375,8 @@ export default function CurriculumPage() {
             <FormShell
               title="Lesson Plan" icon={FileText}
               open={formOpen} onToggle={() => setFormOpen(v => !v)}
-              onSave={() => handle(() => saveLessonPlan(lessonForm).then(() => setLessonForm(emptyLesson)))}
-              onCancel={() => { setLessonForm(emptyLesson); setFormOpen(false); }}
+              onSave={() => handle(() => saveLessonPlan(lessonForm).then(() => setLessonForm(emptyLesson())))}
+              onCancel={() => { setLessonForm(emptyLesson()); setFormOpen(false); }}
               saving={saving} canSave={!!lessonForm.title} editMode={!!lessonForm.id}
             >
               <Field label="Lesson Title *">
@@ -318,13 +385,13 @@ export default function CurriculumPage() {
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Class">
-                  <select value={lessonForm.classRoomId} onChange={e => setLessonForm(f => ({ ...f, classRoomId: e.target.value }))} className={inputCls}>
+                  <select value={lessonForm.classRoomId} onChange={e => setLessonCtxField('classRoomId', e.target.value)} className={inputCls}>
                     <option value="">Select class</option>
                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </Field>
                 <Field label="Subject">
-                  <select value={lessonForm.subjectId} onChange={e => setLessonForm(f => ({ ...f, subjectId: e.target.value }))} className={inputCls}>
+                  <select value={lessonForm.subjectId} onChange={e => setLessonCtxField('subjectId', e.target.value)} className={inputCls}>
                     <option value="">Select subject</option>
                     {subjects.map(s => <option key={s.id} value={s.id}>{s.course}</option>)}
                   </select>
@@ -407,20 +474,20 @@ export default function CurriculumPage() {
             <FormShell
               title="Weekly Scheme" icon={CalendarDays}
               open={formOpen} onToggle={() => setFormOpen(v => !v)}
-              onSave={() => handle(() => saveWeeklyScheme(schemeForm).then(() => setSchemeForm(emptyScheme)))}
-              onCancel={() => { setSchemeForm(emptyScheme); setFormOpen(false); }}
+              onSave={() => handle(() => saveWeeklyScheme(schemeForm).then(() => setSchemeForm(emptyScheme())))}
+              onCancel={() => { setSchemeForm(emptyScheme()); setFormOpen(false); }}
               saving={saving} canSave={!!schemeForm.week && !!schemeForm.term && !!schemeForm.session && !!schemeForm.content}
               editMode={!!schemeForm.id}
             >
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Class">
-                  <select value={schemeForm.classRoomId} onChange={e => setSchemeForm(f => ({ ...f, classRoomId: e.target.value }))} className={inputCls}>
+                  <select value={schemeForm.classRoomId} onChange={e => setSchemeCtxField('classRoomId', e.target.value)} className={inputCls}>
                     <option value="">All classes</option>
                     {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </Field>
                 <Field label="Subject">
-                  <select value={schemeForm.subjectId} onChange={e => setSchemeForm(f => ({ ...f, subjectId: e.target.value }))} className={inputCls}>
+                  <select value={schemeForm.subjectId} onChange={e => setSchemeCtxField('subjectId', e.target.value)} className={inputCls}>
                     <option value="">All subjects</option>
                     {subjects.map(s => <option key={s.id} value={s.id}>{s.course}</option>)}
                   </select>
@@ -432,14 +499,14 @@ export default function CurriculumPage() {
                   </select>
                 </Field>
                 <Field label="Term *">
-                  <select value={schemeForm.term} onChange={e => setSchemeForm(f => ({ ...f, term: e.target.value }))} className={inputCls}>
+                  <select value={schemeForm.term} onChange={e => setSchemeCtxField('term', e.target.value)} className={inputCls}>
                     <option value="">Select term</option>
                     {terms.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </Field>
                 <div className="col-span-2">
                   <Field label="Session *">
-                    <select suppressHydrationWarning value={schemeForm.session} onChange={e => setSchemeForm(f => ({ ...f, session: e.target.value }))} className={inputCls}>
+                    <select suppressHydrationWarning value={schemeForm.session} onChange={e => setSchemeCtxField('session', e.target.value)} className={inputCls}>
                       <option value="">Select session</option>
                       {sessions.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
