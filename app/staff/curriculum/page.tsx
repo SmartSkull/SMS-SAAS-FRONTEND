@@ -6,6 +6,7 @@ import {
   ListChecks, Layers, Edit2, AlertCircle,
 } from 'lucide-react';
 import { useCurriculum, type CurriculumTopic, type LessonPlan, type WeeklyScheme } from '@/hooks/staff';
+import { useSchoolData } from '@/hooks/useSchoolData';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import clsx from 'clsx';
@@ -109,11 +110,14 @@ function FormShell({
 export default function CurriculumPage() {
   const toast = useToast();
   const { topics, lessonPlans, weeklySchemes, loading, saveTopic, deleteTopic, saveLessonPlan, deleteLessonPlan, saveWeeklyScheme, deleteWeeklyScheme } = useCurriculum();
+  const schoolData = useSchoolData();
   const [tab, setTab] = useState<Tab>('topics');
-  const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
+  // Classes and subjects still come from staff-specific endpoints (scoped to teacher's school + class)
+  const [classes,  setClasses]  = useState<{ id: string; name: string }[]>([]);
   const [subjects, setSubjects] = useState<{ id: string; course: string }[]>([]);
-  const [sessions, setSessions] = useState<string[]>([]);
-  const [terms, setTerms] = useState<string[]>([]);
+  // Sessions and terms come from useSchoolData — already filtered by school slug
+  const sessions = schoolData.sessions;
+  const terms    = schoolData.terms;
   const [saving, setSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [formOpen, setFormOpen] = useState(true);
@@ -157,8 +161,6 @@ export default function CurriculumPage() {
   useEffect(() => {
     api.get<any>(endpoints.staff.classes).then(r => setClasses((r.data ?? []).map((c: any) => ({ id: c.id.toString(), name: c.name }))));
     api.get<any>(endpoints.staff.courses).then(r => setSubjects((r.data ?? []).map((s: any) => ({ id: s.course_id ?? s.id, course: s.course }))));
-    api.get<any>(endpoints.public.sessions).then(r => setSessions((r.data ?? []).map((s: any) => s.name)));
-    api.get<any>(endpoints.public.terms).then(r => setTerms([...new Set<string>((r.data ?? []).map((t: any) => t.name as string))]));
   }, []);
 
   const handle = async (fn: () => Promise<void>) => {
