@@ -518,6 +518,9 @@ export default function StudentPayments() {
   };
 
   const openReceipt = (p?: any) => {
+    // If called with a MouseEvent (from button onClick), treat as no argument
+    if (p && typeof p === 'object' && 'target' in p) p = undefined;
+
     if (!p && data?.reference) {
       // Always use the matching history item — it has the correct field names and values
       const histItem = data.history?.find((h: any) => h.reference === data.reference);
