@@ -68,7 +68,7 @@ interface Bubble {
   opacity: number;
 }
 
-function BubbleField() {
+function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'light'; primaryColor?: string }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
 
   useEffect(() => {
@@ -134,8 +134,12 @@ function BubbleField() {
               width:  b.size,
               height: b.size,
               '--op': b.opacity,
-              background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.20), rgba(255,255,255,0.05))`,
-              border: '1px solid rgba(255,255,255,0.18)',
+              background: variant === 'light'
+                ? `radial-gradient(circle at 35% 35%, ${primaryColor ?? '#2563eb'}18, ${primaryColor ?? '#2563eb'}06)`
+                : `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.20), rgba(255,255,255,0.05))`,
+              border: variant === 'light'
+                ? `1px solid ${primaryColor ?? '#2563eb'}20`
+                : '1px solid rgba(255,255,255,0.18)',
               backdropFilter: 'blur(2px)',
               animation: `bubbleRise ${b.duration}s linear ${b.delay}s both`,
               padding: '8px',
@@ -145,8 +149,10 @@ function BubbleField() {
               className="font-semibold leading-tight select-none"
               style={{
                 fontSize: b.size < 90 ? '9px' : b.size < 120 ? '10px' : '11px',
-                color: 'rgba(255,255,255,0.82)',
-                textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                color: variant === 'light'
+                  ? `${primaryColor ?? '#2563eb'}99`
+                  : 'rgba(255,255,255,0.82)',
+                textShadow: variant === 'light' ? 'none' : '0 1px 3px rgba(0,0,0,0.4)',
               }}
             >
               {b.text}
@@ -187,8 +193,9 @@ export default function LoginPage() {
     return (
       <div className="portal-theme min-h-screen w-full flex">
         {/* Left side - School selection message (50% width on desktop) */}
-        <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto">
-          <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10">
+        <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto relative overflow-hidden">
+          <BubbleField variant="light" primaryColor="#2563eb" />
+          <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10 relative z-10">
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
               <Search size={24} />
             </div>
@@ -211,7 +218,6 @@ export default function LoginPage() {
             }}
           />
           <div className="absolute inset-0 bg-black/80" />
-          <BubbleField />
           <div className="absolute inset-0 flex items-center justify-center p-8">
             <div className="text-white max-w-md">
               <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
@@ -262,8 +268,9 @@ export default function LoginPage() {
   return (
     <div className="portal-theme min-h-screen w-full flex">
       {/* Left side - Login form (50% width on desktop) */}
-      <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto">
-        <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10">
+      <div className="w-full lg:w-1/2 min-h-screen bg-white flex flex-col p-4 lg:p-8 lg:overflow-y-auto relative overflow-hidden">
+        <BubbleField variant="light" primaryColor={primary} />
+        <div className="w-full max-w-md mx-auto my-auto py-6 lg:py-10 relative z-10">
           {/* School Header */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">
@@ -476,7 +483,6 @@ export default function LoginPage() {
           }}
         />
         <div className="absolute inset-0 bg-black/80" />
-        <BubbleField />
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <div className="text-white max-w-md">
             <h2 className="text-3xl font-bold mb-4">Welcome to SmartCampus</h2>
