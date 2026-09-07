@@ -84,11 +84,11 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
 
   useEffect(() => {
     // Start with just 5 bubbles, staggered so they're already mid-flight
-    const initial: Bubble[] = Array.from({ length: 5 }, (_, i) => ({
+    const initial: Bubble[] = Array.from({ length: 2 }, (_, i) => ({
       id: i,
       text: FACTS[(i * 6) % FACTS.length],
-      left: 8 + i * 17,
-      size: 80 + (i % 3) * 25,
+      left: 15 + i * 55,
+      size: 90 + (i % 3) * 25,
       duration: 16 + i * 3,
       delay: -(4 + i * 3),
       opacity: 0.55 + (i % 3) * 0.10,
