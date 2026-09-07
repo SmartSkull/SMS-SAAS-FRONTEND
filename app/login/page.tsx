@@ -135,22 +135,22 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
               height: b.size,
               '--op': b.opacity,
               background: variant === 'light'
-                ? `radial-gradient(circle at 35% 35%, ${primaryColor ?? '#2563eb'}40, ${primaryColor ?? '#2563eb'}18)`
-                : `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.20), rgba(255,255,255,0.05))`,
+                ? 'rgba(37, 99, 235, 0.12)'
+                : 'radial-gradient(circle at 35% 35%, rgba(255,255,255,0.20), rgba(255,255,255,0.05))',
               border: variant === 'light'
-                ? `1px solid ${primaryColor ?? '#2563eb'}55`
+                ? '1.5px solid rgba(37, 99, 235, 0.35)'
                 : '1px solid rgba(255,255,255,0.18)',
-              backdropFilter: 'blur(2px)',
+              backdropFilter: 'blur(1px)',
               animation: `bubbleRise ${b.duration}s linear ${b.delay}s both`,
-              padding: '8px',
+              padding: '10px',
             } as React.CSSProperties}
           >
             <span
-              className="font-semibold leading-tight select-none"
+              className="font-bold leading-tight select-none"
               style={{
-                fontSize: b.size < 90 ? '9px' : b.size < 120 ? '10px' : '11px',
+                fontSize: b.size < 90 ? '10px' : b.size < 120 ? '11px' : '12px',
                 color: variant === 'light'
-                  ? `${primaryColor ?? '#2563eb'}dd`
+                  ? 'rgba(30, 64, 175, 0.90)'
                   : 'rgba(255,255,255,0.82)',
                 textShadow: variant === 'light' ? 'none' : '0 1px 3px rgba(0,0,0,0.4)',
               }}
