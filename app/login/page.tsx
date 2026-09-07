@@ -61,11 +61,22 @@ const FACTS = [
 interface Bubble {
   id: number;
   text: string;
-  left: number;       // % from left
-  size: number;       // px diameter
-  duration: number;   // animation seconds
-  delay: number;      // animation delay seconds
+  left: number;
+  size: number;
+  duration: number;
+  delay: number;
   opacity: number;
+  borderRadius: string;
+}
+
+/** Generate an organic blob border-radius like "60% 40% 70% 30% / 50% 60% 40% 70%" */
+function blobRadius(seed: number): string {
+  const r = (base: number, range: number) => base + (seed * 17 + range) % range;
+  const a = r(40, 40), b = 100 - a;
+  const c = r(35, 45), d = 100 - c;
+  const e = r(30, 50), f = 100 - e;
+  const g = r(45, 40), h = 100 - g;
+  return `${a}% ${b}% ${c}% ${d}% / ${e}% ${f}% ${g}% ${h}%`;
 }
 
 function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'light'; primaryColor?: string }) {
@@ -76,11 +87,13 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
     const initial: Bubble[] = Array.from({ length: 5 }, (_, i) => ({
       id: i,
       text: FACTS[(i * 6) % FACTS.length],
-      left: 8 + i * 17,          // evenly spread: 8, 25, 42, 59, 76
-      size: 80 + (i % 3) * 25,   // 80, 105, 130, 80, 105
+      left: 8 + i * 17,
+      size: 80 + (i % 3) * 25,
       duration: 16 + i * 3,
-      delay: -(4 + i * 3),       // already in progress
+      delay: -(4 + i * 3),
       opacity: 0.55 + (i % 3) * 0.10,
+      borderRadius: blobRadius(i),
+    }));
     }));
     setBubbles(initial);
 
@@ -105,6 +118,7 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
             duration: 15 + Math.floor(Math.random() * 10),
             delay: 0,
             opacity: 0.50 + Math.random() * 0.25,
+            borderRadius: blobRadius(counter),
           },
         ];
         return next.slice(-8); // never more than 8 at once
@@ -118,21 +132,23 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
     <>
       <style>{`
         @keyframes bubbleRise {
-          0%   { transform: translateY(0) scale(1);    opacity: var(--op); }
+          0%   { transform: translateY(0) scale(1) rotate(0deg);    opacity: var(--op); }
           12%  { opacity: calc(var(--op) * 1.3); }
+          50%  { transform: translateY(-52vh) scale(0.95) rotate(120deg); }
           80%  { opacity: var(--op); }
-          100% { transform: translateY(-105vh) scale(0.8); opacity: 0; }
+          100% { transform: translateY(-105vh) scale(0.8) rotate(240deg); opacity: 0; }
         }
       `}</style>
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
         {bubbles.map(b => (
           <div
             key={b.id}
-            className="absolute bottom-0 rounded-full flex items-center justify-center text-center"
+            className="absolute bottom-0 flex items-center justify-center text-center"
             style={{
               left: `${b.left}%`,
               width:  b.size,
               height: b.size,
+              borderRadius: b.borderRadius,
               '--op': b.opacity,
               background: variant === 'light'
                 ? 'rgba(37, 99, 235, 0.12)'
