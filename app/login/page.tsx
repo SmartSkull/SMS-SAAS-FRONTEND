@@ -133,9 +133,9 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
         @keyframes bubbleRise {
           0%   { transform: translateY(0) scale(1) rotate(0deg);    opacity: var(--op); }
           12%  { opacity: calc(var(--op) * 1.3); }
-          50%  { transform: translateY(-52vh) scale(0.95) rotate(120deg); }
+          50%  { transform: translateY(-52vh) scale(0.95) rotate(8deg); }
           80%  { opacity: var(--op); }
-          100% { transform: translateY(-105vh) scale(0.8) rotate(240deg); opacity: 0; }
+          100% { transform: translateY(-105vh) scale(0.8) rotate(15deg); opacity: 0; }
         }
       `}</style>
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
