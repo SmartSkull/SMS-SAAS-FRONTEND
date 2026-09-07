@@ -35,19 +35,25 @@ function ReceiptModal({
   const receiptRef = useRef<HTMLDivElement>(null);
   const verifyUrl  = `${VERIFY_BASE}?reference=${payment.reference}`;
 
-  // Safely parse date — try paidAt first, then createdAt, fall back to now
+  // Safely parse date — history item uses paidAt, fallback to createdAt
   const rawDate = payment.paidAt || payment.paid_at || payment.createdAt || payment.created_at;
   const paidDate = rawDate && !isNaN(new Date(rawDate).getTime())
     ? new Date(rawDate)
     : null;
 
-  // Safely parse amount — handle number, string, or null
+  // Safely parse amount — it's already a number in the history item
   const parsedAmount = payment.amount != null && payment.amount !== ''
     ? Number(payment.amount)
     : null;
   const amountDisplay = parsedAmount != null && !isNaN(parsedAmount)
     ? `₦${parsedAmount.toLocaleString()}`
     : '₦—';
+
+  // Student name — history item uses firstname/lastname (lowercase)
+  const studentName = [
+    payment.firstname ?? payment.firstName ?? user?.firstname ?? user?.firstName ?? '',
+    payment.lastname  ?? payment.lastName  ?? user?.lastname  ?? user?.lastName  ?? '',
+  ].filter(Boolean).join(' ').trim() || '—';
 
   const logo       = normalizeSchoolLogo(school?.logo);
   const primary    = school?.primaryColor || '#2563eb';
@@ -124,7 +130,7 @@ function ReceiptModal({
           {/* Rows */}
           <div className="divide-y divide-gray-50">
             {[
-              ['Student',     user ? `${user.firstName ?? user.firstname ?? ''} ${user.lastName ?? user.lastname ?? ''}`.trim() : '—'],
+              ['Student',     studentName],
               ['Reference',   payment.reference || '—'],
               ['Description', payment.description || 'School Fees'],
               ['Date',        paidDate ? paidDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'],
@@ -513,16 +519,24 @@ export default function StudentPayments() {
 
   const openReceipt = (p?: any) => {
     if (!p && data?.reference) {
-      // Find from history first — it has all the correct field names
+      // Always use the matching history item — it has the correct field names and values
       const histItem = data.history?.find((h: any) => h.reference === data.reference);
-      p = histItem ?? {
-        reference: data.reference,
-        amount: data.amount ?? 0,
-        status: 'SUCCESS',
-        paidAt: data.paid_at || null,
-        createdAt: data.paid_at || new Date().toISOString(),
-        description: data.description || 'School Fees',
-      };
+      if (histItem) {
+        p = histItem;
+      } else {
+        // Fallback: build from top-level data fields
+        p = {
+          reference:   data.reference,
+          amount:      data.amount,
+          status:      data.payment_status,
+          paidAt:      data.paid_at,
+          createdAt:   data.paid_at,
+          description: data.description,
+          class:       data.class,
+          firstname:   currentUser?.firstname ?? currentUser?.firstName ?? '',
+          lastname:    currentUser?.lastname  ?? currentUser?.lastName  ?? '',
+        };
+      }
     }
     setReceipt(p ?? null);
   };
