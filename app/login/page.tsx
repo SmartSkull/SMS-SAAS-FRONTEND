@@ -80,7 +80,7 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
       size: 80 + (i % 3) * 25,   // 80, 105, 130, 80, 105
       duration: 16 + i * 3,
       delay: -(4 + i * 3),       // already in progress
-      opacity: 0.20 + (i % 3) * 0.06,
+      opacity: 0.55 + (i % 3) * 0.10,
     }));
     setBubbles(initial);
 
@@ -104,7 +104,7 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
             size,
             duration: 15 + Math.floor(Math.random() * 10),
             delay: 0,
-            opacity: 0.20 + Math.random() * 0.22,
+            opacity: 0.50 + Math.random() * 0.25,
           },
         ];
         return next.slice(-8); // never more than 8 at once
@@ -135,10 +135,10 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
               height: b.size,
               '--op': b.opacity,
               background: variant === 'light'
-                ? `radial-gradient(circle at 35% 35%, ${primaryColor ?? '#2563eb'}18, ${primaryColor ?? '#2563eb'}06)`
+                ? `radial-gradient(circle at 35% 35%, ${primaryColor ?? '#2563eb'}40, ${primaryColor ?? '#2563eb'}18)`
                 : `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.20), rgba(255,255,255,0.05))`,
               border: variant === 'light'
-                ? `1px solid ${primaryColor ?? '#2563eb'}20`
+                ? `1px solid ${primaryColor ?? '#2563eb'}55`
                 : '1px solid rgba(255,255,255,0.18)',
               backdropFilter: 'blur(2px)',
               animation: `bubbleRise ${b.duration}s linear ${b.delay}s both`,
@@ -150,7 +150,7 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
               style={{
                 fontSize: b.size < 90 ? '9px' : b.size < 120 ? '10px' : '11px',
                 color: variant === 'light'
-                  ? `${primaryColor ?? '#2563eb'}99`
+                  ? `${primaryColor ?? '#2563eb'}dd`
                   : 'rgba(255,255,255,0.82)',
                 textShadow: variant === 'light' ? 'none' : '0 1px 3px rgba(0,0,0,0.4)',
               }}
