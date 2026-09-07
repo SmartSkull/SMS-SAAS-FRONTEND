@@ -94,7 +94,6 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
       opacity: 0.55 + (i % 3) * 0.10,
       borderRadius: blobRadius(i),
     }));
-    }));
     setBubbles(initial);
 
     // Add one new bubble every 7 seconds
