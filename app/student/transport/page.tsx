@@ -518,371 +518,394 @@ export default function StudentTransportPage() {
   );
 
   return (
-    <div className="p-4 max-w-lg mx-auto flex flex-col gap-4">
+    <div className="max-w-lg mx-auto flex flex-col gap-0 pb-8">
 
-      {/* ── Bus info header ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-3">
-        <div className="w-11 h-11 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-          <Bus size={22} className="text-purple-600" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-gray-900">{busInfo.plateNumber}</div>
-          <div className="text-xs text-gray-500 truncate">
-            {busInfo.routeName ?? 'No route'}{busInfo.routeFare ? ` · ₦${busInfo.routeFare.toLocaleString()}` : ''} · {busInfo.schoolName}
-          </div>
-          {busInfo.driverName && <div className="text-xs text-gray-400">Driver: {busInfo.driverName}</div>}
-        </div>
-        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full shrink-0 ${busInfo.tripActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${busInfo.tripActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-          {busInfo.tripActive ? 'On the way' : 'Not active'}
-        </span>
-      </div>
+      {/* HERO BANNER */}
+      <div className="relative bg-gradient-to-br from-violet-700 via-purple-700 to-indigo-800 rounded-b-3xl px-5 pt-6 pb-8 -mx-4 mb-4 shadow-xl overflow-hidden">
+        <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-28 h-28 rounded-full bg-white/5 pointer-events-none" />
 
-      {/* ── Capacity indicator ── */}
-      {capacity && (
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Users size={16} className="text-purple-500" /> Bus Capacity
+        <div className="relative z-10 flex items-start justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20 backdrop-blur-sm shrink-0">
+              <Bus size={26} className="text-white" />
             </div>
-            <span className="text-xs text-gray-500">{capacity.assigned} / {capacity.capacity} seats</span>
+            <div>
+              <p className="text-white font-black text-lg leading-tight">{busInfo.plateNumber}</p>
+              <p className="text-white/60 text-xs mt-0.5">{busInfo.routeName ?? 'No route'}{busInfo.routeFare ? ` · ₦${busInfo.routeFare.toLocaleString()}` : ''}</p>
+              {busInfo.driverName && <p className="text-white/50 text-xs">🧑‍✈️ {busInfo.driverName}</p>}
+            </div>
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all ${capacity.assigned / capacity.capacity > 0.9 ? 'bg-red-500' : capacity.assigned / capacity.capacity > 0.7 ? 'bg-orange-400' : 'bg-green-500'}`}
-              style={{ width: `${Math.min(100, (capacity.assigned / capacity.capacity) * 100)}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ── Speed + moving status ── */}
-      {busInfo.tripActive && busMoving !== null && (
-        <div className={`flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ${busMoving ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-600'}`}>
-          <div className="flex items-center gap-2">
-            <Gauge size={16} />
-            {busMoving ? 'Bus is moving' : 'Bus is stopped'}
-          </div>
-          {busMoving && busSpeed !== null && <span className="text-xs font-semibold">{busSpeed} km/h</span>}
-        </div>
-      )}
-
-      {/* ── ETA ── */}
-      {busInfo.tripActive && (homeCoords || absent === false) && (
-        <div className="bg-purple-50 border border-purple-100 rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-            <Clock size={20} className="text-purple-600" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs text-purple-500 font-medium uppercase tracking-wide">{eta?.dest === 'school' ? 'ETA to school' : 'ETA to your stop'}</p>
-            {etaLoading && !eta ? (
-              <p className="text-gray-400 text-sm mt-0.5">Calculating…</p>
-            ) : eta ? (
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-2xl font-bold text-purple-700">{fmt(eta.durationSeconds)}</span>
-                <span className="text-xs text-purple-400 flex items-center gap-1">
-                  <Navigation size={10} />{fmtDist(eta.distanceMeters)} away{eta.source === 'estimate' ? ' (est.)' : ''}
-                </span>
-              </div>
-            ) : (
-              <p className="text-gray-400 text-sm mt-0.5">Bus location not yet available</p>
+          <div className="flex flex-col items-end gap-2">
+            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${busInfo.tripActive ? 'bg-green-400/20 border-green-400/40 text-green-200' : 'bg-white/10 border-white/20 text-white/50'}`}>
+              <span className={`w-2 h-2 rounded-full ${busInfo.tripActive ? 'bg-green-400 animate-pulse' : 'bg-white/40'}`} />
+              {busInfo.tripActive ? 'On the way' : 'Not active'}
+            </span>
+            {connected && busInfo.tripActive && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-300/80">
+                <Wifi size={10} /> Live
+              </span>
             )}
           </div>
         </div>
-      )}
 
-      {/* ── Route progress bar ── */}
-      {busInfo.tripActive && progress !== null && (
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Route Progress</span>
-            <span className="text-xs text-purple-600 font-semibold">{progress}%</span>
-          </div>
-          <div className="w-full bg-gray-100 rounded-full h-2.5 relative">
-            <div className="h-2.5 rounded-full bg-purple-500 transition-all duration-500" style={{ width: `${progress}%` }} />
-            <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-purple-600 border-2 border-white rounded-full shadow transition-all duration-500" style={{ left: `calc(${progress}% - 8px)` }}>
-              <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] font-bold text-purple-700">🚌</span>
-            </div>
-          </div>
-          <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-            <span>Start</span><span>End</span>
-          </div>
-        </div>
-      )}
-
-      {/* ── Live map ── */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-4 pt-3 pb-2">
-          <span className="text-sm font-semibold text-gray-700">Live Map</span>
-        </div>
-        <LiveMap busCoords={busCoords} homeCoords={homeCoords} routePolyline={busInfo.routePolyline} eta={eta} connected={connected} />
-      </div>
-
-      {/* ── Home location ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2"><MapPin size={15} className="text-purple-500" /> Home Location</p>
-        {homeCoords ? (
-          <p className="text-xs text-green-600 mb-3">✅ Saved — {homeCoords.lat.toFixed(5)}, {homeCoords.lng.toFixed(5)}</p>
-        ) : (
-          <p className="text-xs text-amber-600 mb-3">Not set — ETA and arrival alerts require your home location.</p>
-        )}
-        <div className="flex gap-2 mb-2">
-          <button onClick={pinHomeLocation} disabled={settingHome}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-purple-600 text-white rounded-xl text-xs font-semibold hover:bg-purple-700 disabled:opacity-60">
-            <MapPin size={13} />{settingHome ? 'Getting GPS…' : 'Use GPS'}
-          </button>
-        </div>
-        <div className="flex gap-2">
-          <input value={addressInput} onChange={e => setAddressInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && geocodeAddress()}
-            placeholder="Or type your home address…"
-            className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-400" />
-          <button onClick={geocodeAddress} disabled={geocoding || !addressInput.trim()}
-            className="p-2 bg-purple-100 text-purple-600 rounded-xl hover:bg-purple-200 disabled:opacity-50">
-            <Search size={15} />
-          </button>
-        </div>
-        {homeMsg && <p className="mt-2 text-xs text-purple-600">{homeMsg}</p>}
-      </div>
-
-      {/* ── Bus Fee Payment ── */}
-      {(busFee?.feeConfigured || feeLoading) && (
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Bus Fee</p>
-          {feeLoading ? (
-            <p className="text-sm text-gray-400">Loading fee status…</p>
-          ) : busFee && (
-            <>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">₦{busFee.fare.toLocaleString()}</p>
-                  {busFee.paidAt && <p className="text-xs text-gray-400 mt-0.5">Paid {new Date(busFee.paidAt).toLocaleDateString()}</p>}
+        {busInfo.tripActive && (
+          <div className="relative z-10 bg-white/10 border border-white/15 backdrop-blur-sm rounded-2xl px-4 py-3.5 flex items-center justify-between">
+            <div>
+              <p className="text-white/50 text-[10px] uppercase tracking-widest font-semibold mb-0.5">
+                {eta?.dest === 'school' ? 'ETA to school' : 'ETA to your stop'}
+              </p>
+              {etaLoading && !eta ? (
+                <p className="text-white/60 text-sm animate-pulse">Calculating…</p>
+              ) : eta ? (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white">{fmt(eta.durationSeconds)}</span>
+                  <span className="text-white/50 text-xs flex items-center gap-1">
+                    <Navigation size={10} />{fmtDist(eta.distanceMeters)}{eta.source === 'estimate' ? ' (est.)' : ''}
+                  </span>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${busFee.status === 'SUCCESS' ? 'bg-green-100 text-green-700' : busFee.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {busFee.status === 'SUCCESS' ? '✓ Paid' : busFee.status === 'PENDING' ? 'Pending' : 'Not Paid'}
-                </span>
-              </div>
-              {busFee.status !== 'SUCCESS' && (
-                <>
-                  <button onClick={payBusFee} disabled={payingFee}
-                    className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-60">
-                    💳 {payingFee ? 'Redirecting…' : 'Pay Bus Fee'}
-                  </button>
-                  <p className="text-xs text-gray-400 mt-2">You will be redirected to Paystack to pay securely.</p>
-                </>
+              ) : (
+                <p className="text-white/50 text-sm">Waiting for GPS…</p>
               )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* ── Driver actions ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Driver & Actions</p>
-        <div className={`grid gap-3 ${busInfo.driverUserId ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          {busInfo.driverPhone ? (
-            <a href={`tel:${busInfo.driverPhone}`} className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl bg-green-500 text-white hover:bg-green-600">
-              <Phone size={17} /><span className="text-xs font-semibold">Call</span>
-            </a>
-          ) : (
-            <div className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl bg-gray-100 text-gray-400">
-              <Phone size={17} /><span className="text-xs">No phone</span>
             </div>
-          )}
-          {busInfo.driverUserId && (
-            <button onClick={() => router.push(`/student/messages?userId=${busInfo.driverUserId}`)}
-              className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl bg-blue-500 text-white hover:bg-blue-600">
-              <MessageCircle size={17} /><span className="text-xs font-semibold">Message</span>
-            </button>
-          )}
-          <button onClick={shareBusLocation} disabled={!busCoords}
-            className="flex flex-col items-center gap-1 py-3 px-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40">
-            <Share2 size={17} /><span className="text-xs font-semibold">Share</span>
-          </button>
-        </div>
-      </div>
+            <div className="text-4xl opacity-20 select-none">🚌</div>
+          </div>
+        )}
 
-      {/* ── SOS Button ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Emergency</p>
-        <p className="text-xs text-gray-400 mb-3">Send your GPS location to admin and the driver immediately.</p>
-        <button onClick={sendSos} disabled={sosLoading}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors disabled:opacity-60 active:scale-95">
-          <Siren size={18} />{sosLoading ? 'Sending SOS…' : '🆘 SOS — Emergency Alert'}
-        </button>
-        {sosMsg && <p className="mt-2 text-xs text-center text-red-600">{sosMsg}</p>}
-      </div>
-
-      {/* ── Absent toggle ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <p className="text-sm font-medium text-gray-700 mb-1">Are you sick today?</p>
-        <p className="text-xs text-gray-400 mb-3">Tell the driver not to stop at your house.</p>
-        <button onClick={toggleAbsent} disabled={absentLoading}
-          className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition-colors ${absent ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-500 text-white hover:bg-red-600'}`}>
-          {absent ? <><CheckCircle size={18} />Cancel — I'm coming</> : <><AlertTriangle size={18} />I'm sick — skip my stop</>}
-        </button>
-        {message && <p className="mt-2 text-xs text-center text-gray-500">{message}</p>}
-      </div>
-
-      {/* ── Complaint / Feedback ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <button onClick={() => setShowComplaint(p => !p)}
-          className="w-full flex items-center justify-between text-sm font-medium text-gray-700">
-          <span className="flex items-center gap-2"><MessageCircle size={15} className="text-purple-500" />Send Complaint / Feedback</span>
-          <span className="text-xs text-gray-400">{showComplaint ? '▲' : '▼'}</span>
-        </button>
-        {showComplaint && (
-          <div className="mt-3 flex flex-col gap-2">
-            <textarea value={complaint} onChange={e => setComplaint(e.target.value)}
-              placeholder="Describe your issue (late bus, behaviour, etc.)…"
-              rows={3}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-400 resize-none" />
-            <button onClick={sendComplaint} disabled={complaintSending || !complaint.trim()}
-              className="self-end px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 disabled:opacity-50">
-              {complaintSending ? 'Sending…' : 'Send'}
-            </button>
+        {busInfo.tripActive && busMoving !== null && (
+          <div className="relative z-10 mt-2 flex items-center gap-2 px-1">
+            <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${busMoving ? 'bg-green-400/20 text-green-300' : 'bg-amber-400/20 text-amber-300'}`}>
+              <Gauge size={12} />
+              {busMoving ? `Moving${busSpeed ? ` · ${busSpeed} km/h` : ''}` : 'Stopped'}
+            </div>
           </div>
         )}
       </div>
 
-      {/* ── Trip History ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <button onClick={() => setShowHistory(p => !p)}
-          className="w-full flex items-center justify-between text-sm font-medium text-gray-700">
-          <span className="flex items-center gap-2"><History size={15} className="text-purple-500" />Trip History</span>
-          <span className="text-xs text-gray-400">{showHistory ? '▲' : '▼'}</span>
-        </button>
-        {showHistory && (
-          <div className="mt-3">
-            {tripHistory.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-3">No trip history yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {tripHistory.map((t: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-gray-50 rounded-xl">
-                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center shrink-0">
-                      <Bus size={14} className="text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-800">{t.routeName ?? 'Unknown route'}</p>
-                      <p className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · {t.plateNumber}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Admin Broadcast ── */}
       {pinnedBroadcast && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-          <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+        <div className="mx-4 mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+          <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
             <Radio size={16} className="text-amber-600" />
           </div>
-          <div className="flex-1">
-            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Admin Broadcast</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1">Admin Broadcast</p>
             <p className="text-sm text-gray-800">{pinnedBroadcast.message}</p>
             {pinnedBroadcast.expiresAt && (
-              <p className="text-[10px] text-gray-400 mt-1">Expires: {new Date(pinnedBroadcast.expiresAt).toLocaleString()}</p>
+              <p className="text-[10px] text-gray-400 mt-1">Expires {new Date(pinnedBroadcast.expiresAt).toLocaleString()}</p>
             )}
           </div>
         </div>
       )}
 
-      {/* ── Route Group Chat ── */}
-      {busInfo?.routeId && (
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-              <Users size={15} className="text-purple-500" /> Route Chat
-            </p>
-            <button onClick={() => { setShowRouteChat(p => !p); if (!showRouteChat) loadRouteChat(); }}
-              className="text-xs text-purple-600 font-medium">
-              {showRouteChat ? 'Hide' : 'Show'}
-            </button>
+      {message && (
+        <div className="mx-4 mb-2 text-sm text-center text-purple-700 bg-purple-50 border border-purple-100 rounded-xl px-4 py-2.5">{message}</div>
+      )}
+
+      <div className="px-4 flex flex-col gap-4">
+
+        {/* LIVE MAP */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+            <p className="text-sm font-bold text-gray-800 flex items-center gap-2"><MapPin size={14} className="text-purple-500" /> Live Map</p>
+            {busCoords && (
+              <button onClick={shareBusLocation} className="text-xs text-purple-600 font-semibold flex items-center gap-1 hover:text-purple-800">
+                <Share2 size={12} /> Share
+              </button>
+            )}
           </div>
-          {showRouteChat && (
-            <div className="flex flex-col gap-3">
-              <div className="max-h-60 overflow-y-auto space-y-2">
-                {chatLoading && routeChat.length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-3">Loading chat…</p>
-                ) : routeChat.length === 0 ? (
-                  <p className="text-xs text-gray-400 text-center py-3">No messages yet. Say hello!</p>
-                ) : (
-                  routeChat.map((msg: any) => (
-                    <div key={msg.id} className={`flex ${msg.userId === busInfo.driverUserId ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs ${msg.userId === busInfo.driverUserId ? 'bg-gray-100 text-gray-900 rounded-bl-sm' : 'bg-purple-600 text-white rounded-br-sm'}`}>
-                        <p className="font-semibold text-[10px] mb-0.5 opacity-70">{msg.user?.firstName || 'User'}</p>
-                        {msg.type === 'voice' && msg.voiceUrl ? (
-                          <div className="flex items-center gap-2">
-                            <Play size={12} />
-                            <audio controls src={msg.voiceUrl} className="h-8 max-w-[150px]" />
-                          </div>
-                        ) : (
-                          <p>{msg.message}</p>
-                        )}
-                        <p className="text-[9px] opacity-50 mt-0.5">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              <div className="flex gap-2">
-                <input value={chatMessage} onChange={e => setChatMessage(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && sendRouteChatMessage()}
-                  placeholder="Type a message…"
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-400" />
-                <button onClick={sendRouteChatMessage} disabled={chatLoading || !chatMessage.trim()}
-                  className="p-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-40">
-                  <Send size={14} />
-                </button>
-                <button onClick={startVoiceNote} disabled={recording || chatLoading}
-                  className={`p-2 rounded-xl ${recording ? 'bg-red-500 text-white animate-pulse' : 'bg-purple-100 text-purple-600 hover:bg-purple-200'} disabled:opacity-40`}>
-                  {recording ? <><Square size={14} /> {recordingTime}s</> : <Mic size={14} />}
-                </button>
+          <LiveMap busCoords={busCoords} homeCoords={homeCoords} routePolyline={busInfo.routePolyline} eta={eta} connected={connected} />
+        </div>
+
+        {/* ROUTE PROGRESS */}
+        {busInfo.tripActive && progress !== null && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold text-gray-800">Route Progress</p>
+              <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full">{progress}%</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-3 relative">
+              <div className="h-3 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 transition-all duration-500" style={{ width: `${progress}%` }} />
+              <div className="absolute top-1/2 -translate-y-1/2 w-5 h-5 bg-purple-600 border-2 border-white rounded-full shadow-md transition-all duration-500 flex items-center justify-center" style={{ left: `calc(${progress}% - 10px)` }}>
+                <span className="text-[8px]">🚌</span>
               </div>
             </div>
-          )}
-        </div>
-      )}
+            <div className="flex justify-between text-[10px] text-gray-400 mt-1.5 font-medium">
+              <span>Start</span><span>End</span>
+            </div>
+          </div>
+        )}
 
-      {/* ── Share Tracking Link ── */}
-      {busInfo?.driverUserId && (
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2"><Share2 size={15} className="text-purple-500" /> Share Bus Location</p>
-          <p className="text-xs text-gray-400 mb-3">Send a read-only live tracking link to a parent/guardian via WhatsApp or SMS.</p>
-          <button onClick={shareTrackingLink}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600">
-            <UserPlus size={15} /> Share with Parent/Guardian
-          </button>
-        </div>
-      )}
+        {/* CAPACITY */}
+        {capacity && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-sm font-bold text-gray-800 flex items-center gap-2"><Users size={14} className="text-purple-500" /> Bus Capacity</p>
+              <span className="text-xs text-gray-500 font-medium">{capacity.assigned} / {capacity.capacity}</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2.5">
+              <div
+                className={`h-2.5 rounded-full transition-all ${capacity.assigned / capacity.capacity > 0.9 ? 'bg-red-500' : capacity.assigned / capacity.capacity > 0.7 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                style={{ width: `${Math.min(100, (capacity.assigned / capacity.capacity) * 100)}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1.5">
+              {capacity.assigned / capacity.capacity > 0.9 ? '⚠️ Almost full' : capacity.assigned / capacity.capacity > 0.7 ? 'Filling up' : '✓ Seats available'}
+            </p>
+          </div>
+        )}
 
-      {/* ── Admin Broadcasts ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
-        <button onClick={() => { setShowBroadcasts(p => !p); if (!showBroadcasts) loadBroadcasts(); }}
-          className="w-full flex items-center justify-between text-sm font-medium text-gray-700">
-          <span className="flex items-center gap-2"><Radio size={15} className="text-purple-500" />Admin Broadcasts</span>
-          <span className="text-xs text-gray-400">{showBroadcasts ? '▲' : '▼'}</span>
-        </button>
-        {showBroadcasts && (
-          <div className="mt-3 space-y-2">
-            {broadcasts.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-3">No broadcasts yet.</p>
+        {/* QUICK ACTIONS */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Quick Actions</p>
+          <div className={`grid gap-3 ${busInfo.driverUserId ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {busInfo.driverPhone ? (
+              <a href={`tel:${busInfo.driverPhone}`}
+                className="flex flex-col items-center gap-1.5 py-3.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 transition-colors">
+                <Phone size={20} className="text-emerald-600" />
+                <span className="text-[11px] font-bold">Call Driver</span>
+              </a>
             ) : (
-              broadcasts.map((b: any) => (
-                <div key={b.id} className={`p-3 rounded-xl text-xs ${b.expiresAt && new Date(b.expiresAt) < new Date() ? 'bg-gray-50 text-gray-400 line-through' : 'bg-amber-50 text-gray-800'}`}>
-                  <p>{b.message}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">{new Date(b.createdAt).toLocaleString()}</p>
+              <div className="flex flex-col items-center gap-1.5 py-3.5 rounded-2xl bg-gray-50 border border-gray-100 text-gray-300">
+                <Phone size={20} /><span className="text-[11px]">No phone</span>
+              </div>
+            )}
+            {busInfo.driverUserId && (
+              <button onClick={() => router.push(`/student/messages?userId=${busInfo.driverUserId}`)}
+                className="flex flex-col items-center gap-1.5 py-3.5 rounded-2xl bg-blue-50 border border-blue-100 text-blue-700 hover:bg-blue-100 transition-colors">
+                <MessageCircle size={20} className="text-blue-600" />
+                <span className="text-[11px] font-bold">Message</span>
+              </button>
+            )}
+            {busInfo.driverUserId && (
+              <button onClick={shareTrackingLink}
+                className="flex flex-col items-center gap-1.5 py-3.5 rounded-2xl bg-green-50 border border-green-100 text-green-700 hover:bg-green-100 transition-colors">
+                <UserPlus size={20} className="text-green-600" />
+                <span className="text-[11px] font-bold">Share Link</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* HOME LOCATION */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-sm font-bold text-gray-800 flex items-center gap-2"><MapPin size={14} className="text-purple-500" /> Home Stop</p>
+            {homeCoords && <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">✓ Saved</span>}
+          </div>
+          {!homeCoords && <p className="text-xs text-amber-600 mb-3">Not set — ETA requires your home location.</p>}
+          {homeCoords && <p className="text-xs text-gray-400 mb-3">{homeCoords.lat.toFixed(5)}, {homeCoords.lng.toFixed(5)}</p>}
+          <div className="flex gap-2 mb-2">
+            <button onClick={pinHomeLocation} disabled={settingHome}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold disabled:opacity-60 transition-colors">
+              <Pin size={13} />{settingHome ? 'Getting GPS…' : 'Use My GPS'}
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input value={addressInput} onChange={e => setAddressInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && geocodeAddress()}
+              placeholder="Or type your home address…"
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-purple-400 transition-colors" />
+            <button onClick={geocodeAddress} disabled={geocoding || !addressInput.trim()}
+              className="px-3 bg-purple-100 text-purple-600 rounded-xl hover:bg-purple-200 disabled:opacity-50 transition-colors">
+              <Search size={15} />
+            </button>
+          </div>
+          {homeMsg && <p className="mt-2 text-xs text-purple-600 font-medium">{homeMsg}</p>}
+        </div>
+
+        {/* BUS FEE */}
+        {(busFee?.feeConfigured || feeLoading) && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Bus Fee</p>
+            {feeLoading ? (
+              <div className="h-8 bg-gray-100 rounded-xl animate-pulse" />
+            ) : busFee && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-black text-gray-900">₦{busFee.fare.toLocaleString()}</p>
+                  {busFee.paidAt && <p className="text-xs text-gray-400 mt-0.5">Paid {new Date(busFee.paidAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>}
                 </div>
-              ))
+                <div className="flex flex-col items-end gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${busFee.status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-700' : busFee.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {busFee.status === 'SUCCESS' ? '✓ Paid' : busFee.status === 'PENDING' ? 'Pending' : 'Not Paid'}
+                  </span>
+                  {busFee.status !== 'SUCCESS' && (
+                    <button onClick={payBusFee} disabled={payingFee}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-60">
+                      💳 {payingFee ? 'Redirecting…' : 'Pay Now'}
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}
-      </div>
 
+        {/* ABSENT TOGGLE */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-start gap-3 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${absent ? 'bg-emerald-50' : 'bg-red-50'}`}>
+              {absent ? <CheckCircle size={18} className="text-emerald-600" /> : <AlertTriangle size={18} className="text-red-500" />}
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800">Not coming today?</p>
+              <p className="text-xs text-gray-400">Notify the driver to skip your stop.</p>
+            </div>
+          </div>
+          <button onClick={toggleAbsent} disabled={absentLoading}
+            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${absent ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:bg-emerald-100' : 'bg-red-500 text-white hover:bg-red-600 shadow-sm shadow-red-200'}`}>
+            {absent ? <><CheckCircle size={16} />Cancel — I'm coming</> : <><AlertTriangle size={16} />I'm sick — skip my stop</>}
+          </button>
+        </div>
+
+        {/* SOS */}
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+              <Siren size={18} className="text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800">Emergency SOS</p>
+              <p className="text-xs text-gray-500">Sends your GPS to admin + driver instantly.</p>
+            </div>
+          </div>
+          <button onClick={sendSos} disabled={sosLoading}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-colors disabled:opacity-60 active:scale-95">
+            <Siren size={16} />{sosLoading ? 'Sending…' : '🆘 Send Emergency Alert'}
+          </button>
+          {sosMsg && <p className="mt-2 text-xs text-center text-red-600 font-medium">{sosMsg}</p>}
+        </div>
+
+        {/* COMPLAINT */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <button onClick={() => setShowComplaint(p => !p)}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/60 transition-colors">
+            <span className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <MessageCircle size={15} className="text-purple-500" />Send Complaint
+            </span>
+            <span className="text-gray-400 text-xs">{showComplaint ? '▲' : '▼'}</span>
+          </button>
+          {showComplaint && (
+            <div className="px-4 pb-4 flex flex-col gap-2 border-t border-gray-50 pt-3">
+              <textarea value={complaint} onChange={e => setComplaint(e.target.value)}
+                placeholder="Describe your issue (late bus, behaviour, safety concern…)"
+                rows={3}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400 resize-none" />
+              <button onClick={sendComplaint} disabled={complaintSending || !complaint.trim()}
+                className="self-end flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors">
+                <Send size={13} />{complaintSending ? 'Sending…' : 'Submit'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ROUTE CHAT */}
+        {busInfo?.routeId && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <button onClick={() => { setShowRouteChat(p => !p); if (!showRouteChat) loadRouteChat(); }}
+              className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/60 transition-colors">
+              <span className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                <MessageSquare size={15} className="text-purple-500" />Route Chat
+              </span>
+              <span className="text-gray-400 text-xs">{showRouteChat ? '▲' : '▼'}</span>
+            </button>
+            {showRouteChat && (
+              <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+                <div className="max-h-60 overflow-y-auto space-y-2 mb-3">
+                  {chatLoading && routeChat.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-4 animate-pulse">Loading…</p>
+                  ) : routeChat.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-4">No messages yet.</p>
+                  ) : routeChat.map((msg: any) => (
+                    <div key={msg.id} className={`flex ${msg.userId === busInfo.driverUserId ? 'justify-start' : 'justify-end'}`}>
+                      <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs ${msg.userId === busInfo.driverUserId ? 'bg-gray-100 text-gray-900 rounded-bl-sm' : 'bg-purple-600 text-white rounded-br-sm'}`}>
+                        <p className="font-semibold text-[10px] mb-0.5 opacity-60">{msg.user?.firstName || 'User'}</p>
+                        <p>{msg.message}</p>
+                        <p className="text-[9px] opacity-40 mt-0.5">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input value={chatMessage} onChange={e => setChatMessage(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && sendRouteChatMessage()}
+                    placeholder="Type a message…"
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-400" />
+                  <button onClick={sendRouteChatMessage} disabled={chatLoading || !chatMessage.trim()}
+                    className="px-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-40">
+                    <Send size={15} />
+                  </button>
+                  <button onClick={startVoiceNote} disabled={recording || chatLoading}
+                    className={`px-3 rounded-xl ${recording ? 'bg-red-500 text-white animate-pulse' : 'bg-purple-100 text-purple-600 hover:bg-purple-200'} disabled:opacity-40`}>
+                    {recording ? <span className="text-xs font-bold">{recordingTime}s</span> : <Mic size={15} />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TRIP HISTORY */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <button onClick={() => setShowHistory(p => !p)}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/60 transition-colors">
+            <span className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <History size={15} className="text-purple-500" />Trip History
+              {tripHistory.length > 0 && <span className="text-[11px] bg-purple-100 text-purple-600 font-bold px-2 py-0.5 rounded-full">{tripHistory.length}</span>}
+            </span>
+            <span className="text-gray-400 text-xs">{showHistory ? '▲' : '▼'}</span>
+          </button>
+          {showHistory && (
+            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+              {tripHistory.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No trip history yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {tripHistory.map((t: any, i: number) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <div className="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
+                        <Bus size={15} className="text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-800">{t.routeName ?? 'Unknown route'}</p>
+                        <p className="text-[10px] text-gray-400">{new Date(t.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · {t.plateNumber}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ADMIN BROADCASTS */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <button onClick={() => { setShowBroadcasts(p => !p); if (!showBroadcasts) loadBroadcasts(); }}
+            className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/60 transition-colors">
+            <span className="flex items-center gap-2 text-sm font-bold text-gray-800">
+              <Radio size={15} className="text-purple-500" />Admin Broadcasts
+            </span>
+            <span className="text-gray-400 text-xs">{showBroadcasts ? '▲' : '▼'}</span>
+          </button>
+          {showBroadcasts && (
+            <div className="px-4 pb-4 border-t border-gray-50 pt-3">
+              {broadcasts.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No broadcasts yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {broadcasts.map((b: any) => (
+                    <div key={b.id} className={`p-3 rounded-xl text-xs ${b.expiresAt && new Date(b.expiresAt) < new Date() ? 'bg-gray-50 text-gray-400 line-through' : 'bg-amber-50 border border-amber-100 text-gray-800'}`}>
+                      <p>{b.message}</p>
+                      <p className="text-[10px] text-gray-400 mt-1">{new Date(b.createdAt).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+      </div>
       <div ref={bottomRef} />
     </div>
   );
