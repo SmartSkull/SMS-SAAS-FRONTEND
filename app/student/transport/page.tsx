@@ -71,9 +71,10 @@ function LiveMap({ busCoords, homeCoords, routePolyline, eta, connected }: {
       const center: [number, number] = busCoords ? [busCoords.lat, busCoords.lng] : homeCoords ? [homeCoords.lat, homeCoords.lng] : [9.082, 8.6753];
       const map = L.map(mapRef.current!, { zoomControl: false, attributionControl: false }).setView(center, 16);
 
-      // Carto dark-matter tiles (Bolt/Uber style dark map)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      // OpenStreetMap tiles — free, no API key required
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        attribution: '© OpenStreetMap contributors',
       }).addTo(map);
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
