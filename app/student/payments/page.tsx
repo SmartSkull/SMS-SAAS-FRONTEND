@@ -34,7 +34,21 @@ function ReceiptModal({
 }: { payment: any; user: any; school?: SchoolProfile | null; onClose: () => void }) {
   const receiptRef = useRef<HTMLDivElement>(null);
   const verifyUrl  = `${VERIFY_BASE}?reference=${payment.reference}`;
-  const paidDate   = new Date(payment.paidAt || payment.createdAt);
+
+  // Safely parse date — try paidAt first, then createdAt, fall back to now
+  const rawDate = payment.paidAt || payment.paid_at || payment.createdAt || payment.created_at;
+  const paidDate = rawDate && !isNaN(new Date(rawDate).getTime())
+    ? new Date(rawDate)
+    : null;
+
+  // Safely parse amount — handle number, string, or null
+  const parsedAmount = payment.amount != null && payment.amount !== ''
+    ? Number(payment.amount)
+    : null;
+  const amountDisplay = parsedAmount != null && !isNaN(parsedAmount)
+    ? `₦${parsedAmount.toLocaleString()}`
+    : '₦—';
+
   const logo       = normalizeSchoolLogo(school?.logo);
   const primary    = school?.primaryColor || '#2563eb';
   const schoolName = school?.name || 'School Portal';
@@ -99,7 +113,7 @@ function ReceiptModal({
             <div>
               <p className="text-[9px] text-gray-400 uppercase tracking-wider">Amount Paid</p>
               <p className="text-3xl font-black mt-1" style={{ color: primary }}>
-                ₦{Number(payment.amount).toLocaleString()}
+                {amountDisplay}
               </p>
               <span className="inline-block mt-1.5 bg-green-100 text-green-700 text-[9px] font-bold px-2.5 py-0.5 rounded-full">
                 ✓ {payment.status}
@@ -110,11 +124,11 @@ function ReceiptModal({
           {/* Rows */}
           <div className="divide-y divide-gray-50">
             {[
-              ['Student',     user ? `${user.firstName} ${user.lastName}` : '—'],
-              ['Reference',   payment.reference],
+              ['Student',     user ? `${user.firstName ?? user.firstname ?? ''} ${user.lastName ?? user.lastname ?? ''}`.trim() : '—'],
+              ['Reference',   payment.reference || '—'],
               ['Description', payment.description || 'School Fees'],
-              ['Date',        paidDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })],
-              ['Time',        paidDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })],
+              ['Date',        paidDate ? paidDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'],
+              ['Time',        paidDate ? paidDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'],
             ].map(([label, value]) => (
               <div key={label} className="flex justify-between px-5 py-2.5">
                 <span className="text-[9px] text-gray-400 uppercase tracking-wider">{label}</span>
@@ -405,7 +419,7 @@ function HistoryCard({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-bold text-gray-900">
-                      ₦{Number(p.amount).toLocaleString()}
+                      ₦{p.amount != null && !isNaN(Number(p.amount)) ? Number(p.amount).toLocaleString() : '—'}
                     </p>
                     <span className={clsx('px-2.5 py-0.5 rounded-full text-[10px] font-bold', hcfg.badge)}>
                       {p.status}
@@ -499,12 +513,15 @@ export default function StudentPayments() {
 
   const openReceipt = (p?: any) => {
     if (!p && data?.reference) {
-      p = data.history?.find((h: any) => h.reference === data.reference) ?? {
+      // Find from history first — it has all the correct field names
+      const histItem = data.history?.find((h: any) => h.reference === data.reference);
+      p = histItem ?? {
         reference: data.reference,
-        amount: data.amount,
+        amount: data.amount ?? 0,
         status: 'SUCCESS',
-        paidAt: data.paid_at,
-        createdAt: data.paid_at,
+        paidAt: data.paid_at || null,
+        createdAt: data.paid_at || new Date().toISOString(),
+        description: data.description || 'School Fees',
       };
     }
     setReceipt(p ?? null);
