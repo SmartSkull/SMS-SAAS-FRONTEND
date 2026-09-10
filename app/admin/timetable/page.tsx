@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Calendar, Clock, User, BookOpen, GraduationCap, Plus, Trash2,
   Save, Sparkles, ArrowLeft, CheckCircle, AlertCircle, X, ChevronDown,
@@ -405,15 +405,14 @@ function TimetableGrid({ content }: { content: string }) {
 
 /* ═══════════════════════════════════════════════════════════════════════════
    COMBINED TIMETABLE GRID
-   One table: rows = periods, columns = classes.
-   A day selector at the top switches which day's column is shown.
-   Each cell shows the subject for that class on that day at that period.
+   The whole week in one table — no day switching.
+   Columns = periods (across the top), rows grouped by day (down the side),
+   and under each day every class gets its own row of subjects.
 ═══════════════════════════════════════════════════════════════════════════ */
 function CombinedTimetableGrid({ entries, exportTitle }: {
   entries: { label: string; content: string }[];
   exportTitle?: string;
 }) {
-  const [activeDay, setActiveDay] = useState<Day>('Monday');
   const [exporting, setExporting] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
@@ -424,7 +423,7 @@ function CombinedTimetableGrid({ entries, exportTitle }: {
     try {
       const title = exportTitle ?? 'All Classes Timetable';
       if (format === 'png') await exportAsPng(gridRef.current, title);
-      else exportAsPdf(gridRef.current, `${title} — ${activeDay}`);
+      else exportAsPdf(gridRef.current, title);
     } catch (e) {
       console.error('Export error:', e);
       toast.error('Export failed — check browser console for details');
@@ -434,32 +433,80 @@ function CombinedTimetableGrid({ entries, exportTitle }: {
   };
 
   // Parse all entries
-  const parsed = entries.map(e => ({ label: e.label, ...deserialize(e.content) }));
+  const parsed = useMemo(
+    () => entries.map(e => ({ label: e.label, ...deserialize(e.content) })),
+    [entries]
+  );
 
-  // Use rows from the first non-empty entry
-  const base = parsed.find(p => p.rows.length > 0);
-  if (!base) return <p className="text-sm text-gray-400 py-4 text-center">No timetable data.</p>;
+  // Use the period structure shared by most classes as the column set. Unioning
+  // every structure instead would add a near-duplicate column for every class
+  // that starts a few minutes off, leaving the table full of empty columns.
+  const periods = useMemo(() => {
+    const groups = new Map<string, { rows: PeriodRow[]; count: number }>();
+    for (const entry of parsed) {
+      if (!entry.rows.length) continue;
+      const signature = entry.rows.map(r => `${r.startTime}-${r.endTime}-${r.isBreak ? 1 : 0}`).join('|');
+      const group = groups.get(signature);
+      if (group) group.count += 1;
+      else groups.set(signature, { rows: entry.rows, count: 1 });
+    }
+    const best = [...groups.values()].sort(
+      (a, b) => b.count - a.count || b.rows.length - a.rows.length
+    )[0];
+    return best ? [...best.rows].sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime)) : [];
+  }, [parsed]);
 
-  const { rows } = base;
-  const subjectRows = rows.filter(r => !r.isBreak);
+  // Per class: day → column key → subject. A class whose own periods differ from
+  // the column set is matched by greatest time overlap, so a class running five
+  // minutes late still lands in the right column instead of a phantom one.
+  const lookups = useMemo(() => {
+    const teaching = periods.filter(r => !r.isBreak);
+    return parsed.map(entry => {
+      const subjectRows = entry.rows.filter(r => !r.isBreak);
+      const byDay: Record<string, Record<string, string>> = {};
+      for (const day of DAYS) {
+        byDay[day] = {};
+        const used = new Set<number>();
+        for (const column of teaching) {
+          const colStart = toMinutes(column.startTime);
+          const colEnd = toMinutes(column.endTime);
+          let bestIdx = -1;
+          let bestOverlap = 0;
+          subjectRows.forEach((row, idx) => {
+            if (used.has(idx)) return;
+            const overlap = Math.min(colEnd, toMinutes(row.endTime)) - Math.max(colStart, toMinutes(row.startTime));
+            if (overlap > bestOverlap) { bestOverlap = overlap; bestIdx = idx; }
+          });
+          if (bestIdx < 0) continue;
+          used.add(bestIdx);
+          const subject = entry.grid[day]?.[bestIdx];
+          if (subject) byDay[day][`${column.startTime}-${column.endTime}`] = subject;
+        }
+      }
+      return byDay;
+    });
+  }, [parsed, periods]);
+
+  const periodKey = (period: PeriodRow) => `${period.startTime}-${period.endTime}`;
+  const subjectAt = (entryIdx: number, day: Day, period: PeriodRow) =>
+    period.isBreak ? '' : (lookups[entryIdx][day]?.[periodKey(period)] ?? '');
+
+  // Period number and chip colour are shared by teaching periods only, so a
+  // break column never shifts the colours of the periods after it.
+  const teachingPeriods = periods.filter(p => !p.isBreak);
+  const colorIndex = (period: PeriodRow) => teachingPeriods.indexOf(period);
+
+  if (!periods.length) return <p className="text-sm text-gray-400 py-4 text-center">No timetable data.</p>;
+
+  const gridWidth = 168 + periods.reduce((sum, period) => sum + (period.isBreak ? 56 : 104), 0);
 
   return (
     <div className="space-y-3">
-      {/* Day tabs + export */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex gap-1.5 flex-wrap">
-          {DAYS.map(d => (
-            <button key={d} onClick={() => setActiveDay(d)}
-              className={clsx(
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all',
-                activeDay === d
-                  ? 'border-blue-500 bg-blue-500 text-white'
-                  : 'border-gray-200 text-gray-500 bg-white hover:border-blue-300'
-              )}>
-              {d}
-            </button>
-          ))}
-        </div>
+        <p className="text-[11px] text-gray-400">
+          {DAYS.length} days · {parsed.length} class{parsed.length !== 1 ? 'es' : ''} ·{' '}
+          {teachingPeriods.length} period{teachingPeriods.length !== 1 ? 's' : ''} — periods run across the top, days down the side
+        </p>
         <div className="flex items-center gap-1.5">
           <button onClick={() => handleExport('png')} disabled={exporting}
             title="Download as PNG"
@@ -476,65 +523,68 @@ function CombinedTimetableGrid({ entries, exportTitle }: {
 
       {/* Grid */}
       <div ref={gridRef}>
-      {/* Combined grid */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse" style={{ minWidth: `${180 + entries.length * 110}px` }}>
+      <div className="overflow-x-auto rounded-xl border border-gray-100">
+        <table className="w-full border-collapse text-sm" style={{ minWidth: `${gridWidth}px` }}>
           <thead>
-            <tr className="border-b border-gray-100">
-              <th className="w-36 p-3 text-left text-[11px] font-bold uppercase tracking-wider text-gray-400 shrink-0">
-                Period
+            <tr className="border-b border-gray-200">
+              <th className="w-[168px] p-2.5 text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 border-r border-gray-100 bg-gray-50">
+                Class
               </th>
-              {entries.map((e, i) => (
-                <th key={i} className="p-2 text-[11px] font-bold uppercase tracking-wider text-center"
-                  style={{ color: PERIOD_COLORS[i % PERIOD_COLORS.length].replace('bg-', '').includes('-') ? undefined : undefined }}>
-                  <span className={clsx('inline-block px-2 py-0.5 rounded-lg text-white text-[10px]', PERIOD_COLORS[i % PERIOD_COLORS.length])}>
-                    {e.label}
-                  </span>
+              {periods.map((period, pi) => (
+                <th key={pi}
+                  className={clsx(
+                    'px-1.5 py-2 text-center align-middle',
+                    period.isBreak ? 'w-14 bg-amber-50' : 'bg-gray-50'
+                  )}>
+                  {period.isBreak
+                    ? <span className="text-[9px] font-bold uppercase tracking-wide text-amber-600">Break</span>
+                    : <span className="text-[11px] font-bold text-gray-700">P{colorIndex(period) + 1}</span>}
+                  <p className="text-[9px] font-medium text-gray-400 whitespace-nowrap">
+                    {period.startTime}–{period.endTime}
+                  </p>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, rowIdx) => {
-              if (row.isBreak) return (
-                <tr key={rowIdx} className="bg-amber-50/70">
-                  <td className="p-3">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600">
-                      <span>☕</span> {row.startTime}–{row.endTime}
-                    </div>
-                    {row.label && <span className="text-[10px] text-amber-500 pl-5">{row.label}</span>}
-                  </td>
-                  <td colSpan={entries.length} className="p-3 text-center text-xs font-medium text-amber-600 tracking-wide">
-                    {row.label || 'Break'}
+            {DAYS.map(day => (
+              <Fragment key={day}>
+                <tr className="border-y border-indigo-100 bg-indigo-50/70">
+                  <td colSpan={periods.length + 1}
+                    className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-700">
+                    {day}
                   </td>
                 </tr>
-              );
-
-              const slotIdx = subjectRows.findIndex(s => s === row);
-              return (
-                <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-gray-50/40' : 'bg-white'}>
-                  <td className="p-3">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                      <Clock size={11} className="text-gray-400" />
-                      {row.startTime}–{row.endTime}
-                    </div>
-                  </td>
-                  {parsed.map((p, ci) => {
-                    const subject = p.grid[activeDay]?.[slotIdx] ?? '';
-                    return (
-                      <td key={ci} className="p-1.5">
-                        {subject
-                          ? <div className={clsx(
-                              'rounded-xl px-2 py-2 text-white text-[11px] font-bold text-center shadow-sm leading-tight',
-                              PERIOD_COLORS[ci % PERIOD_COLORS.length]
-                            )}>{subject}</div>
-                          : <div className="rounded-xl border-2 border-dashed border-gray-100 min-h-[36px]" />}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                {parsed.map((entry, entryIdx) => (
+                  <tr key={`${day}-${entryIdx}`}
+                    className="border-b border-gray-100 transition-colors last:border-b-0 hover:bg-indigo-50/40">
+                    <td className="border-r border-gray-100 px-4 py-1.5 text-xs font-semibold text-gray-700">
+                      {entry.label}
+                    </td>
+                    {periods.map((period, pi) => {
+                      if (period.isBreak) {
+                        return (
+                          <td key={pi} className="px-1 py-1.5">
+                            <div className="h-7 rounded-md bg-amber-100/70" />
+                          </td>
+                        );
+                      }
+                      const subject = subjectAt(entryIdx, day, period);
+                      return (
+                        <td key={pi} className="px-1 py-1.5">
+                          {subject
+                            ? <div className={clsx(
+                                'rounded-lg px-1.5 py-1.5 text-center text-[11px] font-bold leading-tight text-white shadow-sm',
+                                PERIOD_COLORS[colorIndex(period) % PERIOD_COLORS.length]
+                              )}>{subject}</div>
+                            : <div className="h-7 rounded-lg border-2 border-dashed border-gray-100" />}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
           </tbody>
         </table>
       </div>
@@ -1830,7 +1880,7 @@ function AutoSchedulerWizard({ onClose, onSaved, allClasses }: {
               <div className="rounded-2xl border border-gray-100 overflow-hidden">
                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">All Classes — Combined View</span>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Rows = periods · Columns = classes · Select a day above</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Columns = periods · Grouped by day · One row per class</p>
                 </div>
                 <div className="p-4">
                   <CombinedTimetableGrid
@@ -1952,7 +2002,7 @@ export default function AdminTimetablePage() {
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60">
                 <p className="text-sm font-bold text-gray-800">All Classes</p>
                 <p className="text-[11px] text-gray-400 mt-0.5">
-                  {classTimetables.length} class{classTimetables.length !== 1 ? 'es' : ''} · select a day to view that day's schedule across all classes
+                  {classTimetables.length} class{classTimetables.length !== 1 ? 'es' : ''} · the full week at a glance — no day switching
                 </p>
               </div>
               <div className="p-5">
