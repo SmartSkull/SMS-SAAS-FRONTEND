@@ -192,9 +192,9 @@ export default function StudentsPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-2xl card shadow-sm overflow-hidden">
+      <div className="student-roster bg-white rounded-2xl card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="student-roster-table w-full min-w-[720px] text-sm">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
               <th className="p-3 w-10"><input type="checkbox" checked={selected.length === students.length && students.length > 0} onChange={toggleAll} /></th>

@@ -442,9 +442,9 @@ export default function AdminResults() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
+      <div className="results-roster bg-white rounded-2xl card shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[500px]">
+        <table className="results-roster-table w-full text-sm min-w-[640px]">
           <thead className="bg-gray-50 border-b border-gray-100">
             <tr>
               <th className="p-3 w-10"><input type="checkbox"
@@ -753,17 +753,17 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
 
 
               <div className="overflow-x-auto rounded-xl border border-gray-100">
-                <table className="w-full text-sm">
+                <table className="exam-results-table w-full min-w-[740px] text-sm">
                   <thead className="bg-gray-800 text-white">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase min-w-[140px]">Subject</th>
-                      {showFirst && <th className="px-3 py-3 text-center text-xs font-semibold bg-blue-700">1st</th>}
-                      {showSecond && <th className="px-3 py-3 text-center text-xs font-semibold bg-green-700">2nd</th>}
+                      {showFirst && <th className="exam-term-one px-3 py-3 text-center text-xs font-semibold">1st</th>}
+                      {showSecond && <th className="exam-term-two px-3 py-3 text-center text-xs font-semibold">2nd</th>}
                       <th className="px-3 py-3 text-center text-xs font-semibold uppercase">CA</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold uppercase">Exam</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold uppercase">Total</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase bg-purple-700">Cumul.</th>
-                      <th className="px-3 py-3 text-center text-xs font-semibold uppercase bg-amber-600">Avg</th>
+                      <th className="exam-cumulative px-3 py-3 text-center text-xs font-semibold uppercase">Cumul.</th>
+                      <th className="exam-average px-3 py-3 text-center text-xs font-semibold uppercase">Avg</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold uppercase">Grade</th>
                       <th className="px-3 py-3 text-center text-xs font-semibold uppercase">Remark</th>
                     </tr>

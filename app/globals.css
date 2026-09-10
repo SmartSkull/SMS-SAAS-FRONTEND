@@ -322,6 +322,180 @@ input::placeholder, textarea::placeholder {
   animation: fadeIn 0.3s ease-in-out forwards;
 }
 
+/* Shared admin table treatment, scoped away from staff and student portals. */
+.admin-theme {
+  --admin-table-border: #e8edf3;
+  --admin-table-heading: #64748b;
+  --admin-table-hover: color-mix(in srgb, var(--brand) 4%, white);
+}
+
+.admin-theme .overflow-x-auto {
+  scrollbar-color: color-mix(in srgb, var(--brand) 35%, #cbd5e1) transparent;
+  scrollbar-width: thin;
+}
+
+.admin-theme table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-theme table thead th {
+  padding: 0.8rem 1rem;
+  color: var(--admin-table-heading);
+  background-color: #f8fafc;
+  border-bottom: 1px solid var(--admin-table-border);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.25rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-theme table tbody td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--admin-table-border);
+  vertical-align: middle;
+}
+
+.admin-theme table tbody tr {
+  transition: background-color 0.16s ease;
+}
+
+.admin-theme table tbody tr:hover > td,
+.admin-theme table tbody tr:focus-within > td {
+  background-color: var(--admin-table-hover);
+}
+
+.admin-theme table tbody tr:focus-within > td:first-child {
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.admin-theme table tbody tr:last-child > td {
+  border-bottom: 0;
+}
+
+.admin-theme table th:first-child,
+.admin-theme table td:first-child {
+  padding-left: 1.25rem;
+}
+
+.admin-theme table th:last-child,
+.admin-theme table td:last-child {
+  padding-right: 1.25rem;
+}
+
+/* Student and result rosters use the same calm hierarchy, with denser controls. */
+.admin-theme .student-roster,
+.admin-theme .results-roster {
+  border: 1px solid var(--admin-table-border);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.admin-theme .student-roster-table thead th,
+.admin-theme .results-roster-table thead th {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.admin-theme .student-roster-table tbody tr:hover > td,
+.admin-theme .results-roster-table tbody tr:hover > td {
+  background-color: color-mix(in srgb, var(--brand) 6%, white);
+}
+
+.admin-theme .student-roster-table tbody td:last-child .flex,
+.admin-theme .results-roster-table tbody td:last-child .flex {
+  gap: 0.35rem;
+}
+
+.admin-theme .student-roster-table tbody td:last-child button,
+.admin-theme .results-roster-table tbody td:last-child button {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.admin-theme .student-roster-table tbody td:last-child button:hover,
+.admin-theme .results-roster-table tbody td:last-child button:hover {
+  border-color: color-mix(in srgb, var(--brand) 35%, #e2e8f0);
+  background: var(--admin-table-hover);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08);
+}
+
+/* The score grid stays readable when there are many terms and score columns. */
+.admin-theme .exam-results-table thead th {
+  color: #f8fafc;
+  background: #172033;
+  border-bottom-color: #334155;
+}
+
+.admin-theme .exam-results-table thead th.exam-term-one { background: #1d4ed8; }
+.admin-theme .exam-results-table thead th.exam-term-two { background: #15803d; }
+.admin-theme .exam-results-table thead th.exam-cumulative { background: #6d28d9; }
+.admin-theme .exam-results-table thead th.exam-average { background: #b45309; }
+
+.admin-theme .exam-results-table tbody td {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-theme .exam-results-table tbody td:first-child {
+  text-align: left;
+  color: #0f172a;
+}
+
+.admin-theme .exam-results-table tbody tr:hover > td {
+  background-color: #f8fafc;
+}
+
+.admin-theme .exam-results-table tfoot td {
+  padding: 0.85rem 1rem;
+  background: color-mix(in srgb, var(--brand) 8%, white);
+  border-top: 2px solid color-mix(in srgb, var(--brand) 28%, #cbd5e1);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .admin-theme table thead th,
+  .admin-theme table tbody td {
+    padding: 0.75rem;
+  }
+
+  .admin-theme table th:first-child,
+  .admin-theme table td:first-child {
+    padding-left: 1rem;
+  }
+
+  .admin-theme table th:last-child,
+  .admin-theme table td:last-child {
+    padding-right: 1rem;
+  }
+
+  .admin-theme .student-roster-table,
+  .admin-theme .results-roster-table,
+  .admin-theme .exam-results-table {
+    min-width: 100%;
+  }
+}
+
+@media print {
+  .admin-theme table {
+    border-collapse: collapse !important;
+  }
+
+  .admin-theme table thead th,
+  .admin-theme table tbody td {
+    padding: 3px 5px !important;
+    background: white !important;
+    border-color: #d1d5db !important;
+  }
+}
+
 
 @media print {
   /* Hide chrome */
