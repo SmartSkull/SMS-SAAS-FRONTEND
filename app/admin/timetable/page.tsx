@@ -1126,14 +1126,14 @@ function CombinedTimetableGrid({ entries, exportTitle, courses, onSaved, onSaveD
 ═══════════════════════════════════════════════════════════════════════════ */
 function TeacherBadge({ teacher }: { teacher: AdminClassTimetable['teacher'] }) {
   if (!teacher) return (
-    <div className="flex items-center gap-2">
-      <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"><User size={13} className="text-gray-400" /></div>
-      <span className="text-xs text-gray-400 italic">No teacher assigned</span>
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><User size={13} className="text-gray-400" /></div>
+      <span className="text-xs text-gray-400 italic truncate">No teacher assigned</span>
     </div>
   );
   const imgUrl = getImageUrl(teacher.image);
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 min-w-0">
       <div className="w-7 h-7 rounded-full bg-blue-100 overflow-hidden flex items-center justify-center shrink-0">
         {imgUrl ? <img src={imgUrl} alt={teacher.name} className="w-full h-full object-cover" />
           : <span className="text-[10px] font-bold text-blue-600">{teacher.name.charAt(0)}</span>}
@@ -1374,8 +1374,8 @@ function TimetableCard({ title, icon: Icon, iconColor, content, teacher, updated
       'bg-white rounded-2xl shadow-sm border overflow-hidden transition-colors',
       selected ? 'border-blue-300 ring-1 ring-blue-200' : 'border-gray-100'
     )}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      {/* Header — stacks on phones, one row from sm upwards */}
+      <div className="flex flex-col gap-2.5 border-b border-gray-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-4">
         {/* Selection checkbox — outside the expand target so ticking it doesn't
             also open the card. */}
         {onToggleSelect && (
@@ -1388,7 +1388,7 @@ function TimetableCard({ title, icon: Icon, iconColor, content, teacher, updated
           />
         )}
         {/* Left: click to expand */}
-        <div className="flex items-center gap-3 flex-1 cursor-pointer min-w-0"
+        <div className="flex items-center gap-3 min-w-0 cursor-pointer sm:flex-1"
           onClick={() => { setExpanded(e => !e); if (mode === 'edit') setMode('view'); }}>
           <div className={clsx('w-8 h-8 rounded-xl flex items-center justify-center shrink-0', iconColor)}>
             <Icon size={16} />
@@ -1402,11 +1402,11 @@ function TimetableCard({ title, icon: Icon, iconColor, content, teacher, updated
         </div>
 
         {/* Right: teacher + actions */}
-        <div className="flex items-center gap-3 shrink-0 ml-4">
+        <div className="flex items-center gap-2 sm:gap-3 sm:ml-4 sm:shrink-0">
           <TeacherBadge teacher={teacher} />
 
           {/* Export buttons */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 ml-auto sm:ml-0">
             <button
               onClick={() => handleExport('png')}
               disabled={exporting}
