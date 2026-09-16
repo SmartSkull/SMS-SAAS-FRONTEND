@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
-import { Plus, Minus } from 'lucide-react';
 import { FAQS } from '@/types/landing';
+import { Minus, Plus } from 'lucide-react';
+import { useState } from 'react';
 import { Reveal } from './Reveal';
 import { SectionHeader } from './SectionHeader';
 
@@ -52,7 +52,6 @@ export function FAQSection() {
             })}
           </div>
 
-          {/* Image — right */}
           <Reveal className="lg:sticky lg:top-24">
             <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-blue-950/50">
               <img
