@@ -11,7 +11,8 @@ import { useAdminAttendanceLocation, useAdminAttendanceReport, useAdminStudentAt
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { api, endpoints } from '@/lib/api';
+import { api, endpoints, getProfileImageUrl } from '@/lib/api';
+import { auth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import BarcodeScanner from '@/components/ui/BarcodeScanner';
 import type { AttendanceStatus } from '@/types';
@@ -121,13 +122,22 @@ function RecordsTable({ records, loading, type }: { records: any[]; loading: boo
           {records.map((r) => {
             const person = type === 'staff' ? r.staff : r.student;
             const cfg = STATUS_CFG[r.status as AttendanceStatus];
+            const photoUrl = getProfileImageUrl(person?.image);
             return (
               <tr key={r.id} className="hover:bg-gray-50/60 transition-colors group">
                 <td className="py-3 pr-4">
                   <div className="flex items-center gap-3">
-                    <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold', cfg.bg, cfg.color)}>
-                      {(person?.name?.[0] ?? '?').toUpperCase()}
-                    </div>
+                    {photoUrl ? (
+                      <img
+                        src={photoUrl}
+                        alt=""
+                        className="w-8 h-8 rounded-lg object-cover shrink-0 border border-gray-100"
+                      />
+                    ) : (
+                      <div className={clsx('w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold', cfg.bg, cfg.color)}>
+                        {(person?.name?.[0] ?? '?').toUpperCase()}
+                      </div>
+                    )}
                     <span className="font-semibold text-gray-800">{person?.name}</span>
                   </div>
                 </td>
@@ -159,6 +169,14 @@ function MyAttendanceCard({ school }: { school: any }) {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError]     = useState('');
   const [showFaceModal, setShowFaceModal] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(() => getProfileImageUrl(auth.getUser()?.image ?? null));
+
+  // /auth/me returns the signed-in user for any role, so it works for admins.
+  useEffect(() => {
+    api.get<any>(endpoints.auth.me)
+      .then(r => { const img = getProfileImageUrl(r?.data?.image ?? null); if (img) setPhoto(img); })
+      .catch(() => {});
+  }, []);
 
   const handleClockIn = () => {
     setGeoError('');
@@ -179,9 +197,13 @@ function MyAttendanceCard({ school }: { school: any }) {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-            <UserCheck size={17} className="text-blue-600" />
-          </div>
+          {photo ? (
+            <img src={photo} alt="" className="w-9 h-9 rounded-xl object-cover shrink-0 border border-gray-100" />
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+              <UserCheck size={17} className="text-blue-600" />
+            </div>
+          )}
           <div>
             <h2 className="text-sm font-bold text-gray-800">My Attendance</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">Clock yourself in — the same location and face rules as staff</p>

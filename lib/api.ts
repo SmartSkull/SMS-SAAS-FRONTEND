@@ -16,6 +16,19 @@ export function getImageUrl(filename?: string | null): string | null {
   return `/api/uploads/${filename}`;
 }
 
+/** Stored filenames that stand in for "no photo": the backend's own default,
+ *  plus the placeholder the legacy data import left behind. */
+const PLACEHOLDER_IMAGES = new Set(['image.png', 'default.png', 'null', '']);
+
+/**
+ * A profile photo URL, or null when the record only holds a placeholder — so
+ * callers can fall back to initials or an icon rather than a generic avatar.
+ */
+export function getProfileImageUrl(filename?: string | null): string | null {
+  if (!filename || PLACEHOLDER_IMAGES.has(filename)) return null;
+  return getImageUrl(filename);
+}
+
 const client = axios.create({
   baseURL: BASE_URL,
   headers: { 'ngrok-skip-browser-warning': '1' },

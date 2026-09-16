@@ -11,7 +11,8 @@ const FaceAttendanceModal = dynamic(() => import('@/components/ui/FaceAttendance
 import { useStaffAttendance, useStaffAttendanceHistory } from '@/hooks/attendance';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { api, endpoints } from '@/lib/api';
+import { api, endpoints, getProfileImageUrl } from '@/lib/api';
+import { auth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import BarcodeScanner from '@/components/ui/BarcodeScanner';
 import type { AttendanceStatus } from '@/types';
@@ -109,6 +110,21 @@ function makeCircleGeoJSON(lat: number, lng: number, radiusM: number) {
   };
 }
 
+/** Badge content for the person marker: their profile photo, or a person glyph. */
+function paintPersonBadge(el: HTMLElement | null, photoUrl: string | null) {
+  if (!el) return;
+  el.replaceChildren();
+  if (photoUrl) {
+    const img = document.createElement('img');
+    img.src = photoUrl;
+    img.alt = '';
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block';
+    el.appendChild(img);
+  } else {
+    el.textContent = '🧑';
+  }
+}
+
 function ProximityMap({
   schoolLat, schoolLng, radiusMeters, userLat, userLng, primaryColor,
 }: {
@@ -122,6 +138,22 @@ function ProximityMap({
   const pendingRef   = useRef<{ lat: number; lng: number } | null>(null);
   const personRef    = useRef<any>(null);
   const lastUserRef  = useRef<[number, number] | null>(null);
+  const personElRef  = useRef<HTMLDivElement | null>(null);
+  const photoRef     = useRef<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(() => getProfileImageUrl(auth.getUser()?.image ?? null));
+
+  // Repaint the badge whenever a newer photo arrives.
+  useEffect(() => {
+    photoRef.current = photo;
+    paintPersonBadge(personElRef.current, photo);
+  }, [photo]);
+
+  // The profile endpoint is fresher than whatever the login response carried.
+  useEffect(() => {
+    api.get<any>(endpoints.staff.profile)
+      .then(r => { const img = getProfileImageUrl(r?.data?.image ?? null); if (img) setPhoto(img); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -171,15 +203,17 @@ function ProximityMap({
         map.addLayer({ id: 'prox-line', type: 'line', source: 'line',
           paint: { 'line-color': '#6366f1', 'line-width': 2.5, 'line-dasharray': [4, 3], 'line-opacity': 0.9 } });
 
-        // You: a person badge, revealed once a real position arrives.
+        // You: a badge showing your profile photo, revealed once a real
+        // position arrives.
         const person = document.createElement('div');
         person.style.cssText = [
           'width:30px', 'height:30px', 'display:flex', 'align-items:center', 'justify-content:center',
-          'background:#6366f1', 'border:3px solid #fff', 'border-radius:50%',
+          'background:#6366f1', 'border:3px solid #fff', 'border-radius:50%', 'overflow:hidden',
           'box-shadow:0 0 0 8px rgba(99,102,241,.2), 0 2px 6px rgba(0,0,0,.4)',
           'font-size:15px', 'line-height:1', 'visibility:hidden',
         ].join(';');
-        person.textContent = '🧑';
+        personElRef.current = person;
+        paintPersonBadge(person, photoRef.current);
         personRef.current = new Marker({ element: person, anchor: 'center' })
           .setLngLat([Number(schoolLng), Number(schoolLat)]).addTo(map);
 
