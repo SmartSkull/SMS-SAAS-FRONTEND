@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function Reveal({ children, delay = 0, className = '', variant = 'up' }:
   { children: React.ReactNode; delay?: number; className?: string; variant?: 'up' | 'left' | 'right' | 'fade' }) {
@@ -33,7 +33,6 @@ export function Reveal({ children, delay = 0, className = '', variant = 'up' }:
   );
 }
 
-// Keep named variant exports so existing imports don't break
 export const slideL = 'left';
 export const slideR = 'right';
 export const fadeUp = 'up';
