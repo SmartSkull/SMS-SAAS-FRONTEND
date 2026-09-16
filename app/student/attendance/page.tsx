@@ -143,6 +143,8 @@ function ProximityMap({
   const readyRef     = useRef(false);
   // Buffer student coords that arrive before map is ready
   const pendingRef   = useRef<{ lat: number; lng: number } | null>(null);
+  const personRef    = useRef<any>(null);
+  const lastUserRef  = useRef<[number, number] | null>(null);
 
   /* ── Init map once on mount ── */
   useEffect(() => {
@@ -179,17 +181,15 @@ function ProximityMap({
         map.addLayer({ id: 'radius-line', type: 'line', source: 'radius',
           paint: { 'line-color': primaryColor, 'line-width': 2, 'line-dasharray': [3, 2] } });
 
-        /* School pin */
-        const pin = document.createElement('div');
-        pin.style.cssText = [
-          'width:26px', 'height:26px',
-          'background:' + primaryColor,
-          'border:3px solid #fff',
-          'border-radius:50% 50% 50% 0',
-          'transform:rotate(-45deg)',
-          'box-shadow:0 2px 6px rgba(0,0,0,.4)',
+        /* School: a house badge, so the campus reads at a glance. */
+        const house = document.createElement('div');
+        house.style.cssText = [
+          'width:30px', 'height:30px', 'display:flex', 'align-items:center', 'justify-content:center',
+          'background:' + primaryColor, 'border:3px solid #fff', 'border-radius:50%',
+          'box-shadow:0 2px 6px rgba(0,0,0,.4)', 'font-size:15px', 'line-height:1',
         ].join(';');
-        new Marker({ element: pin, anchor: 'bottom' })
+        house.textContent = '🏠';
+        new Marker({ element: house, anchor: 'center' })
           .setLngLat([Number(schoolLng), Number(schoolLat)])
           .addTo(map);
 
@@ -209,20 +209,25 @@ function ProximityMap({
           paint: { 'line-color': '#6366f1', 'line-width': 2.5,
                    'line-dasharray': [4, 3], 'line-opacity': 0.9 } });
 
-        /* Student dot */
-        map.addSource('student', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            geometry: { type: 'Point', coordinates: [Number(schoolLng), Number(schoolLat)] },
-            properties: {},
-          },
+        /* You: a person badge, revealed once a real position arrives. */
+        const person = document.createElement('div');
+        person.style.cssText = [
+          'width:30px', 'height:30px', 'display:flex', 'align-items:center', 'justify-content:center',
+          'background:#6366f1', 'border:3px solid #fff', 'border-radius:50%',
+          'box-shadow:0 0 0 8px rgba(99,102,241,.2), 0 2px 6px rgba(0,0,0,.4)',
+          'font-size:15px', 'line-height:1', 'visibility:hidden',
+        ].join(';');
+        person.textContent = '🧑';
+        personRef.current = new Marker({ element: person, anchor: 'center' })
+          .setLngLat([Number(schoolLng), Number(schoolLat)])
+          .addTo(map);
+
+        // The gap between the two badges changes as the map zooms, so keep
+        // re-spacing them while it moves.
+        map.on('move', () => {
+          const u = lastUserRef.current;
+          if (u) separatePerson(map, u[1], u[0]);
         });
-        map.addLayer({ id: 'student-halo', type: 'circle', source: 'student',
-          paint: { 'circle-radius': 12, 'circle-color': '#6366f1', 'circle-opacity': 0.2 } });
-        map.addLayer({ id: 'student-dot', type: 'circle', source: 'student',
-          paint: { 'circle-radius': 7, 'circle-color': '#6366f1',
-                   'circle-stroke-color': '#fff', 'circle-stroke-width': 2.5 } });
 
         readyRef.current = true;
 
@@ -242,21 +247,44 @@ function ProximityMap({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * Standing at the school puts the two badges on top of each other, and the
+   * person — added last — hides the house. Push the person along the
+   * school→person line until they clear each other, so both icons stay readable.
+   */
+  function separatePerson(map: any, sLat: number, sLng: number) {
+    const person = personRef.current;
+    if (!person) return;
+    const school = map.project([Number(schoolLng), Number(schoolLat)]);
+    const self   = map.project([Number(sLng), Number(sLat)]);
+    const dx = self.x - school.x, dy = self.y - school.y;
+    const gap = Math.hypot(dx, dy);
+    if (gap >= 42) { person.setOffset([0, 0]); return; }
+    // Exactly on top of each other: nudge out to the bottom-right.
+    const ux = gap > 0.01 ? dx / gap : Math.SQRT1_2;
+    const uy = gap > 0.01 ? dy / gap : Math.SQRT1_2;
+    const push = 42 - gap;
+    person.setOffset([ux * push, uy * push]);
+  }
+
   /* ── Helper: update sources + fit bounds ── */
   function applyStudentCoords(map: any, sLat: number, sLng: number) {
     const sCoord: [number, number] = [Number(sLng), Number(sLat)];
     const hCoord: [number, number] = [Number(schoolLng), Number(schoolLat)];
 
-    map.getSource('student')?.setData({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: sCoord },
-      properties: {},
-    });
     map.getSource('line')?.setData({
       type: 'Feature',
       geometry: { type: 'LineString', coordinates: [hCoord, sCoord] },
       properties: {},
     });
+
+    const person = personRef.current;
+    if (person) {
+      person.getElement().style.visibility = 'visible';
+      person.setLngLat(sCoord);
+    }
+    lastUserRef.current = [Number(sLng), Number(sLat)];
+    separatePerson(map, sLat, sLng);
 
     const pad = 0.003;
     map.fitBounds(
@@ -1113,6 +1141,7 @@ export default function StudentAttendancePage() {
       {showFaceModal && (
         <FaceAttendanceModal
           primaryColor={school?.primaryColor}
+          requireLocation
           onClose={() => setShowFaceModal(false)}
           onClockedIn={(msg) => {
             setShowFaceModal(false);

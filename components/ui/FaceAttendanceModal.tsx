@@ -21,9 +21,11 @@ interface Props {
   /** Override default student endpoints for staff use */
   clockInEndpoint?: string;
   enrollEndpoint?: string;
+  /** Send the device position with clock-in, for endpoints that geofence it */
+  requireLocation?: boolean;
 }
 
-export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor = '#2563eb', clockInEndpoint, enrollEndpoint }: Props) {
+export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor = '#2563eb', clockInEndpoint, enrollEndpoint, requireLocation = false }: Props) {
   const videoRef  = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -32,6 +34,7 @@ export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor
   const [message, setMessage]     = useState('');
   const [capturedUrl, setCapturedUrl]   = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  const [locating, setLocating]   = useState(false);
 
   // Camera switching
   const [cameras, setCameras]         = useState<MediaDeviceInfo[]>([]);
@@ -122,6 +125,19 @@ export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor
     return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
   };
 
+  /* ── Current device position, for endpoints that geofence clock-in ── */
+  const getPosition = (): Promise<GeolocationPosition> => new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is not supported by your browser'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      err => reject(new Error(err.message || 'Could not get your location. Please allow location access.')),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  });
+
   /* ── Handle Clock-In ── */
   const handleClockIn = async () => {
     setStage('capturing');
@@ -134,6 +150,18 @@ export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor
     try {
       const form = new FormData();
       form.append('photo', blob, 'face.jpg');
+      if (requireLocation) {
+        // The endpoint checks the clock-in is made from the school, so the
+        // position travels with the photo.
+        setLocating(true);
+        try {
+          const pos = await getPosition();
+          form.append('latitude', String(pos.coords.latitude));
+          form.append('longitude', String(pos.coords.longitude));
+        } finally {
+          setLocating(false);
+        }
+      }
       const res = await api.upload<any>(clockInEndpoint ?? endpoints.student.attendanceFaceClockIn, form);
       if (res?.enrolled === false) { setStage('not_enrolled'); setMessage(res.message ?? 'Face not registered.'); return; }
       if (res?.alreadyClockedIn)   { setStage('success');      setMessage('You have already clocked in today.'); return; }
@@ -261,7 +289,7 @@ export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor
                 <Loader2 size={32} className="text-white animate-spin" />
                 <p className="text-white text-sm font-semibold">
                   {stage === 'capturing'   && 'Capturing…'}
-                  {stage === 'recognizing' && 'Recognizing face…'}
+                  {stage === 'recognizing' && (locating ? 'Getting your location…' : 'Recognizing face…')}
                   {stage === 'enrolling'   && 'Enrolling face…'}
                 </p>
               </div>
@@ -337,6 +365,7 @@ export default function FaceAttendanceModal({ onClose, onClockedIn, primaryColor
           {stage === 'ready' && (
             <p className="text-[11px] text-gray-400 text-center">
               Position your face inside the oval, ensure good lighting, then tap Clock In.
+              {requireLocation && ' You must be at the school for the clock-in to be accepted.'}
               {canSwitch && ' Tap the flip icon to switch cameras.'}
             </p>
           )}

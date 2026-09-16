@@ -232,6 +232,7 @@ export const endpoints = {
     notificationsRead: '/staff/notifications/read',
     classTimetable: '/staff/timetable/class',
     examTimetable: '/staff/timetable/exam',
+    timetableSchedulerConfig: '/staff/timetable/scheduler-config',
     curriculumTopics: '/staff/curriculum/topics',
     curriculumLessonPlans: '/staff/curriculum/lesson-plans',
     curriculumWeeklySchemes: '/staff/curriculum/weekly-schemes',

@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import {
   MapPin, Users, AlertCircle, Save, RefreshCw,
   CheckCircle2, Clock, XCircle, ChevronDown,
   Settings2, BarChart3, GraduationCap, UserCheck,
-  ScanLine, CheckCircle,
+  ScanLine, ScanFace, LogOut, CheckCircle,
 } from 'lucide-react';
-import { useAdminAttendanceLocation, useAdminAttendanceReport, useAdminStudentAttendanceReport } from '@/hooks/attendance';
+import { useAdminAttendanceLocation, useAdminAttendanceReport, useAdminStudentAttendanceReport, useStaffAttendance } from '@/hooks/attendance';
 import { useSchoolData } from '@/hooks/useSchoolData';
 import { useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -15,6 +16,8 @@ import { useToast } from '@/components/ui/Toast';
 import BarcodeScanner from '@/components/ui/BarcodeScanner';
 import type { AttendanceStatus } from '@/types';
 import clsx from 'clsx';
+
+const FaceAttendanceModal = dynamic(() => import('@/components/ui/FaceAttendanceModal'), { ssr: false });
 
 const STATUS_CFG: Record<AttendanceStatus, { bg: string; color: string; badge: string; dot: string; label: string }> = {
   PRESENT: { bg: 'bg-emerald-50', color: 'text-emerald-600', badge: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', label: 'Present' },
@@ -149,8 +152,127 @@ function RecordsTable({ records, loading, type }: { records: any[]; loading: boo
 }
 
 /* ─────────────────────────────────────────────
+   My Attendance — admins clock in the same way staff do
+   ───────────────────────────────────────────── */
+function MyAttendanceCard({ school }: { school: any }) {
+  const { record, location, loading, acting, clockIn, clockOut, reload } = useStaffAttendance();
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError]     = useState('');
+  const [showFaceModal, setShowFaceModal] = useState(false);
+
+  const handleClockIn = () => {
+    setGeoError('');
+    if (!navigator.geolocation) { setGeoError('Geolocation is not supported by your browser'); return; }
+    setGeoLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      pos => { setGeoLoading(false); clockIn(pos.coords.latitude, pos.coords.longitude); },
+      err => { setGeoLoading(false); setGeoError(err.message || 'Could not get your location. Please allow location access.'); },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
+  const busy = acting || geoLoading;
+  const cfg = record?.status ? STATUS_CFG[record.status as AttendanceStatus] : null;
+  const blocked = busy || !location;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+            <UserCheck size={17} className="text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-gray-800">My Attendance</h2>
+            <p className="text-[11px] text-gray-400 mt-0.5">Clock yourself in — the same location and face rules as staff</p>
+          </div>
+        </div>
+        {cfg && (
+          <span className={clsx('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold', cfg.badge)}>
+            <span className={clsx('w-1.5 h-1.5 rounded-full', cfg.dot)} />
+            {cfg.label}{fmtLate(record?.lateMinutes ?? 0)}
+          </span>
+        )}
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Clock In</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-gray-800">{fmt(record?.clockIn ?? null)}</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 text-center">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Clock Out</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-gray-800">{fmt(record?.clockOut ?? null)}</p>
+          </div>
+        </div>
+
+        {!location && !loading && (
+          <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3.5 text-sm text-amber-700">
+            <AlertCircle size={15} className="shrink-0" />
+            Set the attendance location above before clocking in.
+          </div>
+        )}
+
+        {geoError && (
+          <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 p-3.5 text-sm text-red-700">
+            <AlertCircle size={15} className="shrink-0" /> {geoError}
+          </div>
+        )}
+
+        {loading ? (
+          <Skeleton className="h-11 w-full" />
+        ) : !record?.clockIn ? (
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              onClick={handleClockIn}
+              disabled={blocked}
+              className="flex flex-1 items-center justify-center gap-2 btn-brand text-white py-3 rounded-xl font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {geoLoading ? <RefreshCw size={16} className="animate-spin" /> : <MapPin size={16} />}
+              {geoLoading ? 'Getting location…' : 'Clock In with Location'}
+            </button>
+            <button
+              onClick={() => setShowFaceModal(true)}
+              disabled={blocked}
+              className="flex flex-1 items-center justify-center gap-2 border border-gray-200 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ScanFace size={16} /> Clock In with Face
+            </button>
+          </div>
+        ) : !record?.clockOut ? (
+          <button
+            onClick={clockOut}
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-2 btn-brand text-white py-3 rounded-xl font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy ? <RefreshCw size={16} className="animate-spin" /> : <LogOut size={16} />}
+            Clock Out
+          </button>
+        ) : (
+          <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 py-3 text-sm font-semibold text-emerald-700">
+            <CheckCircle size={16} /> Done for today
+          </div>
+        )}
+      </div>
+
+      {showFaceModal && (
+        <FaceAttendanceModal
+          primaryColor={school?.primaryColor}
+          clockInEndpoint={endpoints.staff.attendanceFaceClockIn}
+          enrollEndpoint={endpoints.staff.attendanceFaceEnroll}
+          requireLocation
+          onClose={() => setShowFaceModal(false)}
+          onClockedIn={() => { setShowFaceModal(false); reload(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    Main Page
-───────────────────────────────────────────── */
+   ───────────────────────────────────────────── */
 export default function AdminAttendancePage() {
   const { location, loading: locLoading, saving, save } = useAdminAttendanceLocation();
   const { school } = useSelectedSchool();
@@ -438,6 +560,9 @@ export default function AdminAttendancePage() {
           </div>
         </div>
       )}
+
+      {/* ── My own attendance ── */}
+      <MyAttendanceCard school={school} />
 
       {/* ── Attendance Report ── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
