@@ -119,7 +119,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   if (!win) return;
 
   win.document.write(`<!DOCTYPE html><html><head>
-  <title>Result — ${student?.firstName} ${student?.lastName}</title>
+  <title>Result — ${student?.lastName} ${student?.firstName}</title>
   <style>
     @page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:10px;background:#fff}
@@ -163,7 +163,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   <div class="info-bar">
     ${photoB64 ? `<img src="${photoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ${primary};margin-right:10px">` : ''}
     <div style="display:flex;gap:15px">
-      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${student?.firstName} ${student?.lastName}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${student?.lastName} ${student?.firstName}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${student?.uniqueId || ''}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class</div><div style="font-weight:600;font-size:10px">${data.class || 'N/A'}</div></div>
     </div>
@@ -846,7 +846,7 @@ export default function StaffResults() {
                         />
                       </td>
                       <td className="sticky left-10 z-10 bg-white group-hover:bg-gray-50 p-3 border-r border-gray-100">
-                        <p className="font-medium text-gray-900 whitespace-nowrap">{s.firstname} {s.lastname}</p>
+                        <p className="font-medium text-gray-900 whitespace-nowrap">{s.lastname} {s.firstname}</p>
                         <p className="text-xs text-gray-400 font-mono">{s.student_id}</p>
                       </td>
                       <td className="p-3 text-gray-500 text-xs">{s._rows.length} subject{s._rows.length !== 1 ? 's' : ''}</td>
@@ -924,7 +924,7 @@ export default function StaffResults() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div>
-                          <p className="font-semibold text-gray-900 text-sm">{s.firstname} {s.lastname}</p>
+                          <p className="font-semibold text-gray-900 text-sm">{s.lastname} {s.firstname}</p>
                           <p className="text-xs text-gray-400 font-mono">{s.student_id}</p>
                         </div>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap ${cls}`}>{avg}% · {g}</span>
@@ -1068,7 +1068,7 @@ export default function StaffResults() {
                         const total = ca + exam;
                         return (
                           <tr key={s.student_id} className="hover:bg-gray-50">
-                            <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
+                            <td className="p-3 font-medium text-gray-900">{s.lastname} {s.firstname}</td>
                             <td className="p-3 text-xs text-gray-400 font-mono">{s.student_id}</td>
                             <td className="p-2">
                               <input type="number" min={0} max={40} value={r.test_score}
@@ -1202,7 +1202,7 @@ export default function StaffResults() {
                           : r.absent;
                         return (
                           <tr key={s.student_id} className="hover:bg-gray-50">
-                            <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
+                            <td className="p-3 font-medium text-gray-900">{s.lastname} {s.firstname}</td>
                             <td className="p-3 text-xs text-gray-400 font-mono">{s.student_id}</td>
                             <td className="p-2">
                               <input type="number" min={0} max={totalSchoolDays ?? undefined} value={r.present}
@@ -1298,7 +1298,7 @@ export default function StaffResults() {
                         const row = traitsRows[s.student_id] ?? {};
                         return (
                           <tr key={s.student_id} className="hover:bg-gray-50">
-                            <td className="p-2 font-medium text-gray-900 whitespace-nowrap">{s.firstname} {s.lastname}</td>
+                            <td className="p-2 font-medium text-gray-900 whitespace-nowrap">{s.lastname} {s.firstname}</td>
                             {AFFECTIVE_TRAITS.map(t => (
                               <td key={t.key} className="p-1 bg-amber-50/40">
                                 <input type="number" min={0} max={5} value={row[t.key] ?? 0}
@@ -1430,7 +1430,7 @@ function StudentResultModal({ studentId, session, term, school, onClose }: { stu
                       : <div className="w-full h-full flex items-center justify-center text-gray-400"><User size={22} /></div>}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">{data.student.firstName} {data.student.lastName}</p>
+                    <p className="font-bold text-gray-900">{data.student.lastName} {data.student.firstName}</p>
                     <p className="text-xs text-gray-500 font-mono">{data.student.uniqueId}</p>
                     {data.class && <p className="text-xs text-blue-600 font-medium mt-0.5">{data.class}</p>}
                   </div>

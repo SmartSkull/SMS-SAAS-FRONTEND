@@ -75,7 +75,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   if (!win) { alert('Pop-up blocked. Please allow pop-ups and try again.'); return; }
 
   const html = `<!DOCTYPE html><html><head>
-  <title>Result — ${data.student?.firstName} ${data.student?.lastName}</title>
+  <title>Result — ${data.student?.lastName} ${data.student?.firstName}</title>
   <style>
     @page{size:A4;margin:8mm}*{margin:0;padding:0;box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:10px;background:#fff}
@@ -119,7 +119,7 @@ async function printResultSheet(data: any, results: any[], session: string, term
   <div class="info-bar">
     ${photoB64 ? `<img src="${photoB64}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid ${primary};margin-right:10px">` : ''}
     <div style="display:flex;gap:15px">
-      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${data.student?.firstName} ${data.student?.lastName}</div></div>
+      <div><div style="color:#666;font-size:7px;text-transform:uppercase">Name</div><div style="font-weight:600;font-size:10px">${data.student?.lastName} ${data.student?.firstName}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Student ID</div><div style="font-weight:600;font-size:10px">${data.student?.uniqueId || ''}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class</div><div style="font-weight:600;font-size:10px">${data.class || 'N/A'}</div></div>
       <div><div style="color:#666;font-size:7px;text-transform:uppercase">Class Size</div><div style="font-weight:600;font-size:10px">${data.class_size || 'N/A'}</div></div>
@@ -414,7 +414,7 @@ export default function AdminResults() {
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {bulkProgress.map(({ id, status }) => {
                 const student = students.find(s => s.student_id === id) || init?.students.find(s => s.student_id === id);
-                const name = student ? `${student.firstname} ${student.lastname}` : id;
+                const name = student ? `${student.lastname} ${student.firstname}` : id;
                 return (
                   <div key={id} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                     <span className="text-sm font-medium text-gray-800 truncate">{name}</span>
@@ -468,7 +468,7 @@ export default function AdminResults() {
             ) : students.map((s) => (
               <tr key={s.student_id} className="hover:bg-gray-50">
                 <td className="p-3"><input type="checkbox" checked={selected.includes(s.student_id)} onChange={() => toggleSelect(s.student_id)} /></td>
-                <td className="p-3 font-medium text-gray-900">{s.firstname} {s.lastname}</td>
+                <td className="p-3 font-medium text-gray-900">{s.lastname} {s.firstname}</td>
                 <td className="p-3 text-gray-500 font-mono text-xs">{s.student_id}</td>
                 <td className="p-3">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.approved == 1 || s.approved === true || s.approved === '1' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
@@ -726,7 +726,7 @@ function StudentResultModal({ studentId, session, term, onClose }: { studentId: 
                       : <div className="w-full h-full flex items-center justify-center text-gray-400"><User size={22} /></div>}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900">{data.student.firstName} {data.student.lastName}</p>
+                    <p className="font-bold text-gray-900">{data.student.lastName} {data.student.firstName}</p>
                     <p className="text-xs text-gray-500 font-mono">{data.student.uniqueId}</p>
                     {data.class && <p className="text-xs text-blue-600 font-medium mt-0.5">{data.class}</p>}
                   </div>
