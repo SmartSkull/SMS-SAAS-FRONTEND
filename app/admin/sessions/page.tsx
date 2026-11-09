@@ -26,21 +26,27 @@ export default function SessionsPage() {
   // Dismissed the "more than one current term" prompt for this load. Reset on
   // every reload so it keeps asking until the data is actually fixed.
   const [fixDismissed, setFixDismissed] = useState(false);
+  const [fixError, setFixError] = useState('');
   const toast = useToast();
 
-  const load = useCallback(() => {
+  const load = useCallback(async (): Promise<Term[]> => {
     setLoading(true);
-    Promise.all([
-      api.get<ApiResponse<Session[]>>(endpoints.admin.sessions),
-      api.get<ApiResponse<Term[]>>(endpoints.admin.terms),
-    ])
-      .then(([s, t]) => {
-        setSessions((s.data as any) ?? []);
-        setTerms((t.data as any) ?? []);
-        setFixDismissed(false);
-      })
-      .catch(() => toast.error('Failed to load'))
-      .finally(() => setLoading(false));
+    try {
+      const [s, t] = await Promise.all([
+        api.get<ApiResponse<Session[]>>(endpoints.admin.sessions),
+        api.get<ApiResponse<Term[]>>(endpoints.admin.terms),
+      ]);
+      const nextTerms = (t.data as any) ?? [];
+      setSessions((s.data as any) ?? []);
+      setTerms(nextTerms);
+      setFixDismissed(false);
+      return nextTerms as Term[];
+    } catch {
+      toast.error('Failed to load');
+      return [];
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -75,9 +81,23 @@ export default function SessionsPage() {
       // current term stops showing as current immediately, instead of lingering
       // until the refetch lands.
       setTerms(prev => prev.map(t => ({ ...t, isCurrent: String(t.id) === String(id) })));
+      setFixError('');
       toast.success('Term updated');
-      load();
-    } catch { toast.error('Failed to update'); }
+
+      const fresh = await load();
+      // If the server still reports two, the pick was saved but the duplicate
+      // was never cleared — the backend running there is older than this page.
+      if (fresh.filter(t => t.isCurrent).length > 1) {
+        setFixError(
+          'Saved, but the server still reports two current terms. The backend update ' +
+          'that clears the old one is not deployed yet, so it cannot be fixed from here.'
+        );
+      }
+    } catch (e: unknown) {
+      const message = (e as { message?: string })?.message ?? 'Failed to update the current term';
+      setFixError(message);
+      toast.error(message);
+    }
   };
 
   const deleteTerm = async () => {
@@ -294,6 +314,11 @@ export default function SessionsPage() {
                 Only one term can be current for this school. Select the correct one — the other
                 will stop showing as current.
               </p>
+              {fixError && (
+                <p className="text-xs leading-relaxed text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                  {fixError}
+                </p>
+              )}
               <div className="space-y-2">
                 {currentTerms.map((t) => (
                   <button
