@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Trash2, Star, X, Edit2 } from 'lucide-react';
+import { AlertTriangle, Plus, Trash2, Star, X, Edit2 } from 'lucide-react';
 import { api, endpoints } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import type { ApiResponse } from '@/types';
@@ -23,6 +23,9 @@ export default function SessionsPage() {
   const [termModal, setTermModal] = useState(false);
   const [termSession, setTermSession] = useState('');
   const [termName, setTermName] = useState('');
+  // Dismissed the "more than one current term" prompt for this load. Reset on
+  // every reload so it keeps asking until the data is actually fixed.
+  const [fixDismissed, setFixDismissed] = useState(false);
   const toast = useToast();
 
   const load = useCallback(() => {
@@ -31,7 +34,11 @@ export default function SessionsPage() {
       api.get<ApiResponse<Session[]>>(endpoints.admin.sessions),
       api.get<ApiResponse<Term[]>>(endpoints.admin.terms),
     ])
-      .then(([s, t]) => { setSessions((s.data as any) ?? []); setTerms((t.data as any) ?? []); })
+      .then(([s, t]) => {
+        setSessions((s.data as any) ?? []);
+        setTerms((t.data as any) ?? []);
+        setFixDismissed(false);
+      })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
   }, []);
@@ -102,6 +109,12 @@ export default function SessionsPage() {
       toast.error((e as { message?: string })?.message ?? 'Failed to create term');
     } finally { setSaving(false); }
   };
+
+  // More than one term flagged current means the stored data is inconsistent —
+  // an older bug left the previous term's flag behind, so two terms show as
+  // current and neither can be cleared on its own. Ask which one is really it.
+  const currentTerms = terms.filter((t) => t.isCurrent);
+  const showDuplicateTermModal = currentTerms.length > 1 && !fixDismissed;
 
   return (
     <div className="space-y-6">
@@ -260,6 +273,42 @@ export default function SessionsPage() {
               <button onClick={createTerm} disabled={saving} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-xl text-sm font-medium hover:bg-purple-700 disabled:opacity-60">
                 {saving ? 'Creating...' : 'Create'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* More than one current term — ask which one is really current */}
+      {showDuplicateTermModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl card shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={18} className="text-amber-500" />
+                <h2 className="font-semibold text-gray-900">Two terms are marked current</h2>
+              </div>
+              <button onClick={() => setFixDismissed(true)}><X size={20} className="text-gray-400" /></button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-sm text-gray-600">
+                Only one term can be current for this school. Select the correct one — the other
+                will stop showing as current.
+              </p>
+              <div className="space-y-2">
+                {currentTerms.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setCurrentTerm(t.id)}
+                    className="w-full flex items-center justify-between gap-3 p-3 border border-gray-200 rounded-xl text-left hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-medium text-gray-900">{t.name}</span>
+                      <span className="block text-xs text-gray-400 truncate">{t.sessionName}</span>
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-purple-600">Set current</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
