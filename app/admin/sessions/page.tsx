@@ -62,8 +62,15 @@ export default function SessionsPage() {
   };
 
   const setCurrentTerm = async (id: number) => {
-    try { await api.put(`${endpoints.admin.terms}/${id}/current`, {}); toast.success('Term updated'); load(); }
-    catch { toast.error('Failed to update'); }
+    try {
+      await api.put(`${endpoints.admin.terms}/${id}/current`, {});
+      // A school has one current term. Mirror that here so the previously
+      // current term stops showing as current immediately, instead of lingering
+      // until the refetch lands.
+      setTerms(prev => prev.map(t => ({ ...t, isCurrent: String(t.id) === String(id) })));
+      toast.success('Term updated');
+      load();
+    } catch { toast.error('Failed to update'); }
   };
 
   const deleteTerm = async () => {
