@@ -2,9 +2,10 @@
 import { useLogin } from '@/hooks/useLogin';
 import { normalizeSchoolLogo, useSelectedSchool } from '@/hooks/useSelectedSchool';
 import { getImageUrl } from '@/lib/api';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 import type { Role } from '@/types';
 import clsx from 'clsx';
-import { BookOpen, Eye, EyeOff, GraduationCap, MessageSquare, Search, Shield, ShieldCheck, Users } from 'lucide-react';
+import { BookOpen, Download, Eye, EyeOff, GraduationCap, MessageSquare, Search, Shield, ShieldCheck, Smartphone, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -182,7 +183,9 @@ function BubbleField({ variant = 'dark', primaryColor }: { variant?: 'dark' | 'l
 export default function LoginPage() {
   const { tab, switchTab, loading, form, setForm, loginId, setLoginId, suggestions, showSug, setShowSug, handleIdChange, handleSubmit } = useLogin();
   const { school } = useSelectedSchool();
+  const { state: pwaState, install: pwaInstall, showBanner: pwaShowBanner } = usePWAInstall();
   const [showPw, setShowPw] = useState(false);
+  const [showIosHint, setShowIosHint] = useState(false);
   const sugRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
 
@@ -221,6 +224,36 @@ export default function LoginPage() {
             <Link href="/school" className="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800">
               Search for school
             </Link>
+
+            {/* PWA install when no school is selected yet */}
+            {pwaState === 'ready' && (
+              <button
+                type="button"
+                onClick={pwaInstall}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-bold text-purple-700 hover:bg-purple-100"
+              >
+                <Download size={16} />
+                Install App
+              </button>
+            )}
+            {pwaState === 'ios' && (
+              <button
+                type="button"
+                onClick={() => setShowIosHint(h => !h)}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-bold text-purple-700 hover:bg-purple-100"
+              >
+                <Smartphone size={16} />
+                Add to Home Screen
+              </button>
+            )}
+            {showIosHint && pwaState === 'ios' && (
+              <div className="mt-2 rounded-xl border border-purple-100 bg-purple-50 p-3 text-xs text-purple-800 space-y-1.5">
+                <p className="font-semibold">To install on iOS:</p>
+                <p>1. Tap the <strong>Share</strong> button (⎋) in Safari's toolbar.</p>
+                <p>2. Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
+                <p>3. Tap <strong>"Add"</strong> to confirm.</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -485,6 +518,40 @@ export default function LoginPage() {
               <Search size={16} />
               Change School
             </Link>
+
+            {/* ── PWA Install Button ───────────────────────────────────────── */}
+            {pwaState === 'ready' && (
+              <button
+                type="button"
+                onClick={pwaInstall}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg font-bold text-sm transition-all border mt-2 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+              >
+                <Download size={16} />
+                Install App
+              </button>
+            )}
+
+            {pwaState === 'ios' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowIosHint(h => !h)}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-lg font-bold text-sm transition-all border mt-2 bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100"
+                >
+                  <Smartphone size={16} />
+                  Add to Home Screen
+                </button>
+                {showIosHint && (
+                  <div className="rounded-xl border border-purple-100 bg-purple-50 p-3 text-xs text-purple-800 space-y-1.5">
+                    <p className="font-semibold">To install on iOS:</p>
+                    <p>1. Tap the <strong>Share</strong> button (⎋) in Safari's toolbar.</p>
+                    <p>2. Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
+                    <p>3. Tap <strong>"Add"</strong> to confirm.</p>
+                  </div>
+                )}
+              </>
+            )}
+            {/* ─────────────────────────────────────────────────────────────── */}
           </form>
         </div>
       </div>
