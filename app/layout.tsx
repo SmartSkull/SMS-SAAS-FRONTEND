@@ -52,6 +52,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* PWA — applied before paint so the browser chrome matches the brand color */}
         <meta name="theme-color" content="#7c3aed" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/*
+          Capture beforeinstallprompt as early as possible — before React mounts.
+          The event fires once and won't repeat, so we stash it on window.__pwaPrompt
+          for the usePWAInstall hook to pick up whenever it initialises.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaPrompt=e;});`,
+          }}
+        />
       </head>
       <body className={`${geist.variable} ${geistMono.variable} font-[family-name:var(--font-geist)] h-full antialiased`}>
         <Script id="brand-colors" strategy="beforeInteractive"
