@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Smart Campus',
     description:
       'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
-    start_url: '/',
+    start_url: '/login',
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#ffffff',
