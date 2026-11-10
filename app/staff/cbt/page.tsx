@@ -8,9 +8,7 @@ import { api, endpoints, getImageUrl } from '@/lib/api';
 import type { CbtQuestion, Student } from '@/types';
 import clsx from 'clsx';
 import { AlertCircle, BarChart2, Calendar, CheckCircle2, CheckSquare, Clock, Download, FileText, HelpCircle, Pencil, Play, Plus, Printer, Search, Square, Trash2, Upload, UserCircle2, X } from 'lucide-react';
-import mammoth from 'mammoth';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Tesseract from 'tesseract.js';
 
 // Resolve the image upload URL relative to the current origin (through the Next.js proxy)
 const CBT_IMAGE_UPLOAD_URL = '/api' + (endpoints.staff.cbtUploadImage);
@@ -224,6 +222,7 @@ export default function StaffCbt() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [parsedQuestions, setParsedQuestions] = useState<ParsedQuestion[]>([]);
+  const [ocrWarnings, setOcrWarnings] = useState<string[]>([]);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const [ocrMeta, setOcrMeta] = useState(EMPTY_META);
 
@@ -907,278 +906,33 @@ export default function StaffCbt() {
     setParsedQuestions([]);
   };
 
+  // The paper is read on the server by an AI provider. It used to be parsed in
+  // the browser by a rules engine, which only understood four option layouts,
+  // defaulted a missing answer to "A", and dropped anything it could not match
+  // without telling anyone — and it fed PDFs to an image-only OCR engine, so
+  // PDFs never worked at all.
   const processFile = async () => {
     if (!uploadFile) return;
     setUploading(true);
-    setUploadProgress('Reading file...');
+    setOcrWarnings([]);
     try {
-      const ext = uploadFile.name.split('.').pop()?.toLowerCase();
-      let rawText = '';
+      setUploadProgress('Reading the paper with AI — this can take a moment on a long paper…');
+      const formData = new FormData();
+      formData.append('file', uploadFile);
 
-      if (ext === 'docx' || ext === 'doc') {
-        setUploadProgress('Extracting text from Word document...');
-        const arrayBuffer = await uploadFile.arrayBuffer();
-        // Use convertToHtml to preserve more character info, then strip tags
-        const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
-        rawText = htmlResult.value
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<\/p>/gi, '\n')
-          .replace(/<\/li>/gi, '\n')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-          .replace(/&#\d+;/g, c => {
-            const code = parseInt(c.replace(/&#(\d+);/, '$1'), 10);
-            return code < 128 ? String.fromCharCode(code) : c;
-          });
-      } else if (ext === 'txt') {
-        rawText = await uploadFile.text();
-      } else {
-        setUploadProgress('Running OCR on image... This may take a moment.');
-        const dataUrl = await readFileAsDataURL(uploadFile);
-        const result = await Tesseract.recognize(dataUrl, 'eng', {
-          logger: (m) => {
-            if (m.status === 'recognizing text') {
-              setUploadProgress(`OCR: ${Math.round((m.progress || 0) * 100)}%`);
-            }
-          },
-        });
-        rawText = result.data.text;
-      }
-
-      setUploadProgress('Parsing questions...');
-      const questions = parseQuestions(rawText);
+      const res = await api.upload<any>(endpoints.staff.cbtExtract, formData);
+      const questions: ParsedQuestion[] = res?.data?.questions ?? [];
+      setOcrWarnings(res?.data?.warnings ?? []);
       setParsedQuestions(questions);
-      if (!questions.length) {
-        toast.error('No questions could be detected in the document');
-      } else {
-        toast.success(`Extracted ${questions.length} questions`);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to process file');
+
+      if (!questions.length) toast.error('No questions could be detected in the document');
+      else toast.success(`Extracted ${questions.length} questions`);
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Failed to process file');
     } finally {
       setUploading(false);
       setUploadProgress('');
     }
-  };
-
-  const readFileAsDataURL = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const parseQuestions = (text: string): ParsedQuestion[] => {
-    const questions: ParsedQuestion[] = [];
-
-    // ── Normalise ─────────────────────────────────────────────────────────
-    const normalized = text
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\r\n?/g, '\n')
-      .replace(/\t/g, ' ')
-      // Fullwidth Unicode → ASCII (e.g. Ａ → A)
-      .replace(/\uFF08/g, '(').replace(/\uFF09/g, ')')
-      .replace(/[\uFF21-\uFF3A]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-      .replace(/[\uFF41-\uFF5A]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-      .replace(/[\uFF10-\uFF19]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-      // Smart quotes / curly apostrophes → straight
-      .replace(/[\u2018\u2019\u02BC]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      // Em/en dashes → hyphen
-      .replace(/[\u2013\u2014]/g, '-')
-      // Common symbol font remappings (Wingdings, Symbol, APOS-style)
-      // Parentheses lookalikes
-      .replace(/[\u2768\u276A\u27EC\u2772\u2774\uFD3E]/g, '(')
-      .replace(/[\u2769\u276B\u27ED\u2773\u2775\uFD3F]/g, ')')
-      // Bullet/period lookalikes that appear as option separators
-      .replace(/[\u2022\u2023\u25E6\u2043\u204C\u204D]/g, '.')
-      // Non-breaking and other space variants → regular space
-      .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
-      .replace(/[ ]{2,}/g, ' ')
-      .trim();
-
-    // ── Detect section headings before flattening ─────────────────────────
-    const lines = normalized.split('\n');
-    const sectionMarkers: { lineIdx: number; label: string; order: number }[] = [];
-    let sectionOrderCounter = 0;
-    // Regex that matches any known option-start pattern
-    const OPT_A = /\([Aa]\)|\b[Aa][.)\-] /;
-    for (let li = 0; li < lines.length; li++) {
-      const line = lines[li].trim();
-      if (!line) continue;
-      if (/^\d{1,3}[.)]/.test(line)) continue;
-      if (/^\(?[A-Da-d][.)\-]/.test(line)) continue;
-      if (/^Ans(?:wer)?\s*:/i.test(line)) continue;
-      if (line.length < 10) continue;
-      if (OPT_A.test(line)) continue;
-      sectionOrderCounter++;
-      sectionMarkers.push({ lineIdx: li, label: line, order: sectionOrderCounter });
-    }
-
-    // Build annotated flat string with «SECTION:n:label» sentinels
-    let annotated = '';
-    for (let li = 0; li < lines.length; li++) {
-      const marker = sectionMarkers.find(m => m.lineIdx === li);
-      if (marker) annotated += ` «SECTION:${marker.order}:${marker.label}» `;
-      else annotated += lines[li] + ' ';
-    }
-    const flat = annotated.replace(/[ ]{2,}/g, ' ').trim();
-
-    // ── Pre-process cloze/gap-fill format ─────────────────────────────────
-    // Converts: "The _1(A. x B. y C. z D. w) Answer: C told the _2(...) Answer: D"
-    // Into individual segments: "1. ___ (A. x B. y C. z D. w) Answer: C"
-    // Pattern: _N( options ) Answer: X  (N = 1-3 digit number)
-    const clozeRe = /_(\d{1,3})\(([^)]+)\)\s*Answer\s*:?\s*([A-Da-d])/gi;
-    const clozeMatches: { num: string; opts: string; ans: string }[] = [];
-    let clozeFlat = flat;
-    if (clozeRe.test(flat)) {
-      clozeRe.lastIndex = 0;
-      let m: RegExpExecArray | null;
-      while ((m = clozeRe.exec(flat)) !== null)
-        clozeMatches.push({ num: m[1], opts: m[2].trim(), ans: m[3].toUpperCase() });
-    }
-
-    // ── Split on question numbers ──────────────────────────────────────────
-    // Split only when: (start or whitespace) + number + separator + (space or letter)
-    // Requires ". " or ") " OR ".Letter" (no space) — but NOT plain numbers like "10 "
-    const segments = flat
-      .split(/(?:^|(?<=\s))(?=\d{1,3}(?:\.[ A-Za-z"'"'«_(]|\) ))/)
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    // Inject cloze questions as synthetic segments (avoid duplicates with normal segments)
-    const normalNums = new Set(segments.map(s => s.match(/^(\d{1,3})/)?.[1]).filter(Boolean));
-    for (const c of clozeMatches) {
-      if (!normalNums.has(c.num))
-        segments.push(`${c.num}. ___ ${c.opts} Answer: ${c.ans}`);
-    }
-
-    let currentSectionLabel = '';
-    let currentSectionOrder = 0;
-
-    const skipLog: string[] = [];
-
-    for (const seg of segments) {
-      const sectionMatch = seg.match(/«SECTION:(\d+):([^»]+)»/);
-      if (sectionMatch) {
-        currentSectionOrder = parseInt(sectionMatch[1], 10);
-        currentSectionLabel = sectionMatch[2].trim();
-      }
-      const cleanSeg = seg.replace(/«SECTION:\d+:[^»]+»/g, '').trim();
-      if (!/^\d{1,3}[.)]/.test(cleanSeg)) continue;
-      const qNum = cleanSeg.match(/^(\d{1,3})/)?.[1] ?? '?';
-      const body = cleanSeg.replace(/^\d{1,3}[.)\s]\s*/, '').trim();
-
-      // ── Extract answer ─────────────────────────────────────────────────
-      // Handles: "Answer: B" / "Answer: B." / "Answer: (d) text" / "Answer :B."
-      const answerMatch = body.match(/Ans(?:wer)?\s*:?\s*\(?([A-Da-d])\)?/i);
-      const answer = answerMatch ? answerMatch[1].toUpperCase() : 'A';
-      // Strip everything from "Answer" onward (covers "Answer: (d) sun rise and sunset")
-      const withoutAnswer = body
-        .replace(/\s*Ans(?:wer)?\s*:?\s*\(?[A-Da-d]\)?.*/gi, '')
-        .trim();
-
-      // ── Detect option format ───────────────────────────────────────────
-      type FmtKey = 'paren' | 'dot' | 'close' | 'dash';
-      const fmtTests: [FmtKey, RegExp][] = [
-        ['paren', /\([Aa]\)/],
-        ['dot',   /(?<![A-Za-z])[Aa]\. /],
-        ['close', /(?<![A-Za-z])[Aa]\) /],
-        ['dash',  /(?<![A-Za-z])[Aa]- /],
-      ];
-      let fmt: FmtKey | null = null;
-      for (const [key, re] of fmtTests) {
-        if (re.test(withoutAnswer)) { fmt = key; break; }
-      }
-      if (!fmt) {
-        skipLog.push(`Q${qNum}: no option format detected — "${withoutAnswer.slice(0, 80)}"`);
-        continue;
-      }
-
-      // ── Find where options start ───────────────────────────────────────
-      const optStartRe: Record<FmtKey, RegExp> = {
-        paren: /\([Aa]\)/,
-        dot:   /(?<![A-Za-z])[Aa]\. /,
-        close: /(?<![A-Za-z])[Aa]\) /,
-        dash:  /(?<![A-Za-z])[Aa]- /,
-      };
-      const optStart = withoutAnswer.search(optStartRe[fmt]);
-      if (optStart === -1) continue;
-      const questionText = withoutAnswer.slice(0, optStart).replace(/[:\-\u2013]\s*$/, '').trim();
-      if (!questionText) continue;
-      const optionString = withoutAnswer.slice(optStart);
-
-      // ── Parse options ──────────────────────────────────────────────────
-      const opts: Record<string, string> = {};
-      if (fmt === 'paren') {
-        // (A) text (B) text ...
-        const re = /\(([A-Da-d])\)\s*(.+?)(?=\s*\([A-Da-d]\)|$)/g;
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(optionString)) !== null)
-          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
-      } else {
-        // A. text B. text  OR  A) text B) text  OR  A- text B- text
-        // Also handles no-space after separator: "C.foreman" → C = foreman
-        const sepChar = fmt === 'dot' ? '\\.' : fmt === 'close' ? '\\)' : '-';
-        const re = new RegExp(`(?<![A-Za-z])([A-Da-d])${sepChar}\\s*(.+?)(?=\\s+[A-Da-d]${sepChar}\\s|$)`, 'g');
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(optionString)) !== null)
-          opts[m[1].toUpperCase()] = m[2].trim().replace(/[.\s]+$/, '').trim();
-      }
-
-      if (Object.keys(opts).length < 2) {
-        skipLog.push(`Q${qNum}: only ${Object.keys(opts).length} option(s) parsed — fmt=${fmt} — "${optionString.slice(0, 80)}"`);
-        continue;
-      }
-
-      questions.push({
-        question: questionText,
-        option1: opts['A'] || '',
-        option2: opts['B'] || '',
-        option3: opts['C'] || '',
-        option4: opts['D'] || '',
-        answer,
-        sectionLabel: currentSectionLabel,
-        sectionOrder: currentSectionOrder,
-      });
-    }
-
-    if (skipLog.length) console.warn('[parseQuestions] Skipped segments:\n' + skipLog.join('\n'));
-    console.log('[parseQuestions] segments:', segments.length, '| parsed:', questions.length);
-    return questions;
-  };
-
-  const extractOption = (text: string, letter: string): string => {
-    const patterns = [
-      new RegExp(`\\n${letter}[\.\)]\s+(.+?)(?=\\n[A-D][\.\)]|\\n\\d+[\.\)\-]|\\nAnswer:|\\nAns:|\\nCorrect:|\\Z)`, 's'),
-      new RegExp(`\\n${letter}[\.\)]\s+(.+?)(?=\\n|$)`, 's'),
-    ];
-    for (const pat of patterns) {
-      const m = text.match(pat);
-      if (m) return m[1].trim();
-    }
-    return '';
-  };
-
-  const extractAnswer = (text: string): string => {
-    const answerPatterns = [
-      /Answer:\s*([A-D])/i,
-      /Ans:\s*([A-D])/i,
-      /Correct:\s*([A-D])/i,
-      /Correct Answer:\s*([A-D])/i,
-      /\b([A-D])\s*is\s*correct/i,
-      /\*\*?([A-D])\*\*?/,
-    ];
-    for (const pat of answerPatterns) {
-      const m = text.match(pat);
-      if (m) return m[1].toUpperCase();
-    }
-    return '';
   };
 
   const updateParsedQuestion = (index: number, field: keyof ParsedQuestion, value: string | number) => {
@@ -2002,15 +1756,12 @@ export default function StaffCbt() {
             <Upload size={18} className="text-blue-500" /> Upload Questions (OCR / Document)
           </h2>
           <p className="text-sm text-gray-500 mb-4">
-            Upload an image, PDF, Word document, or text file. Questions are auto-detected in any of these formats:
-            <span className="block mt-1 font-mono text-xs text-gray-400">
-              1. Question text (A) opt (B) opt (C) opt (D) opt — Answer: A
-            </span>
-            <span className="block font-mono text-xs text-gray-400">
-              1. Question text A. opt B. opt C. opt D. opt Answer: A
-            </span>
+            Upload an image, PDF, Word document, or text file. An AI model reads the paper and returns the questions,
+            their options and the answer you marked, whatever layout the paper uses.
             <span className="block mt-1 text-xs text-gray-400">
-              Any non-numbered line between questions (e.g. <em>"Section A: Read the passage…"</em>) is automatically detected as a section heading and assigned to the questions that follow. You can edit or clear section headings in the preview table before importing.
+              Photographs and scans are read as images. Numbered options in any style (<em>A.</em>, <em>(a)</em>, <em>A)</em>),
+              section headings and separate answer keys are all understood. Nothing is guessed — a question the paper does
+              not answer comes back blank for you to fill in, and the table below lets you correct anything before importing.
             </span>
           </p>
 
@@ -2061,7 +1812,7 @@ export default function StaffCbt() {
             {uploadFile && (
               <span className="text-sm text-gray-600 flex items-center gap-2">
                 <FileText size={16} /> {uploadFile.name}
-                <button onClick={() => { setUploadFile(null); setParsedQuestions([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-red-500 hover:text-red-700"><X size={16} /></button>
+                <button onClick={() => { setUploadFile(null); setParsedQuestions([]); setOcrWarnings([]); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="text-red-500 hover:text-red-700"><X size={16} /></button>
               </span>
             )}
             {uploadFile && !uploading && parsedQuestions.length === 0 && (
@@ -2077,6 +1828,19 @@ export default function StaffCbt() {
             </div>
           )}
 
+          {ocrWarnings.length > 0 && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-sm font-medium text-amber-800 flex items-center gap-2 mb-1">
+                <AlertCircle size={15} /> Check these before importing
+              </p>
+              <ul className="list-disc pl-5 space-y-0.5">
+                {ocrWarnings.map((warning, i) => (
+                  <li key={i} className="text-xs text-amber-700">{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Parsed Questions Preview */}
           {parsedQuestions.length > 0 && (
             <div className="border rounded-xl overflow-hidden">
@@ -2087,7 +1851,7 @@ export default function StaffCbt() {
                     className="btn-brand text-white px-4 py-1.5 rounded-lg text-sm font-medium disabled:opacity-50">
                     {bulkSubmitting ? 'Importing…' : 'Import All'}
                   </button>
-                  <button onClick={() => setParsedQuestions([])} className="border border-gray-200 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50">
+                  <button onClick={() => { setParsedQuestions([]); setOcrWarnings([]); }} className="border border-gray-200 px-3 py-1.5 rounded-lg text-sm hover:bg-gray-50">
                     Clear
                   </button>
                 </div>

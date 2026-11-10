@@ -16,6 +16,12 @@ export const metadata: Metadata = {
     template: '%s — Smart Campus',
   },
   description: 'All-in-one school management platform — fees, transport, academics, staff, library, hostel and more.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Smart Campus',
+  },
   icons: {
     icon: [
       { url: '/images/logo.png', type: 'image/png' },
@@ -43,6 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" type="image/png" href="/images/logo.png" />
         <link rel="apple-touch-icon" href="/images/logo2.png" />
+        {/* PWA — applied before paint so the browser chrome matches the brand color */}
+        <meta name="theme-color" content="#7c3aed" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className={`${geist.variable} ${geistMono.variable} font-[family-name:var(--font-geist)] h-full antialiased`}>
         <Script id="brand-colors" strategy="beforeInteractive"

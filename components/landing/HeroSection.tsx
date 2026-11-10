@@ -30,7 +30,7 @@ export function HeroSection({ heroRef }: HeroSectionProps) {
 
           <Reveal delay={0.15}>
             <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
-              <Link href="/school/register" className="group btn-hero flex items-center gap-2 px-8 py-4 font-bold rounded-2xl text-[15px]" style={{ color: '#fff' }}>
+              <Link href="/school/register" className="group btn-hero flex items-center gap-2 px-8 py-4 font-bold rounded-2xl text-[15px]" style={{ color: '#fff' }}>   
                 Register your school
                 <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
               </Link>
